@@ -688,3 +688,9 @@ body:not([data-theme="night"]) .main .dash-welcome{background:linear-gradient(11
 body[data-theme="wine"]{--app-bg:#f8f4ef;--app-bg2:#eee2dd;--accent:#792d37;--accent-deep:#60232d;--accent-soft:#f3e6e5;--welcome-from:#f9f2ec;--welcome-to:#fffaf4;--shade:#792d371d;--editorial-accent:#792d37}
 .theme-preview-wine{--sample-bg:#f6efeb;--sample-side:#fffaf6;--sample-paper:#fffdfb;--sample-accent:#792d37}
 body[data-theme="wine"] .editorial-income{background:repeating-linear-gradient(13deg,#00000016 0 2px,transparent 3px 26px),linear-gradient(130deg,#420c16,#79232b)}
+
+/* Pre-release calendar: compact quarter-hour cards without clipping at :45 */
+.calendar-grid .calendar-event{display:flex;flex-direction:row;align-items:center;gap:3px;min-height:18px;max-height:18px;height:18px;padding:2px 4px;overflow:hidden;white-space:nowrap}
+.calendar-grid .calendar-event .event-time{flex:0 0 auto;font-size:9px;line-height:1}
+.calendar-grid .calendar-event strong{flex:1;min-width:0;font-size:10px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:560px){.calendar-grid .calendar-event{min-height:17px;max-height:17px;height:17px;padding:2px 3px;gap:2px}.calendar-grid .calendar-event strong{font-size:9px}}
