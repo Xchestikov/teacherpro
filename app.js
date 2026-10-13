@@ -209,17 +209,24 @@ $('#content').innerHTML='<div class="settings-intro"><span class="settings-eyebr
 
 function importData(input){const file=input.files&&input.files[0];if(!file)return;if(file.size>20*1024*1024){alert('Файл слишком большой для безопасного импорта (лимит 20 МБ).');input.value='';return}const reader=new FileReader();reader.onload=()=>{try{const raw=JSON.parse(reader.result),payload=raw&&typeof raw==='object'?(raw.data||raw):null;if(!payload||typeof payload!=='object'||Array.isArray(payload)||!['clients','lessons','payments','subscriptions'].some(k=>Array.isArray(payload[k])))throw Error('Invalid backup');const parsed=normalizeDb(payload);if(!confirm('Импортировать резервную копию? Текущие данные будут заменены.'))return;db=parsed;save();render();alert('Резервная копия восстановлена.')}catch(e){alert('Не удалось прочитать файл. Выбери корректную резервную копию TeacherPro в формате JSON.')}finally{input.value=''}};reader.onerror=()=>{input.value='';alert('Не удалось прочитать файл резервной копии.')};reader.readAsText(file)}
 function saveSettings(){db.settings.name=$('#setName')?.value||db.settings.name;db.settings.specialistMode=$('#mode')?.checked??db.settings.specialistMode;save();render()}
+function roundRub(value){return Math.round((Number(value)||0)*100)/100}
+function subscriptionHourlyRate(x){return Number.isFinite(Number(x?.hourlyRate))&&Number(x?.hourlyRate)>0?Number(x.hourlyRate):Number(x?.price)>0&&Number(x?.total)>0?roundRub(Number(x.price)/Number(x.total)):0}
+function suggestedLessonRate(clientId,date){const subs=db.subscriptions.filter(x=>String(x.clientId)===String(clientId)&&(!date||(!x.startDate||x.startDate<=date)&&(!x.endDate||x.endDate>=date))).sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));return subscriptionHourlyRate(subs.find(x=>x.paymentStatus!=='pending')||subs[0])||Number(client(clientId)?.hourlyRate)||0}
+function updateSubscriptionPriceFromHour(){const n=Number($('#sTotal')?.value),rate=Number($('#sHourlyRate')?.value);if(Number.isFinite(n)&&n>0&&Number.isFinite(rate)&&rate>=0&&$('#sPrice'))$('#sPrice').value=roundRub(n*rate)}
+function updateSubscriptionHourFromPrice(){const n=Number($('#sTotal')?.value),price=Number($('#sPrice')?.value);if(Number.isFinite(n)&&n>0&&Number.isFinite(price)&&price>=0&&$('#sHourlyRate'))$('#sHourlyRate').value=roundRub(price/n)}
+function updateLessonRatePreview(){const rate=Number($('#lHourlyRate')?.value),duration=Number($('#lDuration')?.value)||60,node=$('#lessonRatePreview');if(node)node.textContent=Number.isFinite(rate)&&rate>=0?'Стоимость занятия: '+fmt(roundRub(rate*duration/60)):'Укажи стоимость часа'}
+function updateLessonRateForStudent(){const id=$('#lClient')?.value,date=$('#lDate')?.value,rate=suggestedLessonRate(id,date);if($('#lHourlyRate'))$('#lHourlyRate').value=rate||'';updateLessonRatePreview()}
 function openSubscription(id,sourceId){
 if(!db.clients.length){alert('Сначала добавь ученика.');setPage('clients');return}
 const editing=id?db.subscriptions.find(s=>String(s.id)===String(id)):null,source=!editing&&sourceId?db.subscriptions.find(s=>String(s.id)===String(sourceId)):null;
 if(id&&!editing)return alert('Абонемент не найден.');
-const x=editing||{clientId:source?.clientId||db.clients[0].id,name:source?.name||'8 занятий',total:source?.total||8,remaining:source?.total||8,price:source?.price??7200,startDate:todayISO(),endDate:'',paymentStatus:'paid'};
+const x=editing||{clientId:source?.clientId||db.clients[0].id,name:source?.name||'8 занятий',hourlyRate:source?subscriptionHourlyRate(source):900,total:source?.total||8,remaining:source?.total||8,price:source?.price??7200,startDate:todayISO(),endDate:'',paymentStatus:'paid'};
 const consumed=editing?db.lessons.filter(l=>String(l.consumedSubscriptionId)===String(editing.id)).length:0;
 const html='<div class="form"><label>Ученик<select id="sClient" '+(editing?'disabled':'')+'>'+db.clients.map(c=>'<option value="'+htmlSafe(c.id)+'" '+(String(c.id)===String(x.clientId)?'selected':'')+'>'+htmlSafe(c.name)+'</option>').join('')+'</select></label>'+
-'<label>Название<input id="sName" value="'+htmlSafe(x.name||'')+'"></label><label>Всего занятий<input id="sTotal" type="number" min="1" step="1" value="'+Number(x.total||1)+'"></label>'+
+'<label>Всего занятий<input id="sTotal" type="number" min="1" step="1" value="'+Number(x.total||1)+'" oninput="updateSubscriptionPriceFromHour()"></label>'+
 '<label>Осталось занятий<input id="sRemain" type="number" min="0" step="1" value="'+Number(x.remaining??0)+'"></label>'+
 (editing?'<p class="muted">Уже списано по этому пакету: '+consumed+' занятий. Нельзя уменьшить пакет ниже использованного.</p>':'')+
-'<label>Стоимость абонемента, ₽<input id="sPrice" type="number" min="0" step="0.01" value="'+Number(x.price||0)+'"></label>'+
+'<label>Стоимость часа, ₽<input id="sHourlyRate" type="number" min="0" step="0.01" value="'+subscriptionHourlyRate(x)+'" oninput="updateSubscriptionPriceFromHour()"></label><label>Стоимость абонемента, ₽<input id="sPrice" type="number" min="0" step="0.01" value="'+Number(x.price||0)+'" oninput="updateSubscriptionHourFromPrice()"></label><p class="muted">Стоимость часа рассчитана для занятий по 60 минут. Итоговую стоимость абонемента можно скорректировать вручную.</p>'+
 '<label>Начало действия / ожидаемая оплата<input id="sStart" type="date" value="'+htmlSafe(x.startDate||todayISO())+'"></label><label>Окончание действия<input id="sEnd" type="date" value="'+htmlSafe(x.endDate||'')+'"></label>'+
 (!editing?'<label>Статус предоплаты<select id="sPaymentStatus"><option value="paid">Оплачено</option><option value="pending">Ожидается</option></select></label><p class="muted">Продление создаёт новый абонемент и одну связанную запись оплаты. Старый пакет и его история сохраняются.</p>':'<p class="muted">При изменении стоимости или даты обновится существующая связанная оплата, если она есть. Новая запись не создаётся.</p>')+
 '<div class="form-actions"><button class="secondary" onclick="closeModal()">Отмена</button><button class="primary" onclick="saveSubscription('+JSON.stringify(editing?.id||null)+')">Сохранить</button></div></div>';
@@ -229,15 +236,15 @@ function saveSubscription(id){
 const existing=id?db.subscriptions.find(s=>String(s.id)===String(id)):null;
 if(id&&!existing)return alert('Абонемент не найден.');
 const total=Number($('#sTotal').value),remaining=Number($('#sRemain').value),price=Number($('#sPrice').value);
-const startDate=$('#sStart').value||todayISO(),endDate=$('#sEnd').value||'',name=$('#sName').value.trim()||'Абонемент';
+const startDate=$('#sStart').value||todayISO(),endDate=$('#sEnd').value||'',name=total+' '+(total===1?'занятие':total>=2&&total<=4?'занятия':'занятий'),hourlyRate=Number($('#sHourlyRate')?.value);
 if(!Number.isInteger(total)||total<1||total>1000)return alert('Количество занятий должно быть целым числом от 1 до 1000.');
 if(!Number.isInteger(remaining)||remaining<0||remaining>total)return alert('Остаток занятий должен быть целым числом от 0 до общего количества.');
-if(!Number.isFinite(price)||price<0||price>100000000||Math.abs(price*100-Math.round(price*100))>1e-6)return alert('Укажи корректную стоимость абонемента с точностью до копеек.');
+if(!Number.isFinite(price)||price<0||price>100000000||Math.abs(price*100-Math.round(price*100))>1e-6)return alert('Укажи корректную стоимость абонемента с точностью до копеек.');if(!Number.isFinite(hourlyRate)||hourlyRate<0||hourlyRate>100000000||Math.abs(hourlyRate*100-Math.round(hourlyRate*100))>1e-6)return alert('Укажи корректную стоимость часа.');
 if(endDate&&endDate<startDate)return alert('Дата окончания не может быть раньше даты начала.');
 const consumed=existing?db.lessons.filter(l=>String(l.consumedSubscriptionId)===String(existing.id)).length:0;
 if(total<consumed||remaining>total-consumed)return alert('Нельзя уменьшить пакет ниже уже проведённых занятий или увеличить остаток выше неиспользованного количества.');
 const status=existing?(existing.paymentStatus||'paid'):($('#sPaymentStatus').value||'paid');
-const x={id:existing?.id||'sub-'+crypto.randomUUID(),clientId:existing?.clientId??Number($('#sClient').value),name,total,remaining,price,startDate,endDate,paymentStatus:status,status:remaining>0?'active':'expired'};
+const x={id:existing?.id||'sub-'+crypto.randomUUID(),clientId:existing?.clientId??Number($('#sClient').value),name,total,remaining,price,hourlyRate,startDate,endDate,paymentStatus:status,status:remaining>0?'active':'expired'};
 if(existing){const linked=db.payments.find(p=>String(p.subscriptionId)===String(existing.id));if(linked?.status==='paid'&&Number(linked.amount)!==price)return alert('Абонемент уже оплачен. Сумму полученной предоплаты нельзя менять задним числом. Создай отдельный платёж для доплаты.');Object.assign(existing,x);if(linked){if(linked.status!=='paid'){linked.amount=price;linked.date=startDate;}linked.description='Предоплата: '+name;}}
 else{db.subscriptions.push(x);db.payments.push({id:crypto.randomUUID(),clientId:x.clientId,amount:price,date:startDate,status,type:'subscription',subscriptionId:x.id,description:'Предоплата: '+name,...(status==='paid'?{paidAt:todayISO()}:{})})}
 syncClientSubscription(x);save();closeModal();render()
