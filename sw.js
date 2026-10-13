@@ -1,5 +1,5 @@
 const ROOT=new URL('./',self.registration.scope).pathname;
-const CACHE='teacherpro-shell-v3';
+const CACHE='teacherpro-shell-v4';
 const SHELL=['','index.html','style.css','app.js','cloud-config.js','manifest.webmanifest','icon.svg'].map(path=>ROOT+path);
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
