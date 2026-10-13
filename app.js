@@ -5,8 +5,11 @@ if(!db.subscriptions){db.subscriptions=db.clients.map(c=>({id:'sub-'+c.id,client
 if(!db.settings.telegram)db.settings.telegram={enabled:false,botToken:'',reminderHours:24};
 const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-let page='dashboard';
+let page='dashboard'; let weekOffset=0;
 const fmt=n=>new Intl.NumberFormat('ru-RU').format(n)+' ₽';
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function monthISO(){return todayISO().slice(0,7)}
+function shiftWeek(n){weekOffset+=n;schedule()}
 const dateFmt=s=>new Date(s+'T00:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
 const client=id=>db.clients.find(c=>c.id==id);
 function nav(){ $$('#nav button,.sidebar-bottom button').forEach(b=>b.classList.toggle('active',b.dataset.page===page)); }
