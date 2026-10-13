@@ -371,3 +371,43 @@ body{background:#f8f8fc;color:var(--ink)}
 #paymentRows tr[hidden]{display:none}
 @media(max-width:950px){.finance-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.finance-cards{gap:8px}.finance-cards .stat{padding:13px}.finance-cards .value{font-size:20px}.finance-filters{align-items:stretch;flex-direction:column}.finance-filters .search,.finance-filters select{width:100%;max-width:100%;flex-basis:auto}.finance-actions button{max-width:100%}}
+
+/* Student workspace: overview, homework, private lesson notes and history */
+.modal-backdrop.student-modal .modal{width:min(920px,100%);max-height:min(92dvh,960px)}
+.student-profile{min-width:0}
+.student-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 12px;margin:0 0 15px;border-bottom:1px solid #eeedf4;scrollbar-width:thin}
+.student-tabs button{flex:0 0 auto;padding:9px 12px;background:transparent;color:#797589;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap}
+.student-tabs button.active{background:#f0edff;color:#6051c5}
+.student-pane{min-width:0}
+.student-overview-grid{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:16px;align-items:start}
+.student-section{padding:17px;border:1px solid #eeedf5;border-radius:15px;background:#fff;min-width:0}
+.student-section h3{font-size:14px;margin:4px 0 12px}
+.student-section h3:not(:first-child){margin-top:23px}
+.student-section p{font-size:12px;line-height:1.6;color:#7c7c8a;overflow-wrap:anywhere}
+.student-section .form textarea{min-height:76px}
+.student-profile .client-profile-summary{margin-bottom:16px}
+.student-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px;flex-wrap:wrap}
+.student-section-head p{flex:1 1 260px;max-width:620px;line-height:1.5}
+.student-records{display:grid;gap:12px}
+.student-record{padding:16px 17px;border:1px solid #eae8f3;border-radius:14px;background:#fff;min-width:0}
+.student-record-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.student-record-head strong{font-size:14px;overflow-wrap:anywhere;min-width:0}
+.student-record>p{font-size:12px;color:#5d5d6e;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;margin:11px 0}
+.student-record-meta{font-size:11px;line-height:1.6;color:#88849a;overflow-wrap:anywhere}
+.student-record-meta a,.student-contact-link{color:#6555ca}
+.student-record-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.student-record-actions button{font-size:11px}
+.student-empty{background:#f7f6fc;color:#88849a;padding:28px;border-radius:14px;text-align:center;font-size:12px;line-height:1.6}
+.student-profile-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:19px;border-top:1px solid #eeeef5;padding-top:14px}
+.student-contact-link{display:inline-flex;margin-top:10px;font-size:12px;text-decoration:none;overflow-wrap:anywhere}
+.student-profile .history-row span{min-width:0;overflow-wrap:anywhere}
+@media(max-width:720px){
+ .student-overview-grid{grid-template-columns:1fr}
+ .modal-backdrop.student-modal .modal{width:100%;max-height:calc(100dvh - 20px);padding:16px}
+ .student-section{padding:12px}
+ .student-profile-footer{flex-wrap:wrap}
+ .student-record{padding:13px}
+ .student-tabs{margin-bottom:10px}
+ .student-tabs button{padding:9px 10px;font-size:11px}
+}
+@media(max-width:400px){.student-profile .client-profile-stat{padding:8px 6px}.student-profile .client-profile-stat small{font-size:9px}.student-record-actions button{flex:1 1 42%}}
