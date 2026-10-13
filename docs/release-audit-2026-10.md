@@ -63,4 +63,20 @@
 ## Решение по готовности
 
 **Code review: условно пройден.**  
-**Release gate: BLOCKED**, пока не выполнены реальная проверка Supabase/RLS и критические end-to-end/мобильные проверки. После прохождения перечисленных пунктов можно запросить отдельное объединение ветки и **один** продакшен-деплой.
+**Release gate: BLOCKED (реальные RLS, роли и триггер подтверждены; необходимы E2E и браузерная проверка)**, пока не выполнены реальная проверка Supabase/RLS и критические end-to-end/мобильные проверки. После прохождения перечисленных пунктов можно запросить отдельное объединение ветки и **один** продакшен-деплой.
+
+## Проверка реального Supabase (13.10.2026, подключённый проект)
+
+Реально подключён и проверен проект `egopcojrzklvytcuhpov` (status: `ACTIVE_HEALTHY`). Запросы выполнялись **только на чтение**:
+
+- `public.app_data` существует с колонками `user_id` UUID PK и FK на `auth.users`, `payload` JSONB, `updated_at` timestamptz.
+- RLS **включён**; `anon` не имеет SELECT/INSERT/UPDATE; `authenticated` имеет SELECT/INSERT/UPDATE и не имеет DELETE.
+- Ровно три политики SELECT, INSERT, UPDATE для `authenticated`, каждая ограничивает строки условием `auth.uid()=user_id`, на INSERT и UPDATE используется соответствующая `WITH CHECK`.
+- `teacherpro_app_data_updated_at` — триггер BEFORE UPDATE. Тело `teacherpro_touch_app_data()` подтверждено: `greatest(clock_timestamp(), old.updated_at + interval '1 microsecond')`, `search_path=''`.
+- Таблица содержит две строки, обе принадлежат отдельным владельцам; некорректного JSON нет, ключи `clients` и `settings` имеют корректный тип в обеих строках. Личные данные и payload не выводились.
+- Advisor безопасности: **Leaked Password Protection Disabled**. Рекомендовано проверить доступность и включить проверку скомпрометированных паролей в Supabase Auth. Инструкция: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- Advisor производительности: три замечания `auth_rls_initplan` (по одному на SELECT/INSERT/UPDATE). В ветке аудита `supabase/schema.sql` подготовлен вариант `(select auth.uid())=user_id`, но **изменения в базе не выполнялись**. Документация: https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select
+
+**Реальная конфигурация RLS подтверждена; отдельный end-to-end тест чтения/записи через два пользовательских JWT не проводился.** Реальная проверка восстановления пароля, доставки email и мобильного UI остаётся открытой.
+
+Никаких деплоев, DDL, изменений пользователей и записей таблицы `app_data` в ходе этой проверки не выполнялось.
