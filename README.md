@@ -48,3 +48,15 @@ python -m http.server 8080
 ```
 
 Открой http://localhost:8080.
+
+## Альтернативный хостинг без домена Vercel
+
+Добавлен GitHub Actions workflow `.github/workflows/pages.yml`. После включения GitHub Pages сайт можно публиковать по адресу `https://xchestikov.github.io/teacherpro/`.
+
+1. Открой Settings репозитория → Pages.
+2. В разделе Build and deployment выбери **GitHub Actions** как источник.
+3. Дождись workflow **Deploy static app to GitHub Pages** в разделе Actions.
+4. В Supabase → Authentication → URL Configuration добавь в Redirect URLs адрес `https://xchestikov.github.io/teacherpro/**`.
+5. Открывай сайт по GitHub Pages URL и проверь вход, письмо подтверждения и сохранение данных.
+
+Это альтернативный адрес frontend. Если без VPN недоступен именно API Supabase, перенос frontend сам по себе этого не исправит — тогда понадобится отдельно проверить доступность `egopcojrzklvytcuhpov.supabase.co` и, возможно, сменить backend/провайдера.
