@@ -105,3 +105,6 @@ body{background:#f8f8fc;color:var(--ink)}
 .auth-tools{display:flex;flex-direction:column;gap:8px;margin-top:12px;text-align:center}
 .auth-tools button{background:transparent;color:#777988;font-size:11px;padding:5px}
 .auth-tools button:hover{color:#6254c7}
+
+#nav button[data-page="settings"]{display:none}
+@media(max-width:560px){#nav button[data-page="settings"]{display:flex}.sidebar-bottom{display:none}}
