@@ -1,5 +1,5 @@
 const ROOT=new URL('./',self.registration.scope).pathname;
-const CACHE='teacherpro-shell-v17';
+const CACHE='teacherpro-shell-v18';
 const PREFIX='teacherpro-shell-v';
 const SHELL=['','index.html','style.css','app.js','cloud-config.js','manifest.webmanifest','icon.svg'].map(path=>ROOT+path);
 const SHELL_PATHS=new Set(SHELL);
