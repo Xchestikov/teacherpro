@@ -208,7 +208,7 @@ if(endDate&&endDate<startDate)return alert('Дата окончания не м�
 const consumed=existing?db.lessons.filter(l=>String(l.consumedSubscriptionId)===String(existing.id)).length:0;
 if(total<consumed||remaining>total-consumed)return alert('Нельзя уменьшить пакет ниже уже проведённых занятий или увеличить остаток выше неиспользованного количества.');
 const status=existing?(existing.paymentStatus||'paid'):($('#sPaymentStatus').value||'paid');
-const x={id:existing.id||'sub-'+crypto.randomUUID(),clientId:existing?.clientId??Number($('#sClient').value),name,total,remaining,price,startDate,endDate,paymentStatus:status,status:remaining>0?'active':'expired'};
+const x={id:existing?.id||'sub-'+crypto.randomUUID(),clientId:existing?.clientId??Number($('#sClient').value),name,total,remaining,price,startDate,endDate,paymentStatus:status,status:remaining>0?'active':'expired'};
 if(existing){Object.assign(existing,x);const linked=db.payments.find(p=>String(p.subscriptionId)===String(existing.id));if(linked){linked.amount=price;linked.date=startDate;linked.description='Предоплата: '+name;}}
 else{db.subscriptions.push(x);db.payments.push({id:crypto.randomUUID(),clientId:x.clientId,amount:price,date:startDate,status,type:'subscription',subscriptionId:x.id,description:'Предоплата: '+name,...(status==='paid'?{paidAt:todayISO()}:{})})}
 syncClientSubscription(x);save();closeModal();render()
