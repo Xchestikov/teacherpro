@@ -35,7 +35,7 @@
 3. В Project Settings → API возьми Project URL и публичный publishable/anon key.
 4. Заполни `cloud-config.js` значениями `RITM_SUPABASE_URL` и `RITM_SUPABASE_ANON_KEY`. **Никогда не помещай сюда service_role/secret key.**
 5. В Authentication → URL Configuration укажи основной URL приложения в Site URL и добавь его в Redirect URLs.
-6. В Authentication → Providers → Email проверь, включено ли подтверждение почты. В интерфейсе приложения доступны повторная отправка подтверждения и восстановление пароля.
+6. В Authentication → Providers → Email отключи Confirm email, чтобы сейчас регистрация по email и паролю сразу входила в приложение без ожидания письма. Код приложения поддерживает оба режима: если позднее включить Confirm email, новая регистрация покажет инструкцию подтвердить адрес и кнопку повторной отправки письма. Восстановление пароля по-прежнему использует email.
 7. Push в ветку `main` автоматически запускает деплой Vercel.
 
 ## Работа с данными
