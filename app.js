@@ -39,7 +39,7 @@ function dashboard(){
   const pending=db.payments.filter(x=>x.status!=='paid').reduce((sum,x)=>sum+(Number(x.amount)||0),0);
   const activeClients=db.clients.filter(x=>x.status!=='inactive').length;
   const expiring=db.subscriptions.filter(x=>Number(x.remaining)<=2&&x.status!=='expired').map(x=>({name:client(x.clientId)?.name||'Ученик',remaining:Number(x.remaining)||0,id:x.clientId}));
-  db.clients.filter(x=>!db.subscriptions.some(s=>String(s.clientId)===String(x.id))&&Number(x.remaining)<=2&&x.status!=='inactive').forEach(x=>expiring.push({name:x.name,remaining:Number(x.remaining)||0,id:x.id}));
+  db.clients.filter(x=>!db.subscriptions.some(s=>String(s.clientId)===String(x.id))&&(x.package||Number(x.remaining)>0)&&Number(x.remaining)<=2&&x.status!=='inactive').forEach(x=>expiring.push({name:x.name,remaining:Number(x.remaining)||0,id:x.id}));
   const attention=expiring.slice(0,5);
   const pendingPayments=db.payments.filter(p=>p.status!=='paid');
   const pastPayments=pendingPayments.filter(p=>(p.date||todayISO())<todayISO());
