@@ -683,3 +683,8 @@ body:not([data-theme="night"]) .main .dash-welcome{background:linear-gradient(11
 @media(max-width:560px){.editorial-feature-grid{gap:10px}.editorial-feature{border-radius:17px;min-height:135px;padding:14px}.feature-eyebrow{font-size:9px}.feature-number{font-size:43px}.feature-unit{font-size:17px}.feature-currency{font-size:clamp(22px,6vw,37px)}.feature-caption{font-size:10px}.birthday-widget{border-radius:16px;padding:15px;margin:12px 0}.birthday-items{grid-template-columns:1fr}.background-choices{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.background-choice-name{font-size:10px}.background-thumb{border-radius:9px}}
 @media(max-width:360px){.editorial-feature-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.editorial-feature{transition:none}}
+
+/* Warm burgundy accent palette for the editorial desk aesthetic */
+body[data-theme="wine"]{--app-bg:#f8f4ef;--app-bg2:#eee2dd;--accent:#792d37;--accent-deep:#60232d;--accent-soft:#f3e6e5;--welcome-from:#f9f2ec;--welcome-to:#fffaf4;--shade:#792d371d;--editorial-accent:#792d37}
+.theme-preview-wine{--sample-bg:#f6efeb;--sample-side:#fffaf6;--sample-paper:#fffdfb;--sample-accent:#792d37}
+body[data-theme="wine"] .editorial-income{background:repeating-linear-gradient(13deg,#00000016 0 2px,transparent 3px 26px),linear-gradient(130deg,#420c16,#79232b)}
