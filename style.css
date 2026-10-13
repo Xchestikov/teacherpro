@@ -697,3 +697,15 @@ body[data-theme="wine"] .editorial-income{background:repeating-linear-gradient(1
 
 /* Post-browser-audit: keep background preset labels legible on 320px screens */
 @media(max-width:560px){.background-choice-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.25;min-height:2.5em}}
+
+/* Session restoration: show a calm loader instead of flashing the login form. */
+body.teacherpro-loading::before{content:'Загружаем кабинет…';position:fixed;inset:0;display:grid;place-items:center;background:var(--app-bg,#f8f8fc);color:var(--ink,#292b31);font:600 15px Manrope,system-ui,sans-serif;z-index:2000}
+/* Calendar duration is taken from the lesson model rather than hard-coded to 15 minutes. */
+.calendar-grid .calendar-cell{height:84px;min-height:84px;overflow:visible;padding:0}
+.calendar-grid .calendar-hour{height:84px;min-height:84px}
+.calendar-grid .calendar-event,.calendar-grid .calendar-event[draggable]{position:absolute;left:3px;right:3px;width:calc(100% - 6px);min-height:0;max-height:none;padding:5px 7px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:4px;white-space:normal;overflow:hidden;z-index:3;border-radius:8px;box-shadow:0 2px 5px #17143217}
+.calendar-grid .calendar-event .event-time{flex:0 0 auto;font-size:10px;line-height:1.2}
+.calendar-grid .calendar-event strong{font-size:11px;line-height:1.25;white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.calendar-grid .calendar-event small{display:block;font-size:10px;line-height:1.2}
+.calendar-grid .calendar-cell:hover{z-index:6}
+@media(max-width:700px){.calendar-grid .calendar-cell,.calendar-grid .calendar-hour{height:84px;min-height:84px}.calendar-grid .calendar-event{min-height:0;max-height:none;padding:4px 5px;gap:2px}.calendar-grid .calendar-event .event-time{font-size:9px}.calendar-grid .calendar-event strong{font-size:10px}.calendar-grid .calendar-event small{display:none}}
