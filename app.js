@@ -132,7 +132,7 @@ function saveLesson(id){
     const d=new Date(l.date+'T00:00:00');d.setDate(d.getDate()+7*i*(mode==='biweekly'?2:1));
     candidates.push({...l,id:i===0?l.id:Date.now()+i*37,date:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),status:i===0?l.status:'planned',recurrence:mode});
   }
-  const conflicts=candidates.flatMap((candidate,i)=>lessonConflicts(candidate,i===0?id:null).map(existing=>({candidate,existing})));
+  const conflicts=candidates.flatMap((candidate,i)=>candidate.status==='cancelled'?[]:lessonConflicts(candidate,i===0?id:null).map(existing=>({candidate,existing})));
   if(conflicts.length){
     const unique=[...new Map(conflicts.map(x=>[String(x.existing.id),x.existing])).values()];
     const detail=unique.slice(0,5).map(x=>dateFmt(x.date)+' · '+x.time+' · '+(client(x.clientId)?.name||'Ученик')).join('\n');
