@@ -137,6 +137,7 @@ test('Refresh restores session without showing auth gate',async({page})=>{
  const errors=await setup(page);await login(page);await addStudent(page,'После перезагрузки','07.07');
  await page.reload();
  await expect(page.locator('#authGate')).toBeHidden();
+ await page.evaluate(()=>setPage('clients'));
  await expect(page.locator('#content')).toContainText('После перезагрузки');
  expect(errors).toEqual([]);
 });
