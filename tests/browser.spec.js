@@ -141,3 +141,30 @@ test('Refresh restores session without showing auth gate',async({page})=>{
  await expect(page.locator('#content')).toContainText('После перезагрузки');
  expect(errors).toEqual([]);
 });
+
+test('Subscription rate is calculated from the package total; changing lesson count keeps the total',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Ставка Авто','10.11');
+ await page.evaluate(()=>openSubscription());
+ await page.locator('#sPrice').fill('9600');
+ await expect(page.locator('#sHourlyRate')).toHaveValue('1200');
+ await page.locator('#sTotal').fill('12');
+ await expect(page.locator('#sPrice')).toHaveValue('9600');
+ await expect(page.locator('#sHourlyRate')).toHaveValue('800');
+ await expect(page.locator('#sRemain')).toHaveValue('12');
+ await page.locator('#sHourlyRate').fill('900');
+ await expect(page.locator('#sPrice')).toHaveValue('10800');
+ await page.locator('#modalBody button.primary').click();
+ const data=await page.evaluate(()=>({price:db.subscriptions[0].price,total:db.subscriptions[0].total,remaining:db.subscriptions[0].remaining,hourlyRate:db.subscriptions[0].hourlyRate}));
+ expect(data).toEqual({price:10800,total:12,remaining:12,hourlyRate:900});
+ await page.evaluate(()=>openLesson());
+ await expect(page.locator('#lHourlyRate')).toHaveValue('900');
+ expect(errors).toEqual([]);
+});
+test('Session restore never reveals login gate while a session exists',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await page.reload();
+ await expect(page.locator('#authGate')).toBeHidden();
+ await expect(page.locator('body')).not.toHaveClass(/teacherpro-loading/);
+ expect(errors).toEqual([]);
+});
