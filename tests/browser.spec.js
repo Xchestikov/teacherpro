@@ -86,3 +86,57 @@ for(const width of [320,360,390,768,1280]){
   expect(errors).toEqual([]);
  });
 }
+
+test('Calendar deletion refunds consumed subscription; hour rate persists',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Проверка удаления','10.11');
+ await page.evaluate(()=>openSubscription());
+ await page.locator('#sTotal').fill('8');
+ await page.locator('#sHourlyRate').fill('1350');
+ await page.locator('#modalBody button.primary').click();
+ await page.evaluate(()=>openLesson());
+ await page.locator('#lTime').fill('09:45');
+ await page.locator('#lDuration').selectOption('60');
+ await page.locator('#lHourlyRate').fill('1350');
+ await page.locator('#lStatus').selectOption('done');
+ await page.locator('#modalBody button.primary').click();
+ await expect.poll(()=>page.evaluate(()=>db.subscriptions[0].remaining)).toBe(7);
+ await page.evaluate(()=>openLessonByKey(db.lessons[0].id));
+ await expect(page.locator('#modalBody [data-lesson-id]')).toHaveCount(2);
+ page.once('dialog',dialog=>dialog.accept());
+ await page.locator('#modalBody button[data-lesson-id]').first().click();
+ await expect.poll(()=>page.evaluate(()=>db.lessons.length)).toBe(0);
+ await expect.poll(()=>page.evaluate(()=>db.subscriptions[0].remaining)).toBe(8);
+ expect(errors).toEqual([]);
+});
+test('Calendar event visual duration follows 30, 60, 90 minute lessons',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Проверка длительности','15.12');
+ await page.evaluate(()=>{
+  const day=todayISO();
+  db.lessons=[
+   {id:'duration30',clientId:db.clients[0].id,date:day,time:'08:00',duration:30,status:'planned',hourlyRate:1000},
+   {id:'duration60',clientId:db.clients[0].id,date:day,time:'10:00',duration:60,status:'planned',hourlyRate:1000},
+   {id:'duration90',clientId:db.clients[0].id,date:day,time:'12:00',duration:90,status:'planned',hourlyRate:1000}
+  ];
+  calendarMode='day';calendarSelectedDate=day;setPage('schedule');
+ });
+ const heights=await page.evaluate(()=>['duration30','duration60','duration90'].map(id=>{
+  const element=document.querySelector('.calendar-event[data-lesson-id="'+id+'"]');
+  const cell=element.closest('.calendar-cell');
+  return {height:element.getBoundingClientRect().height,slot:cell.getBoundingClientRect().height};
+ }));
+ expect(heights[0].height/heights[0].slot).toBeGreaterThan(.4);
+ expect(heights[0].height/heights[0].slot).toBeLessThan(.6);
+ expect(heights[1].height/heights[1].slot).toBeGreaterThan(.9);
+ expect(heights[1].height/heights[1].slot).toBeLessThan(1.05);
+ expect(heights[2].height/heights[2].slot).toBeGreaterThan(1.35);
+ expect(heights[2].height/heights[2].slot).toBeLessThan(1.55);
+ expect(errors).toEqual([]);
+});
+test('Refresh restores session without showing auth gate',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'После перезагрузки','07.07');
+ await page.reload();
+ await expect(page.locator('#authGate')).toBeHidden();
+ await expect(page.locator('#content')).toContainText('После перезагрузки');
+ expect(errors).toEqual([]);
+});
