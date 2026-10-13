@@ -26,6 +26,7 @@ async function addStudent(page,name,birthday){
  await page.getByRole('button',{name:'Добавить ученика'}).click();
  await page.evaluate(()=>setPage('clients'));
  await expect(page.locator('#content')).toContainText(name);
+ await page.evaluate(()=>syncCloud());
 }
 test('Account flows: authentication, distinct student data, logout/login, backup state',async({page})=>{
  const errors=await setup(page);
