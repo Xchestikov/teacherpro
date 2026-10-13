@@ -220,3 +220,58 @@ body{background:#f8f8fc;color:var(--ink)}
   .dash-onboarding p{margin-top:4px}
 }
 @media(prefers-reduced-motion:reduce){.dash-action,.dash-stat{transition:none}.dash-action:hover,.dash-stat:hover{transform:none}}
+
+
+/* Phases 2–4: finance controls, richer student profile, and in-app reminders */
+.client-profile-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:4px 0 12px}
+.client-profile-stat{display:flex;flex-direction:column;gap:7px;min-width:0;padding:13px;border:1px solid #eeeafc;border-radius:13px;background:#f7f5ff}
+.client-profile-stat:nth-child(2){background:#fff6ef;border-color:#f9e8dc}
+.client-profile-stat:nth-child(3){background:#eef9f3;border-color:#dcefe4}
+.client-profile-stat small,.client-profile-next small,.client-profile-sub small{font-size:10px;color:#858497}
+.client-profile-stat strong{font-size:clamp(12px,2vw,17px);overflow-wrap:anywhere;color:#38354e}
+.client-profile-next,.client-profile-sub{display:flex;align-items:center;gap:11px;padding:13px;margin:10px 0;border:1px solid #efedf6;border-radius:13px;background:#fff}
+.client-profile-next>span{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border-radius:12px;background:#eaf3ff;font-size:18px}
+.client-profile-next>div,.client-profile-sub>div{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.client-profile-next strong,.client-profile-sub strong{font-size:12px;color:#414052}
+.client-profile-next .link-btn{white-space:nowrap}
+.client-profile-sub{align-items:center;background:#f7fbf8;border-color:#e0f0e6}
+.client-profile-sub>div span{font-size:10px;line-height:1.5;color:#7e8a82}
+.client-profile-sub .secondary{white-space:nowrap;padding:9px 11px;font-size:10px}
+.client-history{margin-top:15px}
+.client-history h3{font-size:13px;margin:18px 0 8px;color:#4a4860}
+.dash-bottom-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(290px,.9fr);gap:16px;margin:0 0 28px}
+.dash-chart{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end;padding:15px 0 7px}
+.dash-chart-col{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;height:150px}
+.dash-chart-col>strong{font-size:9px;font-weight:600;color:#858197;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.dash-chart-track{display:flex;align-items:flex-end;justify-content:center;width:100%;height:95px;border-radius:9px;background:#f4f2fc;overflow:hidden}
+.dash-chart-track span{display:block;width:65%;min-height:3px;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#a99df5,#7968dc);transition:height .2s}
+.dash-chart-col small{font-size:10px;color:#8a8999;text-transform:capitalize}
+.dash-analytics-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding-top:13px;border-top:1px solid #f0eff5;font-size:10px;color:#888798}
+.dash-analytics-foot b{color:#514a7a}
+.dash-task{display:flex;align-items:center;gap:10px;width:100%;padding:12px 0;text-align:left;background:transparent;border-bottom:1px solid #f0eff5}
+.dash-task:last-of-type{border-bottom:0}
+.dash-task-icon{display:grid;place-items:center;width:37px;height:37px;flex:0 0 37px;border-radius:12px;font-size:16px;font-weight:800}
+.task-peach{background:#fff0e7;color:#b8754c}.task-lilac{background:#f0edff;color:#7464ce}.task-mint{background:#e6f7ed;color:#398c66}
+.dash-task>span:nth-child(2){display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.dash-task b{font-size:11px;color:#454357}
+.dash-task small{font-size:10px;line-height:1.4;color:#9291a0}
+.dash-task-count{display:grid;place-items:center;min-width:26px;height:26px;padding:0 6px;border-radius:9px;background:#f4f2fc;color:#6659ba;font-size:10px;font-weight:800}
+.dash-task-note{margin-top:13px;padding:11px;border-radius:11px;background:#faf8ff;color:#89869b;font-size:10px;line-height:1.5}
+@media(max-width:900px){.dash-bottom-grid{grid-template-columns:1fr}}
+@media(max-width:560px){
+  .client-profile-summary{gap:6px}
+  .client-profile-stat{padding:10px 8px;gap:6px}
+  .client-profile-stat small{font-size:9px}
+  .client-profile-stat strong{font-size:12px}
+  .client-profile-next,.client-profile-sub{gap:8px;padding:10px}
+  .client-profile-next>span{width:32px;height:32px;flex-basis:32px}
+  .client-profile-next strong,.client-profile-sub strong{font-size:11px}
+  .client-profile-next .link-btn,.client-profile-sub .secondary{font-size:9px;padding:8px}
+  .dash-bottom-grid{gap:12px}
+  .dash-chart{gap:5px;padding-top:12px}
+  .dash-chart-col{height:135px;gap:7px}
+  .dash-chart-track{height:82px}
+  .dash-chart-col>strong{font-size:8px}
+  .dash-chart-col small{font-size:9px}
+  .dash-analytics-foot{font-size:9px}
+}
