@@ -72,9 +72,9 @@ function calendarToday(){calendarSelectedDate=todayISO();weekOffset=0;schedule()
 function calendarFilter(value){calendarClientFilter=value;schedule()}
 const dateFmt=s=>new Date(s+'T00:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
 const client=id=>db.clients.find(c=>c.id==id);
-function nav(){ $$('#nav button,.sidebar-bottom button').forEach(b=>b.classList.toggle('active',b.dataset.page===page)); }
+function nav(){ $('#nav button,.sidebar-bottom button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));const mobileSettings=document.querySelector('#mobileSettingsBtn');if(mobileSettings){mobileSettings.classList.toggle('active',page==='settings');mobileSettings.setAttribute('aria-pressed',String(page==='settings'))}}
 function title(){let t={dashboard:'Главная',schedule:'Расписание',clients:'Клиенты',subscriptions:'Абонементы',payments:'Оплаты',settings:'Настройки'}[page];$('#pageTitle').textContent=t;$('#todayLabel').textContent=new Date().toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});}
-function render(){applyTheme();nav();title(); ({dashboard, schedule, clients, subscriptions, payments, settings}[page])();}
+function render(){applyTheme();nav();title();const avatar=document.querySelector('.top-actions .avatar');if(avatar)avatar.textContent=(db.settings?.name||'T').trim().charAt(0).toLocaleUpperCase()||'T';({dashboard, schedule, clients, subscriptions, payments, settings}[page])();}
 function applyTheme(){const theme=THEME_OPTIONS.some(t=>t.id===db.settings?.theme)?db.settings.theme:'lavender';document.body.dataset.theme=theme;const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==='night'?'#25263c':theme==='sage'?'#779d86':theme==='peach'?'#ce9273':theme==='ocean'?'#6e96c8':theme==='sand'?'#a59a82':'#7768dc'}
 function chooseTheme(id){if(!THEME_OPTIONS.some(t=>t.id===id))return;db.settings.theme=id;applyTheme();save();settings();const status=document.querySelector('#themeSaved');if(status)status.textContent='Оформление выбрано · сохраняется в аккаунте';}
 function dashboard(){
