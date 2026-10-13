@@ -75,3 +75,29 @@ body{background:#f8f8fc;color:var(--ink)}
 .cloud-status.ok{background:#e8f7ef;color:#2d805b}
 .cloud-status.error{background:#fff0f0;color:#a03b48}
 @media(max-width:560px){.auth-card{padding:25px 21px}.auth-card h1{font-size:24px}}
+
+/* Practical usability and mobile navigation */
+#cloudStatusGlobal{display:inline-block;margin:0;max-width:245px;padding:8px 10px;font-size:10px;white-space:normal}
+.cloud-status.pending{background:#fff5df;color:#886a26}
+.import-label{display:inline-flex;align-items:center;cursor:pointer;margin-top:8px}
+.client-history{border-top:1px solid #eeedf4;margin-top:16px;padding-top:10px}
+.client-history h3{font-size:12px;margin:14px 0 8px}
+.history-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid #f0eff5;font-size:12px}
+.empty-start{background:#fff;border:1px solid #eeedf4;border-radius:18px;padding:28px;margin-top:22px}
+.empty-start h2{font-size:21px;margin:0 0 8px}
+.empty-start p{font-size:13px;line-height:1.6;color:#858693;max-width:560px}
+.empty-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+@media(max-width:560px){
+  .sidebar{display:block;position:fixed;inset:auto 0 0;width:100%;height:auto;padding:7px 5px calc(7px + env(safe-area-inset-bottom));background:rgba(255,255,255,.97);border-right:0;border-top:1px solid #e9e7f0;z-index:100;backdrop-filter:blur(14px)}
+  .sidebar .brand,.sidebar-bottom{display:none}
+  .sidebar nav{display:flex;justify-content:space-around;gap:2px}
+  .sidebar nav button{display:flex;flex:1;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:8px 2px;border-radius:10px;font-size:17px;min-width:0}
+  .sidebar nav button span{display:block!important;font-size:9px;white-space:nowrap;font-weight:500}
+  .main{margin-left:0;padding:0 12px calc(92px + env(safe-area-inset-bottom))}
+  .topbar{height:82px}
+  .top-actions{gap:6px}
+  #cloudStatusGlobal{max-width:112px;padding:6px 7px;font-size:9px;line-height:1.25}
+  .avatar{display:none}
+  .icon-btn{width:38px;height:38px}
+  .empty-start{padding:20px}
+}
