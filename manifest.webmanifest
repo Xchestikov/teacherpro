@@ -3,14 +3,14 @@
   "short_name": "TeacherPro",
   "description": "Расписание, ученики, абонементы и оплаты",
   "lang": "ru",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f8f8fc",
   "theme_color": "#7768dc",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "./icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
