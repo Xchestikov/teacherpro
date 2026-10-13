@@ -275,3 +275,45 @@ body{background:#f8f8fc;color:var(--ink)}
   .dash-chart-col small{font-size:9px}
   .dash-analytics-foot{font-size:9px}
 }
+
+/* Authentication form and narrow-screen overflow hardening */
+.auth-gate{overflow-y:auto;overscroll-behavior:contain;align-items:safe center}
+.auth-card{max-width:100%;min-width:0;overflow-wrap:anywhere}
+.auth-card .form{min-width:0}
+.auth-card .form label{margin-bottom:-6px}
+.auth-password-wrap{position:relative;min-width:0}
+.auth-password-wrap input{width:100%;min-width:0;padding:11px 85px 11px 11px;border:1px solid #deded8;border-radius:9px;background:#fff;outline:none}
+.auth-password-wrap input:focus{border-color:#a59aef;box-shadow:0 0 0 3px #7768dc14}
+.password-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:7px 9px;border-radius:7px;background:transparent;color:#6254c7;font-size:11px}
+.auth-hint{font-size:11px;line-height:1.5;color:#7e7f8e}
+.auth-error:empty{display:none}
+.auth-tools button:disabled{opacity:.5;cursor:not-allowed}
+#app,.main,#content,.panel,.setting,.dash-panel{min-width:0}
+.topbar{gap:12px}
+.topbar>div:first-child{min-width:0}
+.top-actions{min-width:0}
+.modal-backdrop{z-index:500;padding:12px}
+.modal{max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;min-width:0}
+.modal-head{gap:10px}
+.modal-head h2{min-width:0;overflow-wrap:anywhere}
+.form input,.form select,.form textarea{min-width:0;max-width:100%}
+.dash-welcome-copy,.dash-main-grid>*,.dash-bottom-grid>*,.settings-grid>*{min-width:0}
+@media(max-width:560px){
+ .auth-gate{padding:12px;place-items:safe center}
+ .auth-card{padding:22px 17px;border-radius:19px}
+ .auth-brand{margin-bottom:21px}
+ .topbar{min-width:0}
+ .topbar h1{font-size:clamp(19px,5vw,25px);overflow-wrap:anywhere}
+ #cloudStatusGlobal{max-width:min(112px,29vw)}
+ .client-profile-next,.client-profile-sub{flex-wrap:wrap}
+ .client-profile-next>div,.client-profile-sub>div{flex-basis:calc(100% - 50px)}
+ .client-profile-sub>.secondary,.client-profile-next>.link-btn{margin-left:auto}
+}
+@media(max-width:360px){
+ .auth-gate{padding:8px}
+ .auth-card{padding:18px 13px}
+ .top-actions{gap:4px}
+ .topbar{gap:6px}
+ .sidebar nav button span{font-size:8px}
+ .dash-quick-actions{gap:6px}
+}
