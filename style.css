@@ -411,3 +411,23 @@ body{background:#f8f8fc;color:var(--ink)}
  .student-tabs button{padding:9px 10px;font-size:11px}
 }
 @media(max-width:400px){.student-profile .client-profile-stat{padding:8px 6px}.student-profile .client-profile-stat small{font-size:9px}.student-record-actions button{flex:1 1 42%}}
+
+/* Calm hourly calendar: one visible row per hour, quarter-hour precision by pointer */
+.calendar-grid .calendar-hour{height:84px;padding:10px 7px 0 0;font-size:11px;background:#fff}
+.calendar-grid .calendar-cell{height:84px;min-height:84px;position:relative;padding:0;overflow:hidden;cursor:crosshair;background-image:linear-gradient(to bottom,transparent calc(50% - .5px),#efedf6 50%,transparent calc(50% + .5px));}
+.calendar-grid .calendar-cell:hover{background-color:#fdfcff}
+.calendar-grid .calendar-cell.drop-target{outline:0;background-color:#fdfcff!important;z-index:4}
+.calendar-grid .calendar-cell:has(.calendar-event){overflow:hidden}
+.calendar-grid .calendar-event{position:absolute;left:4px;right:4px;width:calc(100% - 8px);height:24px;min-height:24px;max-height:24px;margin:0;padding:3px 7px;border-radius:6px;gap:1px;z-index:2}
+.calendar-grid .calendar-event strong{font-size:10px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.calendar-grid .calendar-event .event-time{font-size:9px;line-height:1.1;white-space:nowrap}
+.calendar-grid .calendar-event small{display:none}
+.calendar-grid .calendar-cell.drop-target:before{content:'';position:absolute;left:0;right:0;top:var(--calendar-target-offset,0%);height:25%;background:rgba(119,104,220,.14);border-top:2px solid #7768dc;pointer-events:none;z-index:3}
+.calendar-grid .calendar-cell.drop-target:after{content:attr(data-target-time);position:absolute;right:4px;top:var(--calendar-target-offset,0%);padding:3px 6px;border-radius:5px;background:#6457bf;color:white;font-size:10px;font-weight:700;pointer-events:none;z-index:4;left:auto;bottom:auto}
+.calendar-grid .calendar-cell:not(.drop-target):hover:after{content:attr(data-target-time);position:absolute;right:4px;top:var(--calendar-target-offset,0%);padding:3px 6px;border-radius:5px;background:#f0edff;color:#5d4cc0;font-size:10px;font-weight:700;pointer-events:none;z-index:3}
+.calendar-grid .calendar-day-head{height:66px}
+@media(max-width:560px){
+ .calendar-grid .calendar-hour{height:76px;font-size:10px;padding-right:3px}
+ .calendar-grid .calendar-cell{height:76px;min-height:76px}
+ .calendar-grid .calendar-event{left:2px;right:2px;width:calc(100% - 4px);padding:2px 4px;height:23px;min-height:23px;max-height:23px}
+}
