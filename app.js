@@ -44,7 +44,7 @@ async function activateCloudUser(user,preferCloud=false){if(!user?.id)return;cle
 try{const {data:identity,error:identityError}=await cloudClient.auth.getUser();if(generation!==authGeneration||cloudUser?.id!==user.id)return;if(identityError||identity?.user?.id!==user.id)throw new Error('Не удалось проверить сессию пользователя.');
 const {data,error}=await cloudClient.from('app_data').select('payload,updated_at').eq('user_id',user.id).maybeSingle();if(generation!==authGeneration||cloudUser?.id!==user.id)return;if(error)throw error;
 const cached=localStorage.getItem(userStorageKey(user.id)),meta=readSyncMeta(user.id);cloudRevision=data?.updated_at||null;
-if(!preferCloud&&meta?.dirty&&cached){db=normalizeDb(JSON.parse(cached));cloudDirty=true;if(meta.revision!==cloudRevision)cloudConflict=true;}
+if(!preferCloud&&meta?.dirty&&cached){db=normalizeDb(JSON.parse(cached));cloudDirty=true;const remoteRevision=cloudRevision;cloudRevision=meta.revision??null;if(cloudRevision!==remoteRevision)cloudConflict=true;}
 else if(data?.payload){db=normalizeDb(data.payload);cloudDirty=false;}
 else{db=normalizeDb(emptyDb());cloudDirty=false;}
 persistLocal();cloudHydrating=false;render();showAuth(false);
