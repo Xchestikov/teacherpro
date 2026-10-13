@@ -699,7 +699,10 @@ body[data-theme="wine"] .editorial-income{background:repeating-linear-gradient(1
 @media(max-width:560px){.background-choice-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.25;min-height:2.5em}}
 
 /* Session restoration: show a calm loader instead of flashing the login form. */
-body.teacherpro-loading::before{content:'Загружаем кабинет…';position:fixed;inset:0;display:grid;place-items:center;background:var(--app-bg,#f8f8fc);color:var(--ink,#292b31);font:600 15px Manrope,system-ui,sans-serif;z-index:2000}
+/* No modal, splash or auth interstitial on reload. Keep public chrome while verification runs. */
+body.teacherpro-loading #content{visibility:hidden}
+body.teacherpro-loading #app{pointer-events:none}
+body.teacherpro-loading .top-actions .avatar{visibility:hidden}
 /* Calendar duration is taken from the lesson model rather than hard-coded to 15 minutes. */
 .calendar-grid .calendar-cell{height:84px;min-height:84px;overflow:visible;padding:0}
 .calendar-grid .calendar-hour{height:84px;min-height:84px}
