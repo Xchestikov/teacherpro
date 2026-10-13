@@ -101,3 +101,7 @@ body{background:#f8f8fc;color:var(--ink)}
   .icon-btn{width:38px;height:38px}
   .empty-start{padding:20px}
 }
+
+.auth-tools{display:flex;flex-direction:column;gap:8px;margin-top:12px;text-align:center}
+.auth-tools button{background:transparent;color:#777988;font-size:11px;padding:5px}
+.auth-tools button:hover{color:#6254c7}
