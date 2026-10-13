@@ -593,3 +593,20 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  .settings-intro h2{font-size:22px}
 }
 @media(prefers-reduced-motion:reduce){body,.theme-choice{transition:none}}
+
+/* Tablet icon-only rail and final touch sizing */
+@media(min-width:561px) and (max-width:900px){
+ .sidebar nav .nav-glyph,.sidebar-bottom .nav-glyph{display:grid!important}
+ .sidebar nav button,.sidebar-bottom button{justify-content:center;padding:13px 8px}
+ .sidebar .brand{justify-content:center;padding-left:0;padding-right:0}
+}
+@media(min-width:901px){
+ .sidebar .nav-glyph{min-width:24px}
+ .sidebar button{min-height:43px}
+}
+@media(max-width:560px){
+ .settings-grid .setting,.theme-setting{border-radius:16px;padding:17px 14px}
+ .top-actions>.top-settings-btn{display:grid}
+ #nav button[data-page="settings"]{display:none!important}
+ .sidebar nav button:focus-visible{outline-offset:-2px}
+}
