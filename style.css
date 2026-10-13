@@ -610,3 +610,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  #nav button[data-page="settings"]{display:none!important}
  .sidebar nav button:focus-visible{outline-offset:-2px}
 }
+
+.top-settings-btn.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-deep)}
+@media(max-width:560px){body[data-theme="night"] .sidebar{background:var(--surface)}}
