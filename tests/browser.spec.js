@@ -24,6 +24,7 @@ async function addStudent(page,name,birthday){
  await page.locator('#fName').fill(name);
  await page.locator('#fBirthday').fill(birthday);
  await page.getByRole('button',{name:'Добавить ученика'}).click();
+ await page.evaluate(()=>setPage('clients'));
  await expect(page.locator('#content')).toContainText(name);
 }
 test('Account flows: authentication, distinct student data, logout/login, backup state',async({page})=>{
@@ -47,6 +48,7 @@ test('Real clicks: payments, calendar, birthdays and appearance selection',async
  const nextDay=new Date();nextDay.setDate(nextDay.getDate()+1);
  const bday=String(nextDay.getDate()).padStart(2,'0')+'.'+String(nextDay.getMonth()+1).padStart(2,'0');
  await addStudent(page,'Екатерина Тестовая',bday);
+ await page.evaluate(()=>setPage('dashboard'));
  await expect(page.locator('.birthday-widget')).toContainText('Екатерина Тестовая');
  await page.locator('#mobileSettingsBtn').click();
  await page.locator('.background-choice[data-background-id="marble"]').click();
