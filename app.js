@@ -80,7 +80,7 @@ function dashboard(){
   const weekEnd=weekEndDate.getFullYear()+'-'+String(weekEndDate.getMonth()+1).padStart(2,'0')+'-'+String(weekEndDate.getDate()).padStart(2,'0');
   const todayLessons=db.lessons.filter(x=>x.date===today&&x.status!=='cancelled').sort((a,b)=>a.time.localeCompare(b.time));
   const upcoming=db.lessons.filter(x=>x.date>=today&&x.date<=weekEnd&&x.status==='planned').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,6);
-  const income=db.payments.filter(x=>x.status==='paid'&&(x.date||'').startsWith(month)).reduce((sum,x)=>sum+(Number(x.amount)||0),0);
+  const income=db.payments.filter(x=>x.status==='paid'&&paymentDate(x).startsWith(month)).reduce((sum,x)=>sum+(Number(x.amount)||0),0);
   const pending=db.payments.filter(x=>x.status!=='paid').reduce((sum,x)=>sum+(Number(x.amount)||0),0);
   const activeClients=db.clients.filter(x=>x.status!=='inactive').length;
   const expiring=db.subscriptions.filter(x=>Number(x.remaining)<=2&&x.status!=='expired').map(x=>({name:client(x.clientId)?.name||'Ученик',remaining:Number(x.remaining)||0,id:x.clientId}));
@@ -91,7 +91,7 @@ function dashboard(){
   const expiringSoon=db.subscriptions.filter(x=>x.endDate&&x.endDate>=todayISO()&&x.endDate<=weekEnd&&x.status!=='expired');
   const doneMonth=db.lessons.filter(x=>(x.date||'').startsWith(month)&&x.status==='done').length;
   const cancelledMonth=db.lessons.filter(x=>(x.date||'').startsWith(month)&&x.status==='cancelled').length;
-  const monthSeries=Array.from({length:6},(_,i)=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-5+i);const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');return {key,label:d.toLocaleDateString('ru-RU',{month:'short'}).replace('.',''),value:db.payments.filter(p=>p.status==='paid'&&(p.date||'').startsWith(key)).reduce((sum,p)=>sum+(Number(p.amount)||0),0)}});
+  const monthSeries=Array.from({length:6},(_,i)=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-5+i);const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');return {key,label:d.toLocaleDateString('ru-RU',{month:'short'}).replace('.',''),value:db.payments.filter(p=>p.status==='paid'&&paymentDate(p).startsWith(key)).reduce((sum,p)=>sum+(Number(p.amount)||0),0)}});
   const maxIncome=Math.max(1,...monthSeries.map(x=>x.value));
   const lessonRow=l=>'<div class="dash-lesson"><div class="dash-lesson-date"><b>'+l.time+'</b><span>'+dateFmt(l.date)+'</span></div><div class="dash-lesson-main"><strong>'+(client(l.clientId)?.name||'Ученик')+'</strong><span>'+(l.type||'Занятие')+'</span></div><span class="dash-lesson-state '+(l.status==='done'?'done':'planned')+'">'+(l.status==='done'?'Проведено':'В плане')+'</span><button class="dash-open" onclick="openLessonByKey(this.dataset.lessonId)" data-lesson-id="'+htmlSafe(l.id)+'" aria-label="Открыть занятие">›</button></div>';
   if(!db.clients.length){
@@ -227,7 +227,7 @@ function openClient(id){
   if(!id){openModal('Новый ученик','<div class="form"><label>Имя<input id="fName" required placeholder="Имя ученика"></label><label>Телефон<input id="fPhone" type="tel" placeholder="Номер телефона"></label><label>Заметка<textarea id="fNote" placeholder="Цель, особенности, договорённости"></textarea></label><div class="form-actions"><button class="secondary" onclick="closeModal()">Отмена</button><button class="primary" onclick="saveClient(null)">Добавить ученика</button></div></div>');return}
   const c=client(id);if(!c)return;
   const lessons=db.lessons.filter(l=>String(l.clientId)===String(id)).sort((a,b)=>((b.date||'')+(b.time||'')).localeCompare((a.date||'')+(a.time||'')));
-  const pays=db.payments.filter(p=>String(p.clientId)===String(id)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const pays=db.payments.filter(p=>String(p.clientId)===String(id)).sort((a,b)=>paymentDate(b).localeCompare(paymentDate(a)));
   const paid=pays.filter(p=>p.status==='paid').reduce((sum,p)=>sum+(Number(p.amount)||0),0);
   const pending=pays.filter(p=>p.status!=='paid').reduce((sum,p)=>sum+(Number(p.amount)||0),0);
   const next=lessons.filter(l=>l.date>=todayISO()&&l.status==='planned').sort((a,b)=>((a.date||'')+(a.time||'')).localeCompare((b.date||'')+(b.time||'')))[0];
