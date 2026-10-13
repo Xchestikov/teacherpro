@@ -615,7 +615,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 @media(max-width:560px){body[data-theme="night"] .sidebar{background:var(--surface)}}
 
 /* Editorial studio: lightweight textured backgrounds and refined typography */
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap');
+/* Fonts are loaded from index.html to keep stylesheet imports standards-compliant. */
 :root{--editorial-accent:#762f35;--editorial-surface:#fffdf8;--background-texture:none}
 body{font-family:Manrope,Inter,system-ui,sans-serif}
 body[data-theme="night"]{--editorial-surface:#292e43;--editorial-accent:#d7b0b6}
