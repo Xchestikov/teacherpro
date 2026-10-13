@@ -344,3 +344,16 @@ body{background:#f8f8fc;color:var(--ink)}
  .calendar-grid-day .calendar-event{max-width:none}
 }
 @media(max-width:400px){.calendar-grid-day{grid-template-columns:45px minmax(0,1fr)}.calendar-grid-day .calendar-event{min-height:48px}}
+
+/* Quarter-hour planner: exact 00/15/30/45 targets */
+.calendar-grid .calendar-hour{height:43px;padding:8px 6px 0 0}
+.calendar-grid .calendar-cell{height:43px;padding:2px;overflow:visible}
+.calendar-quarter-label{font-size:10px;color:#aaa6bc;background:#fcfbff}
+.calendar-grid .calendar-cell:nth-child(even){border-bottom-color:#f0eff7}
+.calendar-grid .calendar-event{min-height:37px;max-height:40px;padding:3px 5px;gap:1px;margin:0;z-index:1;border-radius:6px}
+.calendar-grid .calendar-event .event-time{font-size:9px}
+.calendar-grid .calendar-event strong{font-size:10px}
+.calendar-grid .calendar-event small{display:none}
+.calendar-grid .calendar-cell.drop-target{position:relative;z-index:5}
+.calendar-grid .calendar-cell.drop-target:after{content:'Перенести сюда';position:absolute;z-index:8;left:2px;right:2px;bottom:1px;font-size:9px;color:#6759c8;background:#f5f2ff;text-align:center;pointer-events:none}
+@media(max-width:560px){.calendar-grid .calendar-event strong{font-size:9px}.calendar-grid .calendar-hour{padding-right:3px}.calendar-grid .calendar-cell{padding:1px}}
