@@ -1,8 +1,18 @@
 name: Deploy TeacherPro to VPS
 
-# Intentionally manual until the server and domain have been verified.
-# After migration, enable production deployment on approved main merges.
+# Production verified on 2026-10-14. Deploy on application changes to main; manual rollback/redeploy remains available.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'app.js'
+      - 'style.css'
+      - 'sw.js'
+      - 'cloud-config.js'
+      - 'manifest.webmanifest'
+      - 'icon.svg'
+      - '.github/workflows/deploy-vps.yml'
   workflow_dispatch:
 
 permissions:

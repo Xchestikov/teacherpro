@@ -1,0 +1,33 @@
+name: Monitor TeacherPro production
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  availability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check publicly reachable HTTPS and app files
+        shell: bash
+        run: |
+          set -euo pipefail
+          site="https://teacherpro-app.ru"
+          curl --fail --silent --show-error --location --max-time 25 "$site/" | grep -qi "TeacherPro"
+          for path in app.js style.css cloud-config.js sw.js; do
+            curl --fail --silent --show-error --max-time 25 -o /dev/null "$site/$path"
+          done
+          echo "TeacherPro public HTTPS and static files OK"
+
+      - name: Check TLS certificate expiry (14-day warning)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo | timeout 20 openssl s_client -connect teacherpro-app.ru:443 -servername teacherpro-app.ru 2>/dev/null \
+            | openssl x509 -checkend 1209600 -noout
+          echo "TLS certificate valid for at least 14 more days"
