@@ -112,7 +112,7 @@
     const from=localDateISO(monday),to=localDateISO(sunday);
     const weekly=db.lessons.filter(l=>l.date>=from&&l.date<=to&&l.status!=='cancelled');
     const minutes=weekly.reduce((sum,l)=>sum+(Number(l.duration)||60),0);
-    const next=db.lessons.filter(l=>l.status==='planned'&&(l.date+'T'+l.time)>=new Date().toISOString().slice(0,16)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))[0];
+    const next=db.lessons.filter(l=>l.status==='planned'&&(l.date+'T'+l.time)>=(todayISO()+'T'+new Date().toTimeString().slice(0,5))).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))[0];
     const stats=document.querySelector('.dash-stats');
     if(stats){
       const node=document.createElement('button');
