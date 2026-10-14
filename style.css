@@ -714,7 +714,7 @@ body.teacherpro-loading .top-actions .avatar{visibility:hidden}
 @media(max-width:700px){.calendar-grid .calendar-cell,.calendar-grid .calendar-hour{height:84px;min-height:84px}.calendar-grid .calendar-event{min-height:0;max-height:none;padding:4px 5px;gap:2px}.calendar-grid .calendar-event .event-time{font-size:9px}.calendar-grid .calendar-event strong{font-size:10px}.calendar-grid .calendar-event small{display:none}}
 
 /* Stage 1: correctly sized lesson cards and touch actions. */
-.calendar-grid .calendar-event{max-height:none!important;min-height:0!important;height:var(--lesson-duration,auto);z-index:4}
+.calendar-grid .calendar-event{max-height:none!important;min-height:0!important;z-index:4}
 .calendar-grid .calendar-cell{overflow:visible!important}
 .calendar-grid .calendar-event.touch-dragging{opacity:.65;outline:2px solid var(--accent);z-index:15;pointer-events:none}
 .calendar-grid .calendar-cell.touch-drop-target{background:var(--accent-soft)!important;outline:2px dashed var(--accent)}
