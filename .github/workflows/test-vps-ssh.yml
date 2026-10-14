@@ -1,0 +1,49 @@
+name: Test SSH connection to TeacherPro VPS
+
+# Read-only smoke check: no changes on VPS, DNS, Vercel, or Supabase.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ssh-check:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production-vps
+    timeout-minutes: 5
+    steps:
+      - name: Configure SSH host verification
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          for key in VPS_HOST VPS_USER VPS_KNOWN_HOSTS VPS_SSH_KEY; do
+            test -n "${!key}" || { echo "Missing secret: $key"; exit 1; }
+          done
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/known_hosts" "$HOME/.ssh/id_ed25519"
+          ssh-keygen -lf "$HOME/.ssh/known_hosts" > /dev/null
+          ssh-keygen -y -f "$HOME/.ssh/id_ed25519" > /dev/null
+
+      - name: Confirm remote user and release-directory access
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/id_ed25519" \
+            -o StrictHostKeyChecking=yes \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            "$VPS_USER@$VPS_HOST" \
+            'test "$(whoami)" = "teacherpro-deploy" && test -w /srv/teacherpro/releases && echo "SSH OK; release directory writable"'

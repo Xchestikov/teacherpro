@@ -1,0 +1,82 @@
+name: Deploy TeacherPro to VPS
+
+# Intentionally manual until the server and domain have been verified.
+# After migration, enable production deployment on approved main merges.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teacherpro-vps-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production-vps
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Validate required files
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in index.html app.js style.css sw.js cloud-config.js manifest.webmanifest icon.svg; do
+            test -s "$f" || { echo "Missing file: $f"; exit 1; }
+          done
+          node --check app.js
+          node --check sw.js
+
+      - name: Set up SSH from GitHub encrypted secrets
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST" && test -n "$VPS_USER"
+          test -n "$VPS_SSH_KEY" && test -n "$VPS_KNOWN_HOSTS"
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Upload versioned static release
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          RELEASE: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          SSH_OPTS="-i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
+          ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "mkdir -p /srv/teacherpro/releases/$RELEASE"
+          rsync -az --chmod=F644,D755 -e "ssh $SSH_OPTS" \
+            index.html app.js style.css sw.js cloud-config.js manifest.webmanifest icon.svg \
+            "$VPS_USER@$VPS_HOST:/srv/teacherpro/releases/$RELEASE/"
+          ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "test -s /srv/teacherpro/releases/$RELEASE/index.html && \
+             ln -sfn /srv/teacherpro/releases/$RELEASE /srv/teacherpro/current-next && \
+             mv -Tf /srv/teacherpro/current-next /srv/teacherpro/current && \
+             ls -l /srv/teacherpro/current"
+
+      - name: Check locally from VPS after switching the symlink
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_DOMAIN: ${{ secrets.VPS_DOMAIN }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_DOMAIN"
+          ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "curl --fail --silent --show-error --resolve '$VPS_DOMAIN:443:127.0.0.1' 'https://$VPS_DOMAIN/' -o /dev/null"
