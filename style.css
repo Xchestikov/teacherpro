@@ -715,12 +715,12 @@ body.teacherpro-loading .top-actions .avatar{visibility:hidden}
 
 
 /* Calendar V2 — time-proportional column layout; scoped to schedule only. */
-.calendar-grid{display:grid;grid-template-columns:55px repeat(7,minmax(112px,1fr));grid-template-rows:66px 1050px;min-width:900px}
+.calendar-grid{display:grid;grid-template-columns:55px repeat(7,minmax(112px,1fr));grid-template-rows:66px 1120px;min-width:900px}
 .calendar-grid.calendar-grid-day{grid-template-columns:55px minmax(180px,1fr);min-width:0}
 .calendar-grid .calendar-corner,.calendar-grid .calendar-day-head{grid-row:1}
 .calendar-hour-column{grid-row:2;grid-column:1;position:sticky;left:0;z-index:3;background:#fff}
 .calendar-hour-column .calendar-hour{height:70px;box-sizing:border-box}
-.calendar-grid .calendar-day-column{grid-row:2;height:1050px;min-height:1050px;box-sizing:border-box;position:relative;padding:0;isolation:isolate;
+.calendar-grid .calendar-day-column{grid-row:2;height:1120px;min-height:1120px;box-sizing:border-box;position:relative;padding:0;isolation:isolate;
 background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 69px,#efedf4 69px,#efedf4 70px),repeating-linear-gradient(to bottom,transparent 0,transparent 34px,#f6f4fa 34px,#f6f4fa 35px);background-color:white}
 .calendar-grid .calendar-day-column.is-today{background-color:#fcfbff}
 .calendar-grid .calendar-day-column.drop-target{background-color:#eeebff}
@@ -745,3 +745,5 @@ background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 6
 .dash-week-day small{color:#92919b}
 @media(max-width:800px){.dash-calendar-highlights{grid-template-columns:1fr}}
 @media(max-width:560px){.calendar-grid:not(.calendar-grid-day){min-width:850px}.calendar-grid.calendar-grid-day{min-width:0}.lesson-quick-menu button{min-height:46px}.dash-week-bars{gap:5px}}
+
+.calendar-grid .calendar-event.event-missed{background:#fff2e8;border-left-color:#d59452;color:#875b2e}
