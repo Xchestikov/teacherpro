@@ -151,6 +151,79 @@ $('#content').innerHTML='<div class="calendar-top"><div><div class="calendar-kic
 }
 function minutesToClock(value){const v=Math.max(0,Number(value)||0);return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}
 function openLessonByKey(id){const lesson=db.lessons.find(l=>String(l.id)===String(id));if(lesson)openLesson(lesson.id)}
+
+let calendarTouchState=null,calendarTouchSuppressClick=false,calendarMenuElement=null;
+function closeLessonMenu(){calendarMenuElement?.remove();calendarMenuElement=null}
+function openLessonMenu(id,origin){
+closeLessonMenu();const l=db.lessons.find(x=>String(x.id)===String(id));if(!l)return;
+const menu=document.createElement('div');menu.className='lesson-quick-menu';menu.setAttribute('role','menu');
+const head=document.createElement('strong');head.textContent=(client(l.clientId)?.name||'Ученик')+' · '+l.time;menu.append(head);
+const add=(name,action)=>{const b=document.createElement('button');b.type='button';b.textContent=name;b.onclick=e=>{e.stopPropagation();closeLessonMenu();quickLessonAction(id,action)};menu.append(b)};
+if(l.status!=='planned')add('◷ Запланирован','planned');
+if(l.status!=='done')add('✓ Проведён','done');
+add('○ Не пришёл','missed');
+add('⊘ Отменить без списания','cancelled');
+add('↗ Перенести / изменить','edit');add('✕ Удалить','delete');
+document.body.append(menu);calendarMenuElement=menu;
+const r=origin?.getBoundingClientRect()||{left:16,top:100,bottom:100},b=menu.getBoundingClientRect();
+menu.style.left=Math.max(8,Math.min(innerWidth-b.width-8,r.left))+'px';
+menu.style.top=(r.bottom+b.height+10<innerHeight?r.bottom+5:Math.max(8,r.top-b.height-5))+'px';
+const outside=e=>{if(!menu.contains(e.target)){closeLessonMenu();document.removeEventListener('pointerdown',outside,true)}};
+setTimeout(()=>document.addEventListener('pointerdown',outside,true),0);
+}
+function quickLessonAction(id,action){
+const l=db.lessons.find(x=>String(x.id)===String(id));if(!l)return;
+if(action==='edit'){openLesson(id);return}
+if(action==='delete'){deleteLesson(id);return}
+if(action==='missed'){const charged=confirm('Ученик не пришёл.\\nOK — списать занятие.\\nОтмена — оставить без списания.');action=charged?'no_show_charged':'no_show'}
+if(!['planned','done','cancelled','no_show','no_show_charged'].includes(action)||l.status===action)return;
+if(action==='done'&&!confirm('Провести занятие и списать одно занятие с абонемента?'))return;
+if(action==='no_show_charged'&&!confirm('Подтвердить списание занятия за пропуск?'))return;
+if(action==='cancelled'&&!confirm('Отменить занятие без списания?'))return;
+const before=JSON.stringify(db),oldConsumed=['done','no_show_charged'].includes(l.status),newConsumed=['done','no_show_charged'].includes(action);
+if(oldConsumed&&!newConsumed)refundLesson(l);
+l.status=action;
+if(!oldConsumed&&newConsumed&&!consumeLesson(l.clientId,l)){db=normalizeDb(JSON.parse(before));return}
+save();render();
+}
+function calendarMoveLesson(id,date,minute){
+const l=db.lessons.find(x=>String(x.id)===String(id));
+if(!l||l.status!=='planned'||!date||minute===null||minute<480||minute>=1380)return;
+const time=minutesToClock(minute);if(l.date===date&&l.time===time)return;
+if(lessonConflicts({...l,date,time},id).length&&!confirm('На новом времени уже есть занятия. Всё равно перенести?'))return;
+l.date=date;l.time=time;save();schedule();
+}
+function calendarTouchStart(event){
+if(event.pointerType!=='touch'||!event.isPrimary)return;
+const el=event.currentTarget,l=db.lessons.find(x=>String(x.id)===String(el.dataset.lessonId));if(!l||l.status!=='planned')return;
+calendarTouchCancel();
+const state={id:String(l.id),el,pointerId:event.pointerId,x:event.clientX,y:event.clientY,active:false};
+state.timer=setTimeout(()=>{state.active=true;calendarTouchSuppressClick=true;el.classList.add('touch-dragging');if(navigator.vibrate)navigator.vibrate(20)},550);
+calendarTouchState=state;
+}
+function calendarTouchMove(event){
+const t=calendarTouchState;if(!t||event.pointerId!==t.pointerId)return;
+if(!t.active){if(Math.hypot(event.clientX-t.x,event.clientY-t.y)>12)calendarTouchCancel();return}
+event.preventDefault();
+document.querySelectorAll('.calendar-day-column.drop-target').forEach(el=>el.classList.remove('drop-target'));
+const cell=document.elementFromPoint(event.clientX,event.clientY)?.closest('.calendar-day-column');
+if(cell){cell.classList.add('drop-target');calendarCellHover({currentTarget:cell,clientY:event.clientY})}
+const shell=document.querySelector('.calendar-shell');
+if(shell){const r=shell.getBoundingClientRect();if(event.clientX<r.left+34)shell.scrollLeft-=18;else if(event.clientX>r.right-34)shell.scrollLeft+=18;if(event.clientY<r.top+34)shell.scrollTop-=18;else if(event.clientY>r.bottom-34)shell.scrollTop+=18}
+}
+function calendarTouchEnd(event){
+const t=calendarTouchState;if(!t||event.pointerId!==t.pointerId)return;clearTimeout(t.timer);calendarTouchState=null;t.el.classList.remove('touch-dragging');
+document.querySelectorAll('.calendar-day-column.drop-target').forEach(el=>el.classList.remove('drop-target'));
+if(!t.active)return;event.preventDefault();calendarTouchSuppressClick=true;setTimeout(()=>calendarTouchSuppressClick=false,450);
+const cell=document.elementFromPoint(event.clientX,event.clientY)?.closest('.calendar-day-column');
+if(cell)calendarMoveLesson(t.id,cell.dataset.date,calendarSlotAtPoint(cell,event.clientY));
+}
+function calendarTouchCancel(event){
+const t=calendarTouchState;if(!t||(event&&event.pointerId!==t.pointerId))return;
+clearTimeout(t.timer);t.el.classList.remove('touch-dragging');calendarTouchState=null;
+document.querySelectorAll('.calendar-day-column.drop-target').forEach(el=>el.classList.remove('drop-target'));
+}
+
 function calendarDragStart(event){const el=event.currentTarget,lesson=db.lessons.find(l=>String(l.id)===String(el.dataset.lessonId));if(!lesson||lesson.status!=='planned'){event.preventDefault();return}event.stopPropagation();event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',String(lesson.id));el.classList.add('dragging')}
 function calendarDragEnd(){document.querySelectorAll('.calendar-cell.drop-target,.calendar-event.dragging').forEach(el=>el.classList.remove('drop-target','dragging'))}
 function calendarSlotAtPoint(cell,clientY){const start=Number(cell.dataset.minute),rect=cell.getBoundingClientRect();if(!Number.isInteger(start)||!rect.height)return null;const relative=Math.max(0,Math.min(.9999,(clientY-rect.top)/rect.height));return start+Math.floor(relative*15*4)*15}
@@ -159,7 +232,7 @@ function calendarCellLeave(event){event.currentTarget.classList.remove('drop-tar
 function calendarCellClick(event){if(event.target.closest('.calendar-event'))return;const cell=event.currentTarget,minute=calendarSlotAtPoint(cell,event.clientY);if(minute===null)return;openLesson(null,cell.dataset.date,minutesToClock(minute))}
 function calendarDragOver(event){if(!event.dataTransfer.types.includes('text/plain'))return;event.preventDefault();event.dataTransfer.dropEffect='move';event.currentTarget.classList.add('drop-target');calendarCellHover(event)}
 function calendarDragLeave(event){if(!event.currentTarget.contains(event.relatedTarget))calendarCellLeave(event)}
-function calendarDrop(event){event.preventDefault();event.stopPropagation();const cell=event.currentTarget;calendarCellLeave(event);const id=event.dataTransfer.getData('text/plain'),lesson=db.lessons.find(l=>String(l.id)===String(id));calendarDragEnd();if(!lesson||lesson.status!=='planned')return;const date=cell.dataset.date,minute=calendarSlotAtPoint(cell,event.clientY);if(!date||minute===null||minute<480||minute>=1380)return;const time=minutesToClock(minute);if(date===lesson.date&&time===lesson.time)return;const candidate={...lesson,date,time};const conflicts=lessonConflicts(candidate,lesson.id);if(conflicts.length){const detail=conflicts.slice(0,4).map(l=>htmlSafe(client(l.clientId)?.name||'Ученик')+' · '+l.time).join('\n');if(!confirm('В новом слоте уже есть занятия:\n'+detail+'\n\nВсё равно перенести?'))return}const before=lesson.date+' '+lesson.time;lesson.date=date;lesson.time=time;save();schedule();setCloudStatus('Занятие перенесено: '+before+' → '+date+' '+time,'pending')}
+function calendarDrop(event){event.preventDefault();event.stopPropagation();const cell=event.currentTarget;calendarCellLeave(event);const id=event.dataTransfer.getData('text/plain');calendarDragEnd();calendarMoveLesson(id,cell.dataset.date,calendarSlotAtPoint(cell,event.clientY))}
 
 function clients(){
 const rows=db.clients.map(c=>{
