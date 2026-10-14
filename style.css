@@ -712,3 +712,17 @@ body.teacherpro-loading .top-actions .avatar{visibility:hidden}
 .calendar-grid .calendar-event small{display:block;font-size:10px;line-height:1.2}
 .calendar-grid .calendar-cell:hover{z-index:6}
 @media(max-width:700px){.calendar-grid .calendar-cell,.calendar-grid .calendar-hour{height:84px;min-height:84px}.calendar-grid .calendar-event{min-height:0;max-height:none;padding:4px 5px;gap:2px}.calendar-grid .calendar-event .event-time{font-size:9px}.calendar-grid .calendar-event strong{font-size:10px}.calendar-grid .calendar-event small{display:none}}
+
+/* Stage 1: correctly sized lesson cards and touch actions. */
+.calendar-grid .calendar-event{max-height:none!important;min-height:0!important;z-index:4}
+.calendar-grid .calendar-cell{overflow:visible!important}
+.calendar-grid .calendar-event.touch-dragging{opacity:.65;outline:2px solid var(--accent);z-index:15;pointer-events:none}
+.calendar-grid .calendar-cell.touch-drop-target{background:var(--accent-soft)!important;outline:2px dashed var(--accent)}
+.lesson-quick-menu{position:fixed;z-index:10000;width:min(245px,calc(100vw - 16px));background:var(--surface,#fff);color:var(--ink,#292938);border:1px solid var(--line,#ddd);border-radius:14px;padding:8px;box-shadow:0 16px 45px #0002}
+.lesson-quick-menu[hidden]{display:none}
+.lesson-quick-menu button{display:block;width:100%;text-align:left;padding:12px 10px;border:0;background:transparent;color:inherit;border-radius:8px;cursor:pointer}
+.lesson-quick-menu button:hover,.lesson-quick-menu button:focus-visible{background:var(--accent-soft,#f3efff)}
+.lesson-quick-heading{font-size:12px;font-weight:700;padding:9px 10px;border-bottom:1px solid var(--line,#ddd);margin-bottom:4px}
+.next-lesson-chip{margin:0 16px 10px;font-size:12px;color:var(--accent-deep,#6759c8)}
+.weekly-workload{min-width:0}
+@media(hover:none){.calendar-grid .calendar-event{touch-action:none}}
