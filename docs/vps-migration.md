@@ -69,6 +69,7 @@ Caddy получает сертификат при доступных DNS, по�
 
 - `VPS_HOST`: публичный IPv4;
 - `VPS_USER`: `teacherpro-deploy`;
+- `VPS_DOMAIN`: приобретённый домен, **без** `https://` (например, `teacherpro.example`);
 - `VPS_SSH_KEY`: содержимое **приватного** ключа `~/.ssh/teacherpro_deploy` (вводить только в GitHub);
 - `VPS_KNOWN_HOSTS`: проверенная запись публичного SSH host key (не копировать без проверки из случайного сетевого ответа).
 
@@ -80,7 +81,7 @@ Fingerprint ключа сервера нужно сверить с fingerprint �
 
 В `.github/workflows/deploy-vps.yml` подготовлен workflow с **ручным запуском**, без автоматической публикации на каждом push. Для `workflow_dispatch` сначала надо согласованно объединить этот workflow в `main`, затем запустить его в **Actions → Deploy TeacherPro to VPS → Run workflow**.
 
-Workflow проверяет JS, загружает статические файлы в `/srv/teacherpro/releases/GIT_SHA`, переключает симлинк `current` на новую версию и проверяет локальный HTTP-ответ от Caddy. При проблемах можно вручную вернуть симлинк на предыдущий каталог релиза. Он **не меняет Supabase и не выключает Vercel**.
+Workflow проверяет JS, загружает статические файлы в `/srv/teacherpro/releases/GIT_SHA`, переключает симлинк `current` на новую версию и проверяет HTTPS-ответ Caddy для `VPS_DOMAIN` с проверкой TLS-сертификата (через `curl --resolve`). При проблемах можно вручную вернуть симлинк на предыдущий каталог релиза. Он **не меняет Supabase и не выключает Vercel**.
 
 После успешной публикации добавить новый домен в Supabase Auth (Site URL и Redirect URLs), выполнить вход/выход/восстановление пароля на новом домене, проверить календарь, оплату и мобильную версию.
 
