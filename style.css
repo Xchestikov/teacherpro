@@ -712,3 +712,38 @@ body.teacherpro-loading .top-actions .avatar{visibility:hidden}
 .calendar-grid .calendar-event small{display:block;font-size:10px;line-height:1.2}
 .calendar-grid .calendar-cell:hover{z-index:6}
 @media(max-width:700px){.calendar-grid .calendar-cell,.calendar-grid .calendar-hour{height:84px;min-height:84px}.calendar-grid .calendar-event{min-height:0;max-height:none;padding:4px 5px;gap:2px}.calendar-grid .calendar-event .event-time{font-size:9px}.calendar-grid .calendar-event strong{font-size:10px}.calendar-grid .calendar-event small{display:none}}
+
+
+/* Calendar V2 — time-proportional column layout; scoped to schedule only. */
+.calendar-grid{display:grid;grid-template-columns:55px repeat(7,minmax(112px,1fr));grid-template-rows:66px 1120px;min-width:900px}
+.calendar-grid.calendar-grid-day{grid-template-columns:55px minmax(180px,1fr);min-width:0}
+.calendar-grid .calendar-corner,.calendar-grid .calendar-day-head{grid-row:1}
+.calendar-hour-column{grid-row:2;grid-column:1;position:sticky;left:0;z-index:3;background:#fff}
+.calendar-hour-column .calendar-hour{height:70px;box-sizing:border-box}
+.calendar-grid .calendar-day-column{grid-row:2;height:1120px;min-height:1120px;box-sizing:border-box;position:relative;padding:0;isolation:isolate;
+background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 69px,#efedf4 69px,#efedf4 70px),repeating-linear-gradient(to bottom,transparent 0,transparent 34px,#f6f4fa 34px,#f6f4fa 35px);background-color:white}
+.calendar-grid .calendar-day-column.is-today{background-color:#fcfbff}
+.calendar-grid .calendar-day-column.drop-target{background-color:#eeebff}
+.calendar-grid .calendar-event{position:absolute;box-sizing:border-box;min-height:0;max-width:none;margin:0;z-index:2;cursor:pointer;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 1px 3px #20203014}
+.calendar-grid .calendar-event .event-time{white-space:nowrap}
+.calendar-grid .calendar-event.touch-dragging{opacity:.55;outline:2px dashed var(--accent);outline-offset:1px;z-index:5}
+.lesson-quick-menu{position:fixed;z-index:1200;display:flex;flex-direction:column;gap:2px;width:min(290px,calc(100vw - 16px));max-height:min(75vh,470px);overflow-y:auto;background:#fff;border:1px solid #e8e4ef;border-radius:16px;padding:8px;box-shadow:0 15px 40px #17142f33;color:#292432}
+.lesson-quick-menu strong{display:block;padding:10px 11px 12px;font-size:13px;border-bottom:1px solid #eeeaf4;margin-bottom:4px}
+.lesson-quick-menu button{appearance:none;border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:10px;color:inherit;font-size:13px;min-height:43px;cursor:pointer}
+.lesson-quick-menu button:hover,.lesson-quick-menu button:focus-visible{background:#f1effa;outline:2px solid transparent}
+.lesson-quick-menu button:last-child{color:#bc3f59}
+.dash-calendar-highlights{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+.dash-calendar-highlights .dash-panel{min-width:0}
+.dash-next-time{margin:12px 0 8px;font-size:15px;color:var(--text)}
+.dash-next-student{display:block;font-size:20px;margin:3px 0}
+.dash-next-card .primary,.dash-next-card .secondary{margin-top:12px;min-height:42px}
+.dash-week-bars{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;min-height:130px;margin:10px 0 14px}
+.dash-week-day{border:0;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;font-size:12px;color:inherit}
+.dash-week-bar-shell{display:flex;align-items:end;width:min(100%,36px);height:90px;border-radius:8px;background:#f5f2fa;overflow:hidden}
+.dash-week-bar{display:block;width:100%;background:var(--accent);opacity:.65;border-radius:7px 7px 0 0}
+.dash-week-day:hover .dash-week-bar,.dash-week-day:focus-visible .dash-week-bar{opacity:1}
+.dash-week-day small{color:#92919b}
+@media(max-width:800px){.dash-calendar-highlights{grid-template-columns:1fr}}
+@media(max-width:560px){.calendar-grid:not(.calendar-grid-day){min-width:850px}.calendar-grid.calendar-grid-day{min-width:0}.lesson-quick-menu button{min-height:46px}.dash-week-bars{gap:5px}}
+
+.calendar-grid .calendar-event.event-missed{background:#fff2e8;border-left-color:#d59452;color:#875b2e}
