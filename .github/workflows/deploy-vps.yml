@@ -73,8 +73,10 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_DOMAIN: ${{ secrets.VPS_DOMAIN }}
         run: |
           set -euo pipefail
+          test -n "$VPS_DOMAIN"
           ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=yes \
             "$VPS_USER@$VPS_HOST" \
-            "curl --fail --silent --show-error -H 'Host: localhost' http://127.0.0.1/ -o /dev/null"
+            "curl --fail --silent --show-error --resolve '$VPS_DOMAIN:443:127.0.0.1' 'https://$VPS_DOMAIN/' -o /dev/null"
