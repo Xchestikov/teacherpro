@@ -75,9 +75,9 @@ test('Native iOS touches drag a planned lesson without selecting time labels',as
    next.scrollIntoView({block:'center'});
    const r=next.getBoundingClientRect(),endX=r.left+r.width*.5,endY=r.top+r.height*.1;
    const fire=(kind,cx,cy)=> {
-     const touch=new Touch({identifier:47,target:source,clientX:cx,clientY:cy,pageX:cx+scrollX,pageY:cy+scrollY});
-     const ev=new TouchEvent(kind,{bubbles:true,cancelable:true,touches:kind==='touchend'?[]:[touch],
-       targetTouches:kind==='touchend'?[]:[touch],changedTouches:[touch]});
+     const touch={identifier:47,target:source,clientX:cx,clientY:cy,pageX:cx+scrollX,pageY:cy+scrollY};
+     const ev=new Event(kind,{bubbles:true,cancelable:true});
+     Object.defineProperties(ev,{touches:{value:kind==='touchend'?[]:[touch]},changedTouches:{value:[touch]}});
      source.dispatchEvent(ev);return ev.defaultPrevented;
    };
    // Touch start after repositioning: source may move due to scroll.
