@@ -189,20 +189,54 @@
   }
   window.tpCalendarShowCancelled=()=>includeCancelled;
 
+  function jumpTo(minute,date){
+    const shell=document.querySelector('.calendar-shell');
+    const targetMinute=Math.max(300,Math.min(1380,Math.floor(minute/60)*60));
+    const activeDay=date||((calendarMode==='day')?calendarSelectedDate:todayISO());
+    const target=shell?.querySelector('.calendar-cell[data-date="'+activeDay+'"][data-minute="'+targetMinute+'"]')||
+      shell?.querySelector('.calendar-cell[data-minute="'+targetMinute+'"]');
+    if(!shell||!target)return;
+    // Work inside the scrollable calendar itself, never scroll the full page.
+    const header=shell.querySelector('.calendar-day-head');
+    const headerHeight=header?.getBoundingClientRect().height||64;
+    const distance=target.getBoundingClientRect().top-shell.getBoundingClientRect().top;
+    shell.scrollTop=Math.max(0,shell.scrollTop+distance-headerHeight-10);
+  }
+  function lessonJump(){
+    const visible=db.lessons.filter(l=>l.status!=='deleted'&&!lessonIsCancelled(l.status)&&
+      (calendarClientFilter==='all'||String(l.clientId)===String(calendarClientFilter))&&
+      (calendarMode==='day'?l.date===calendarSelectedDate:true));
+    const today=todayISO(),now=new Date(),current=now.getHours()*60+now.getMinutes();
+    const activeDate=calendarMode==='day'?calendarSelectedDate:today;
+    const priority=visible.filter(l=>l.date===activeDate&&
+      (activeDate!==today||lessonMinutes(l.time)>=current-30))
+      .sort((a,b)=>lessonMinutes(a.time)-lessonMinutes(b.time))[0];
+    const next=priority||visible.filter(l=>l.date===activeDate)
+      .sort((a,b)=>lessonMinutes(a.time)-lessonMinutes(b.time))[0];
+    const minute=next?lessonMinutes(next.time):activeDate===today?current:540;
+    jumpTo(minute-30,next?.date||activeDate);
+  }
+  function timeJumpControls(){
+    const filters=document.querySelector('.calendar-filters');
+    if(!filters)return;
+    const bar=document.createElement('div');
+    bar.className='cv2-time-jumps';
+    const options=[['К занятиям',null],['Утро',360],['День',720],['Вечер',1080]];
+    for(const [name,minute] of options){
+      const button=document.createElement('button');button.type='button';
+      button.textContent=name;
+      button.setAttribute('aria-label',minute===null?'Перейти к ближайшему занятию':'Перейти к периоду: '+name);
+      if(minute===null)button.className='cv2-jump-lessons';
+      button.onclick=()=>minute===null?lessonJump():jumpTo(minute);
+      bar.append(button);
+    }
+    filters.after(bar);
+  }
   function timeScroll(){
-    const now=new Date(),today=todayISO();
-    const weekday=(now.getDay()+6)%7;
-    const key=calendarMode+'|'+(calendarMode==='day'?calendarSelectedDate:weekOffset)+'|'+today;
+    const key=calendarMode+'|'+(calendarMode==='day'?calendarSelectedDate:weekOffset)+'|'+todayISO();
     if(lastScrollKey===key)return;
     lastScrollKey=key;
-    if(calendarMode==='day'&&calendarSelectedDate!==today)return;
-    if(calendarMode!=='day'&&weekOffset!==0)return;
-    const targetMin=clamp(now.getHours()*60-60,300,1380);
-    const cell=document.querySelector('.calendar-cell[data-date="'+today+'"][data-minute="'+(Math.floor(targetMin/60)*60)+'"]');
-    if(!cell)return;
-    requestAnimationFrame(()=>{
-      if(document.querySelector('.calendar-cell[data-date="'+today+'"]'))cell.scrollIntoView({behavior:'instant',block:'center',inline:'nearest'});
-    });
+    requestAnimationFrame(()=>{if(page==='schedule')lessonJump();});
   }
 
   const nativeSchedule=schedule;
@@ -210,6 +244,7 @@
     nativeSchedule();
     if(page!=='schedule')return;
     filterControl();
+    timeJumpControls();
     const grid=document.querySelector('.calendar-grid');
     if(grid){overlapLayout();resizeHandles();timeScroll();}
   };
