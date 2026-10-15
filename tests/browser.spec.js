@@ -711,7 +711,7 @@ test('Mobile V2 students: compact cards, searchable list and three-dot actions',
  await page.setViewportSize({width:390,height:844});
  await page.evaluate(()=>setPage('clients'));
  await expect(page.locator('.tp-mobile-clients .tp-mobile-record:visible')).toHaveCount(2);
- await expect(page.locator('#clientRows').closest('.table-wrap')).toBeHidden();
+ await expect(page.locator('#content .tp-mobile-original-table')).toBeHidden();
  await page.locator('#clientSearch').fill('Карточка один');
  await expect(page.locator('.tp-mobile-clients .tp-mobile-record:visible')).toHaveCount(1);
  await page.locator('#clientSearch').fill('');
@@ -755,7 +755,7 @@ test('Mobile V2 payments: all four KPI remain, filters sync cards, actions reuse
    setPage('payments');
  });
  await expect(page.locator('.finance-cards .stat')).toHaveCount(4);
- await expect(page.locator('#paymentRows').closest('.table-wrap')).toBeHidden();
+ await expect(page.locator('#content .tp-mobile-original-table')).toBeHidden();
  await expect(page.locator('.tp-mobile-payments .tp-mobile-record:visible')).toHaveCount(2);
  await page.locator('#paymentFilter').selectOption('pending');
  await expect(page.locator('.tp-mobile-payments .tp-mobile-record:visible')).toHaveCount(1);
@@ -766,7 +766,7 @@ test('Mobile V2 payments: all four KPI remain, filters sync cards, actions reuse
  await expect(page.locator('#modalTitle')).toContainText('Редактировать');
  await page.locator('#modalClose').click();
  await page.setViewportSize({width:1280,height:900});
- await expect(page.locator('#paymentRows').closest('.table-wrap')).toBeVisible();
+ await expect(page.locator('#content .tp-mobile-original-table')).toBeVisible();
  await expect(page.locator('.tp-mobile-payments')).toBeHidden();
  expect(errors).toEqual([]);
 });
