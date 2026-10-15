@@ -58,3 +58,34 @@ body.soft-editorial .calendar-grid .calendar-event{z-index:6}
 body.soft-editorial .calendar-grid .calendar-event:hover,
 body.soft-editorial .calendar-grid .calendar-event:focus-within{z-index:8}
 body.soft-editorial .calendar-grid .calendar-cell.drop-target{outline:2px dashed #c96f59;outline-offset:-2px}
+
+
+/* Keep day/date headings visible while vertically scrolling the schedule.
+   The schedule owns its scroll area; the page header and bottom navigation
+   keep their existing layout. Both week and single-day headers stick. */
+body.soft-editorial .calendar-shell{
+  max-height:min(76dvh,800px);
+  overflow:auto;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+}
+body.soft-editorial .calendar-shell .calendar-grid > .calendar-day-head{
+  position:sticky;
+  top:0;
+  z-index:60;
+  background:#fffaf6;
+  box-shadow:0 2px 5px #5335271c;
+}
+body.soft-editorial .calendar-shell .calendar-grid > .calendar-corner{
+  position:sticky;
+  top:0;
+  left:0;
+  z-index:70;
+  background:#fffaf6;
+}
+body.soft-editorial .calendar-shell .calendar-grid > .calendar-day-head.is-today{
+  background:linear-gradient(#fbded4,#fff7f1)!important;
+}
+@media(max-width:720px){
+  body.soft-editorial .calendar-shell{max-height:calc(100dvh - 190px)}
+}
