@@ -29,7 +29,7 @@ function policyForm(c){
  group.innerHTML='<h3>Условия занятий</h3>'+
  '<label>Способ оплаты<select id="fBillingMode"><option value="subscription">По абонементу</option>'+
  '<option value="per_lesson">По факту занятия</option></select></label>'+
- '<label>Стоимость часа, ₽<input id="fLessonRate" type="number" min="0" step="0.01" value="'+Number(c?.hourlyRate||0)+'"></label>'+
+ '<label>Стоимость часа, ₽<input id="fLessonRate" type="number" min="0" step="0.01" value="'+(Number(c?.hourlyRate)>0?Number(c.hourlyRate):'')+'" placeholder="Укажи цену часа"></label>'+
  '<label>Обычная длительность<select id="fLessonDuration">'+[30,45,60,90,120].map(n=>'<option value="'+n+'">'+n+' минут</option>').join('')+'</select></label>'+
  '<p class="muted">Ставка переносится в новый урок. Старые проведённые занятия и оплаты не меняются.</p>';
  const actions=form.querySelector('.form-actions');
@@ -99,7 +99,7 @@ openLesson=function(id,date,time){
    const option=document.createElement('option');option.value=n;option.textContent=n+' минут';select.append(option);
  }
  select.value=String(n);
- document.querySelector('#lHourlyRate').value=String(suggestedLessonRate(student.id,date||todayISO()));
+ document.querySelector('#lHourlyRate').value=String(suggestedLessonRate(student.id,date||todayISO())||'');
  updateLessonRatePreview();
 };
 })();
