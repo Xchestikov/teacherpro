@@ -1,0 +1,8 @@
+/* Finance 2.0 extends the existing four-card payments dashboard. */
+body.soft-editorial .tp-fact-debt{border:1px solid #ecdace;background:#fffaf6;padding:16px 18px;border-radius:17px;margin:10px 0 16px}
+body.soft-editorial .tp-fact-debt h3{font-family:'Playfair Display',Georgia,serif;font-size:18px;margin:0 0 7px;color:#4b332d}
+body.soft-editorial .tp-fact-debt p{font-size:11px;margin:0 0 12px}
+body.soft-editorial .tp-fact-debt-row{display:flex;align-items:center;gap:12px;border-top:1px solid #efdfd5;padding:10px 0;font-size:12px;flex-wrap:wrap}
+body.soft-editorial .tp-fact-debt-row span:first-child{font-weight:800;min-width:120px}
+body.soft-editorial .tp-fact-debt-row strong{margin-left:auto;color:#a55444}
+@media(max-width:700px){body.soft-editorial .tp-fact-debt-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}body.soft-editorial .tp-fact-debt-row strong{margin:0}}
