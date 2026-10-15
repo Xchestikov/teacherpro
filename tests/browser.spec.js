@@ -369,6 +369,7 @@ test('Calendar V2 assigns side-by-side lanes to lessons starting in different ho
    return {a:a.dataset.laneCount,b:b.dataset.laneCount,c:c.dataset.laneCount,separated:ar.right<br.left+8||br.right<ar.left+8};
  });
  expect(layout).toEqual({a:'2',b:'2',c:'1',separated:true});
+ await page.screenshot({path:'test-results/calendar-v2-overlapping-hours.png',fullPage:true});
  expect(errors).toEqual([]);
 });
 
