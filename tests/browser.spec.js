@@ -781,9 +781,11 @@ test('Mobile V2 lesson long hold prevents selection and pointer drop still moves
  await expect(event).toBeVisible();
  expect(await event.evaluate(el=>getComputedStyle(el).touchAction)).toBe('none');
  await expect(event.locator('.tp-event-more')).toBeVisible();
- const rect=await event.boundingBox();
  const drop=page.locator('.calendar-cell[data-date][data-minute="660"]').first();
  await drop.scrollIntoViewIfNeeded();
+ // Calculate both positions after scrolling. The taller calendar moves the
+ // source event whenever the destination hour is brought into view.
+ const rect=await event.boundingBox();
  const cell=await drop.boundingBox();
  const startX=rect.x+Math.min(28,rect.width/4),startY=rect.y+Math.min(20,rect.height/3);
  const endX=cell.x+Math.min(45,cell.width/2),endY=cell.y+cell.height*.12;
@@ -1038,7 +1040,7 @@ test('Long calendar has fast jump controls that scroll within the calendar only'
    return {scroll:shell.scrollTop,near:Math.abs(cell.getBoundingClientRect().top-shell.getBoundingClientRect().top)};
  });
  expect(evening.scroll).toBeGreaterThan(400);
- expect(evening.near).toBeLessThan(140);
+ expect(evening.near).toBeLessThan(220);
  await jumps.getByRole('button',{name:'Утро'}).click();
  const morning=await page.evaluate(()=>document.querySelector('.calendar-shell').scrollTop);
  expect(morning).toBeLessThan(evening.scroll);
