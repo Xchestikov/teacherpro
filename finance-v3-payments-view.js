@@ -14,6 +14,19 @@ payments=function(){
    const remove=actions.querySelectorAll('button')[2];
    if(remove)remove.textContent='Отменить запись';
    if(p.financeV3Lesson)row.children[3].textContent='Оплата занятий';
+   if(p.subscriptionId){
+     const sub=db.subscriptions.find(x=>String(x.id)===String(p.subscriptionId));
+     if(sub){
+       const total=Number(sub.total)||0,remaining=Math.max(0,Number(sub.remaining)||0);
+       const scheduled=db.lessons.filter(l=>String(l.clientId)===String(sub.clientId)&&
+         l.status==='planned'&&l.date>=(sub.startDate||'0000-01-01')&&
+         (!sub.endDate||l.date<=sub.endDate)).length;
+       const info=document.createElement('div');info.className='muted tp-subscription-progress';
+       info.textContent='Всего '+total+' · осталось '+remaining+
+         (scheduled?' · запланировано '+scheduled:'');
+       row.children[3].append(info);
+     }
+   }
  });
  let debt=0,late=0,credit=0,overdueCount=0,accounts=0;
  for(const c of db.clients.filter(x=>x.billingMode==='per_lesson')){

@@ -50,7 +50,7 @@
     const action=(icon,label,handler)=>'<button class="se-action" type="button" onclick="'+handler+'"><span aria-hidden="true">'+icon+'</span><span>'+label+'</span></button>';
     const stats=(icon,count,label)=>'<div class="se-stat"><span aria-hidden="true">'+icon+'</span><div><strong>'+safe(count)+'</strong><div class="se-row-sub">'+label+'</div></div></div>';
     $('#content').innerHTML='<div class="se-dashboard">'+
-      '<header class="se-greeting"><h2>Добрый день, '+safe(greeting)+'! ☀️</h2><p class="se-subtitle">Всё важное для занятий — в одном уютном месте.</p></header>'+
+      '<header class="se-greeting"><h2>'+({night:'Доброй ночи',morning:'Доброе утро',day:'Добрый день',evening:'Добрый вечер'})[(h=>h>=5&&h<11?'morning':h>=11&&h<17?'day':h>=17&&h<23?'evening':'night')(new Date().getHours())]+', '+safe(greeting)+'! '+((h=>h>=5&&h<11?'🌤️':h>=11&&h<17?'☀️':h>=17&&h<23?'🌇':'🌙')(new Date().getHours()))+'</h2><p class="se-subtitle">Всё важное для занятий — в одном уютном месте.</p></header>'+
       '<div class="se-overview">'+
       '<section class="se-card se-hero" aria-label="Ближайшее занятие"><div class="se-card-head"><h3>Ближайшее занятие</h3>'+
       (next?'<span class="se-soon">◷ '+safe(shortDate(next.date))+'</span>':'')+'</div>'+nextCard+'</section>'+

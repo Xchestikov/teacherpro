@@ -11,18 +11,15 @@ saveLesson=function(id){
  const amount=Number(document.querySelector('#lHourlyRate')?.value);
  const duration=Number(document.querySelector('#lDuration')?.value);
  const date=document.querySelector('#lDate')?.value,time=document.querySelector('#lTime')?.value;
- if(!selected||!date||!time)return alert('Укажи ученика, дату и время.');
+ if(!selected||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^(?:0[5-9]|1\d|2[0-3]):[0-5]\d$/.test(time)||lessonMinutes(time)+duration>1440)return alert('Проверь дату и время занятия. Диапазон: с 05:00 до 00:00.');
  if(!Number.isFinite(amount)||amount<0||amount>100000000||
     Math.abs(amount*100-Math.round(amount*100))>1e-6)return alert('Укажи корректную ставку.');
  if(!Number.isInteger(duration)||duration<15||duration>240)return alert('Проверь длительность занятия.');
  const l={id:id||crypto.randomUUID(),clientId:Number(selected.id),date,time,
    type:document.querySelector('#lType').value,duration,hourlyRate:amount,
    status:document.querySelector('#lStatus').value,billingMode:'per_lesson'};
- if(previous&&l.status!==previous.status&&
-    (l.status==='no_show_charged'||l.status==='cancelled_charged')&&
-    !confirm('Пропуск со списанием: начислить стоимость занятия?'))return;
  const recurrence=previous?'none':(document.querySelector('#lRecurrence')?.value||'none');
- const weeks=previous?1:Math.min(52,Math.max(1,Number(document.querySelector('#lWeeks')?.value)||4));
+ const weeks=previous?1:(recurrence==='biweekly'?26:52);
  const events=[];
  for(let i=0;i<(recurrence==='none'?1:weeks);i++){
    const day=new Date(date+'T12:00:00');
@@ -35,7 +32,7 @@ saveLesson=function(id){
  if(conflicts.length){
    const examples=conflicts.slice(0,4).map(x=>(client(x.existing.clientId)?.name||'Ученик')+
      ' · '+x.existing.date+' '+x.existing.time).join('\n');
-   if(!confirm('Есть пересечения с другими уроками:\n'+examples+'\n\nВсё равно продолжить?'))return;
+   return alert('Занятие пересекается с другим в расписании: '+examples);
  }
  if(previous){
    // Never replace historical subscription debits by changing a billing mode.

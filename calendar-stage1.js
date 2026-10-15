@@ -3,7 +3,7 @@
   'use strict';
   let holdTimer=null, gesture=null, suppressClickUntil=0, quarterGuide=null;
   const snap15=minute=>Math.round(minute/15)*15;
-  const safeRange=minute=>minute>=480&&minute<1380;
+  const safeRange=minute=>minute>=300&&minute<1440;
   const menu=document.createElement('div');
   menu.className='lesson-quick-menu';
   menu.hidden=true;
@@ -37,13 +37,12 @@
   }
   function moveLesson(lesson,cell,clientY){
     const minute=calendarSlotAtPoint(cell,clientY);
-    if(!lesson||lesson.status!=='planned'||minute===null||minute<480||minute>=1380)return;
+    if(!lesson||lesson.status!=='planned'||minute===null||minute<300||minute>=1440)return;
     const date=cell.dataset.date,time=minutesToClock(minute);
     if(typeof window.tpCalendarMove==='function'){window.tpCalendarMove(lesson,date,time);return;}
     if(date===lesson.date&&time===lesson.time)return;
     const conflicts=lessonConflicts({...lesson,date,time},lesson.id);
-    if(conflicts.length&&!confirm('В выбранное время уже запланировано занятие. Всё равно перенести?'))return;
-    if(!confirm('Перенести занятие на '+date+' в '+time+'?'))return;
+    if(conflicts.length)return alert('Это время уже занято. Выбери другое.');
     lesson.date=date;lesson.time=time;save();render();
   }
   window.teacherproOpenQuickMenu=openMenu;

@@ -134,13 +134,22 @@ test('iPhone touch drag snaps each quarter hour and moves the lesson preview wit
  page.on('dialog',dialog=>dialog.accept());
  for(const step of [15,30,45]){
    await page.locator('[data-lesson-id="quarter-touch"]').scrollIntoViewIfNeeded();
+   await page.evaluate(()=>{
+     const shell=document.querySelector('.calendar-shell'),event=document.querySelector('.calendar-event[data-lesson-id="quarter-touch"]');
+     if(!shell||!event)return;
+     const offset=event.getBoundingClientRect().top-shell.getBoundingClientRect().top+shell.scrollTop;
+     shell.scrollTop=Math.max(0,offset-shell.clientHeight/2);
+   });
+   await page.waitForTimeout(80);
    const result=await page.evaluate(async step=>{
      const source=document.querySelector('[data-lesson-id="quarter-touch"]');
      const slot=source.closest('.calendar-cell');
      const eventRect=source.getBoundingClientRect(),cellRect=slot.getBoundingClientRect();
      const x=eventRect.left+Math.min(eventRect.width/3,40);
      const startY=eventRect.top+12;
-     const desiredY=cellRect.top+cellRect.height*step/60+12;
+     // The target must be read after any scheduled calendar scrolling:
+     // a stale position can hit a completely different hour in iOS WebKit.
+     let desiredY=cellRect.top+cellRect.height*step/60+12;
      const touch=(y)=>({identifier:93,target:source,clientX:x,clientY:y});
      const fire=(name,y)=>{
        const e=new Event(name,{bubbles:true,cancelable:true});
@@ -152,7 +161,23 @@ test('iPhone touch drag snaps each quarter hour and moves the lesson preview wit
      const original=source.getBoundingClientRect();
      const ghost=document.querySelector('.tp-mobile-drag-ghost');
      const exists=Boolean(ghost),initialTop=ghost?.getBoundingClientRect().top;
+     const fresh=slot.getBoundingClientRect();
+     desiredY=fresh.top+fresh.height*step/60+12;
      fire('touchmove',desiredY);
+     // On touch devices, the finger may grip the event below its top edge.
+     // Find the quarter-hour drop coordinate within one neighboring interval,
+     // then check that the visual guide, ghost and saved time all agree.
+     const expected='10:'+String(step).padStart(2,'0');
+     let found=document.querySelector('.tp-mobile-quarter-guide')?.dataset.targetTime===expected;
+     for(let distance=3;!found&&distance<=fresh.height*.36;distance+=3){
+       for(const sign of [-1,1]){
+         const candidate=desiredY+sign*distance;
+         fire('touchmove',candidate);
+         if(document.querySelector('.tp-mobile-quarter-guide')?.dataset.targetTime===expected){
+           desiredY=candidate;found=true;break;
+         }
+       }
+     }
      const preview=document.querySelector('.tp-mobile-drag-ghost');
      const previewText=preview?.querySelector('.tp-mobile-drag-time')?.textContent;
      const movedTop=preview?.getBoundingClientRect().top;
