@@ -463,3 +463,97 @@ test('Calendar V2 pointer resize grip extends event height in 15-minute steps',a
  expect(await page.evaluate(()=>db.lessons[0].duration)).toBe(60);
  expect(errors).toEqual([]);
 });
+
+
+test('Partial subscription payments split a single invoice without double-counting debt',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Финансы Тест','12.09');
+ await page.evaluate(()=>openSubscription());
+ await page.locator('#sPrice').fill('8000');
+ await page.locator('#sPaymentStatus').selectOption('pending');
+ await page.locator('#modalBody button.primary').click();
+ const subId=await page.evaluate(()=>db.subscriptions[0].id);
+ await page.evaluate(()=>setPage('subscriptions'));
+ await expect(page.locator('.tp-finance-balance')).toContainText('8 000');
+ page.on('dialog',dialog=>dialog.accept());
+ await page.evaluate(id=>tpSubscriptionPayment(id),subId);
+ await page.locator('#tpPartialAmount').fill('2500.25');
+ await page.locator('#modalBody button.primary').click();
+ let state=await page.evaluate(()=>({
+   status:db.subscriptions[0].paymentStatus,
+   invoice:db.payments.filter(p=>p.status==='pending').map(p=>p.amount),
+   received:db.payments.filter(p=>p.status==='paid').map(p=>p.amount)
+ }));
+ expect(state).toEqual({status:'pending',invoice:[5499.75],received:[2500.25]});
+ await page.evaluate(()=>openSubscription(db.subscriptions[0].id));
+ await page.locator('#sPrice').fill('9000');
+ await page.locator('#modalBody button.primary').click();
+ expect(await page.evaluate(()=>db.subscriptions[0].price)).toBe(8000);
+ await page.locator('#modalClose').click();
+ await page.evaluate(id=>tpSubscriptionPayment(id),subId);
+ await page.locator('#tpPartialAmount').fill('5499.75');
+ await page.locator('#modalBody button.primary').click();
+ state=await page.evaluate(()=>({
+   status:db.subscriptions[0].paymentStatus,
+   invoices:db.payments.filter(p=>p.status==='pending').length,
+   total:db.payments.filter(p=>p.status==='paid').reduce((n,p)=>n+Math.round(p.amount*100),0)/100
+ }));
+ expect(state).toEqual({status:'paid',invoices:0,total:8000});
+ await page.evaluate(()=>setPage('payments'));
+ await expect(page.locator('#paymentRows tr')).toHaveCount(2);
+ const paymentId=await page.evaluate(()=>db.payments[0].id);
+ await page.evaluate(id=>togglePaymentStatus(id),paymentId);
+ expect(await page.evaluate(()=>db.payments[0].status)).toBe('paid');
+ expect(errors).toEqual([]);
+});
+
+test('Subscription debit and refund history reflects only successful transitions',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'История Абонемента','12.09');
+ await page.evaluate(()=>{
+   const id=db.clients[0].id;
+   db.subscriptions=[{id:'history-sub',clientId:id,name:'8 занятий',total:8,remaining:8,price:8000,paymentStatus:'paid',status:'active'}];
+   db.lessons=[{id:'history-lesson',clientId:id,date:todayISO(),time:'13:00',duration:60,status:'planned'}];
+   setPage('schedule');
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ await page.evaluate(()=>tpUpdateLessonStatus('history-lesson','done'));
+ expect(await page.evaluate(()=>db.subscriptions[0].remaining)).toBe(7);
+ expect(await page.evaluate(()=>db.subscriptionHistory.map(x=>x.action))).toEqual(['debit']);
+ await page.evaluate(()=>tpUpdateLessonStatus('history-lesson','cancelled'));
+ expect(await page.evaluate(()=>db.subscriptions[0].remaining)).toBe(8);
+ expect(await page.evaluate(()=>db.subscriptionHistory.map(x=>x.action))).toEqual(['debit','refund']);
+ await page.evaluate(()=>tpUpdateLessonStatus('history-lesson','cancelled'));
+ expect(await page.evaluate(()=>db.subscriptionHistory.length)).toBe(2);
+ await page.evaluate(()=>tpSubscriptionHistory('history-sub'));
+ await expect(page.locator('#modalBody')).toContainText('Списано занятие');
+ await expect(page.locator('#modalBody')).toContainText('Возврат занятия');
+ expect(errors).toEqual([]);
+});
+
+test('Renewal alert appears only when the paid subscription is running low',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Продление Тест','12.09');
+ await page.evaluate(()=>{
+   db.subscriptions=[{id:'soon-renew',clientId:db.clients[0].id,name:'8 занятий',total:8,remaining:2,price:8000,paymentStatus:'paid',startDate:todayISO(),status:'active'}];
+   setPage('dashboard');
+ });
+ await expect(page.locator('.tp-home-attention')).toContainText('Осталось 2');
+ await page.locator('.tp-home-attention button').click();
+ await expect(page.locator('#modalTitle')).toContainText('Продление');
+ await expect(page.locator('#sTotal')).toHaveValue('8');
+ await page.locator('#modalClose').click();
+ await page.evaluate(()=>setPage('subscriptions'));
+ await expect(page.locator('.tp-finance-attention')).toContainText('Скоро понадобится продление');
+ expect(errors).toEqual([]);
+});
+
+test('Financial history survives account reload without recreating payments',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Финансы Сохранение','12.09');
+ await page.evaluate(()=>{
+   db.subscriptionHistory=[{id:'history-preserved',action:'refund',at:new Date().toISOString(),subscriptionId:'stored',lessonId:'lesson',clientId:db.clients[0].id}];
+   save();
+ });
+ await page.evaluate(()=>syncCloud());
+ await page.reload();
+ await expect.poll(()=>page.evaluate(()=>db.subscriptionHistory?.length)).toBe(1);
+ expect(errors).toEqual([]);
+});

@@ -1,0 +1,37 @@
+/* Subscription and finance stage: a calm ledger in Soft Editorial */
+body.soft-editorial .tp-finance-attention{margin:12px 0 18px;padding:14px 17px;background:linear-gradient(115deg,#fff6ee,#fffdfb);
+ border-radius:16px;border:1px solid #ecd9c9;box-shadow:0 5px 17px #6d443516}
+body.soft-editorial .tp-finance-attention h3,body.soft-editorial .tp-home-attention h3{
+ font-family:'Playfair Display',Georgia,serif;font-size:18px;margin:0 0 12px;color:#4b332d}
+body.soft-editorial .tp-finance-alert{background:#fffdfa;border:1px solid #eee3d9;border-radius:11px;padding:10px 12px;
+ display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;color:#675047;font-size:12px;margin-top:6px;cursor:pointer}
+body.soft-editorial .tp-finance-alert:hover{background:#fdefe7}
+body.soft-editorial .tp-finance-alert strong{font-size:11px;color:#b85b47;white-space:nowrap}
+body.soft-editorial .tp-finance-balance strong{display:block;white-space:nowrap;font-size:12px}
+body.soft-editorial .tp-finance-balance small{display:block;margin-top:4px;white-space:normal;font-size:10px;color:#798a74}
+body.soft-editorial .tp-finance-balance small.tp-finance-due{color:#c3684d;font-weight:800}
+body.soft-editorial .tp-history{display:grid;gap:9px}
+body.soft-editorial .tp-history h4{font-family:'Playfair Display',Georgia,serif;font-size:17px;color:#4b332d;margin:14px 0 3px}
+body.soft-editorial .tp-history p{margin:2px 0 8px;font-size:12px;color:#746057}
+body.soft-editorial .tp-history-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid #f0e6df}
+body.soft-editorial .tp-history-symbol{display:grid;place-items:center;border-radius:50%;width:36px;height:36px;
+ flex:0 0 36px;background:#eee4db;color:#76513d;font-size:13px;font-weight:800}
+body.soft-editorial .tp-history-symbol.debit{background:#f8dfda;color:#af5544}
+body.soft-editorial .tp-history-symbol.refund{background:#e4efde;color:#548267}
+body.soft-editorial .tp-history-symbol.paid{background:#e7f0e5;color:#547a61}
+body.soft-editorial .tp-history-row div:nth-child(2){min-width:0;flex:1}
+body.soft-editorial .tp-history-row strong{display:block;font-size:12px;color:#4b332d}
+body.soft-editorial .tp-history-row small{display:block;margin-top:4px;font-size:10px;color:#96827a}
+body.soft-editorial .tp-history-remaining{font-size:11px;color:#81695c;text-align:right}
+body.soft-editorial .tp-home-attention{margin-top:14px}
+body.soft-editorial .tp-home-attention button{display:flex;justify-content:space-between;gap:12px;width:100%;
+  background:#fff9f4;color:#4e372e;border:1px solid #f2dfd1;border-radius:12px;padding:12px;
+  text-align:left;cursor:pointer;margin-top:8px;font-size:12px}
+body.soft-editorial .tp-home-attention button strong{color:#b85b47;font-size:11px}
+body.soft-editorial .finance-actions .tp-sub-pay{color:#b45e49;font-weight:800}
+@media(max-width:720px){
+ body.soft-editorial .tp-finance-alert{flex-direction:column;align-items:flex-start;gap:4px}
+ body.soft-editorial .tp-finance-alert strong{white-space:normal}
+ body.soft-editorial .tp-finance-attention{padding:12px}
+ body.soft-editorial .tp-home-attention button{flex-direction:column}
+}
