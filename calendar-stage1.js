@@ -37,6 +37,7 @@
     if(!confirm('Перенести занятие на '+date+' в '+time+'?'))return;
     lesson.date=date;lesson.time=time;save();render();
   }
+  window.teacherproOpenQuickMenu=openMenu;
   menu.addEventListener('click',e=>{
     const button=e.target.closest('[data-action]');if(!button)return;
     const id=menu.dataset.lessonId,action=button.dataset.action;
