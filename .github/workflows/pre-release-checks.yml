@@ -23,6 +23,14 @@ jobs:
           node --check teacherpro-polish.js
           node --check calendar-v2.js
           node --check finance-v2.js
+          node --check finance-v3-core.js
+          node --check finance-v3-lessons.js
+          node --check finance-v3-ledger.js
+          node --check finance-v3-edit.js
+          node --check finance-v3-void.js
+          node --check finance-v3-new-payment.js
+          node --check finance-v3-edit-form.js
+          node --check finance-v3-payments-view.js
           node --check sw.js
           node --check tests/browser.spec.js
           node --check tests/check-release-assets.js
@@ -51,7 +59,7 @@ jobs:
           cat /tmp/teacherpro-test-http.log
           exit 1
       - name: Browser scenarios with mocked Supabase and synthetic students only
-        run: npx playwright test tests/browser.spec.js --reporter=list --workers=1
+        run: npx playwright test tests --reporter=list --workers=1
       - name: Save screenshots for review
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,0 +1,41 @@
+const {test,expect}=require('@playwright/test');
+const fs=require('node:fs'),path=require('node:path');
+const mock=fs.readFileSync(path.join(__dirname,'mock-supabase.js'),'utf8');
+test.use({baseURL:'http://127.0.0.1:4173',serviceWorkers:'block'});
+test('Mistaken receipt can be cancelled; paid subscription becomes outstanding without changing lessons',async({page})=>{
+ await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
+ await page.route('https://fonts.googleapis.com/**',r=>r.abort());
+ await page.route('https://fonts.gstatic.com/**',r=>r.abort());
+ await page.addInitScript({content:mock});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
+ await page.locator('#authPassword').fill('DemoPass123');
+ await page.locator('#authSubmit').click();
+ await expect(page.locator('#authGate')).toBeHidden();
+ await page.evaluate(()=>openClient());
+ await page.locator('#fName').fill('Ученица Расчёты');
+ await page.locator('#modalBody').getByRole('button',{name:'Добавить ученика'}).click();
+ await page.evaluate(()=>openSubscription());
+ await page.locator('#sPrice').fill('13500');
+ await page.locator('#modalBody button.primary').click();
+ const data=await page.evaluate(()=>({sub:db.subscriptions[0].id,first:db.payments[0].id}));
+ expect(await page.evaluate(()=>db.payments.length)).toBe(1);
+ await page.evaluate(()=>openPayment());
+ await page.locator('#pAmount').fill('13500');
+ await page.locator('#modalBody button.primary').click();
+ expect(await page.evaluate(()=>db.payments.filter(p=>p.status==='paid').length)).toBe(2);
+ page.on('dialog',dialog=>dialog.accept());
+ const id=await page.evaluate(()=>db.payments.find(p=>!p.subscriptionId).id);
+ await page.evaluate(id=>tpVoidPayment(id),id);
+ expect(await page.evaluate(()=>db.payments.length)).toBe(1);
+ await page.evaluate(id=>tpVoidPayment(id),data.first);
+ const result=await page.evaluate(()=>({status:db.subscriptions[0].paymentStatus,
+  remaining:db.subscriptions[0].remaining,pending:db.payments.filter(p=>p.status==='pending').map(p=>p.amount),
+  log:db.paymentChanges.length}));
+ expect(result).toEqual({status:'pending',remaining:8,pending:[13500],log:2});
+ await page.evaluate(()=>setPage('payments'));
+ await expect(page.locator('.finance-cards .stat')).toHaveCount(4);
+ await expect(page.locator('#paymentRows')).toContainText('13 500');
+ expect(errors).toEqual([]);
+});
