@@ -1,5 +1,5 @@
 const ROOT=new URL('./',self.registration.scope).pathname;
-const CACHE='teacherpro-shell-v33';
+const CACHE='teacherpro-shell-v34';
 const PREFIX='teacherpro-shell-v';
 const SHELL=['','index.html','style.css','app.js','calendar-stage1.js','soft-editorial.js','soft-editorial.css','teacherpro-polish.js','teacherpro-polish.css','calendar-v2.js','calendar-v2.css','finance-v2.js','finance-v2.css','finance-v3-core.js','finance-v3-lessons.js','finance-v3-ledger.js','finance-v3-edit.js','finance-v3-void.js','finance-v3-new-payment.js','finance-v3-edit-form.js','finance-v3-payments-view.js','finance-v3.css','schedule-series.js','schedule-series.css','student-v2.js','student-v2.css','mobile-ui-v2.js','mobile-ui-v2.css','calendar-colors.css','calendar-colors.js','assets/studio-botanical.svg','assets/studio-mark.svg','cloud-config.js','manifest.webmanifest','icon.svg'].map(path=>ROOT+path);
 const SHELL_PATHS=new Set(SHELL);
