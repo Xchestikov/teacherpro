@@ -702,3 +702,99 @@ test('Lesson notes are editable and the profile opens a student-filtered calenda
  await expect(page.locator('.calendar-top')).toBeVisible();
  expect(errors).toEqual([]);
 });
+
+
+test('Mobile V2 students: compact cards, searchable list and three-dot actions',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Карточка один','04.05');
+ await addStudent(page,'Карточка два','05.05');
+ await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>setPage('clients'));
+ await expect(page.locator('.tp-mobile-clients .tp-mobile-record:visible')).toHaveCount(2);
+ await expect(page.locator('#clientRows').closest('.table-wrap')).toBeHidden();
+ await page.locator('#clientSearch').fill('Карточка один');
+ await expect(page.locator('.tp-mobile-clients .tp-mobile-record:visible')).toHaveCount(1);
+ await page.locator('#clientSearch').fill('');
+ const card=page.locator('.tp-mobile-clients .tp-mobile-record').first();
+ await card.getByRole('button',{name:'Действия'}).click();
+ await expect(card.locator('[role=menu]')).toBeVisible();
+ await card.getByRole('menuitem',{name:'Открыть карточку'}).click();
+ await expect(page.locator('#modal')).toHaveClass(/open/);
+ await page.locator('#modalClose').click();
+ await card.getByRole('button',{name:'Действия'}).click();
+ await card.getByRole('menuitem',{name:'Добавить занятие'}).click();
+ await expect(page.locator('#lClient')).toHaveValue(String(await page.evaluate(()=>db.clients[0].id)));
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(2);
+ expect(errors).toEqual([]);
+});
+
+test('Mobile V2 subscriptions: no horizontal table and same edit/renew/history actions',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Пакет мобильный','04.05');
+ await page.evaluate(()=>openSubscription());
+ await page.locator('#sPrice').fill('9000');
+ await page.locator('#modalBody button.primary').last().click();
+ await page.evaluate(()=>setPage('subscriptions'));
+ const card=page.locator('.tp-mobile-subscriptions .tp-mobile-record').first();
+ await expect(card).toBeVisible();
+ await expect(page.locator('#content .tp-mobile-original-table')).toBeHidden();
+ await expect(card).toContainText('9 000');
+ await card.getByRole('button',{name:'Действия'}).click();
+ await expect(card.locator('[role=menu]')).toContainText('Продлить');
+ await card.getByRole('menuitem',{name:'Продлить'}).click();
+ await expect(page.locator('#modalTitle')).toContainText('Продление');
+ expect(errors).toEqual([]);
+});
+
+test('Mobile V2 payments: all four KPI remain, filters sync cards, actions reuse audited editor',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Платёж один','04.05');
+ await page.evaluate(()=>{
+   const id=db.clients[0].id;
+   db.payments=[
+     {id:'mobile-paid',clientId:id,amount:2300,date:todayISO(),status:'paid',type:'single',paidAt:todayISO()},
+     {id:'mobile-pending',clientId:id,amount:1500,date:todayISO(),status:'pending',type:'single'}];
+   setPage('payments');
+ });
+ await expect(page.locator('.finance-cards .stat')).toHaveCount(4);
+ await expect(page.locator('#paymentRows').closest('.table-wrap')).toBeHidden();
+ await expect(page.locator('.tp-mobile-payments .tp-mobile-record:visible')).toHaveCount(2);
+ await page.locator('#paymentFilter').selectOption('pending');
+ await expect(page.locator('.tp-mobile-payments .tp-mobile-record:visible')).toHaveCount(1);
+ await page.locator('#paymentFilter').selectOption('all');
+ const card=page.locator('.tp-mobile-payments .tp-mobile-record').filter({hasText:'2 300'}).first();
+ await card.getByRole('button',{name:'Действия'}).click();
+ await card.getByRole('menuitem',{name:'Редактировать'}).click();
+ await expect(page.locator('#modalTitle')).toContainText('Редактировать');
+ await page.locator('#modalClose').click();
+ await page.setViewportSize({width:1280,height:900});
+ await expect(page.locator('#paymentRows').closest('.table-wrap')).toBeVisible();
+ await expect(page.locator('.tp-mobile-payments')).toBeHidden();
+ expect(errors).toEqual([]);
+});
+
+test('Mobile V2 lesson long hold prevents selection and pointer drop still moves lesson',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Жесты iOS','04.05');
+ await page.evaluate(()=>{
+   db.lessons=[{id:'touch-mobile-v2',clientId:db.clients[0].id,date:todayISO(),time:'10:00',duration:60,status:'planned'}];
+   calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ const event=page.locator('.calendar-event[data-lesson-id="touch-mobile-v2"]');
+ await expect(event).toBeVisible();
+ expect(await event.evaluate(el=>getComputedStyle(el).touchAction)).toBe('none');
+ await expect(event.locator('.tp-event-more')).toBeVisible();
+ const rect=await event.boundingBox();
+ const drop=page.locator('.calendar-cell[data-date][data-minute="660"]').first();
+ await drop.scrollIntoViewIfNeeded();
+ const cell=await drop.boundingBox();
+ const startX=rect.x+Math.min(28,rect.width/4),startY=rect.y+Math.min(20,rect.height/3);
+ const endX=cell.x+Math.min(45,cell.width/2),endY=cell.y+cell.height*.12;
+ page.on('dialog',dialog=>dialog.accept());
+ await event.dispatchEvent('pointerdown',{pointerType:'touch',pointerId:8,isPrimary:true,clientX:startX,clientY:startY});
+ await page.waitForTimeout(490);
+ await expect(event).toHaveClass(/touch-dragging/);
+ await page.evaluate(()=>document.querySelector('.calendar-event strong')?.dispatchEvent(new Event('selectstart',{bubbles:true,cancelable:true})));
+ expect(await page.evaluate(()=>String(getSelection()))).toBe('');
+ await page.evaluate(({x,y})=>document.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,pointerType:'touch',pointerId:8,isPrimary:true,clientX:x,clientY:y})),{x:endX,y:endY});
+ await page.evaluate(({x,y})=>document.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,cancelable:true,pointerType:'touch',pointerId:8,isPrimary:true,clientX:x,clientY:y})),{x:endX,y:endY});
+ expect(await page.evaluate(()=>db.lessons[0].time)).toBe('11:00');
+ expect(errors).toEqual([]);
+});
