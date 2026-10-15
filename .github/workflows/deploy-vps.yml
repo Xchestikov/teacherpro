@@ -9,6 +9,8 @@ on:
       - 'app.js'
       - 'calendar-stage1.js'
       - 'soft-editorial.js'
+      - 'teacherpro-polish.js'
+      - 'teacherpro-polish.css'
       - 'soft-editorial.css'
       - 'assets/studio-botanical.svg'
       - 'assets/studio-mark.svg'
@@ -41,12 +43,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html app.js calendar-stage1.js soft-editorial.js style.css soft-editorial.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do
+          for f in index.html app.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do
             test -s "$f" || { echo "Missing file: $f"; exit 1; }
           done
           node --check app.js
           node --check calendar-stage1.js
           node --check soft-editorial.js
+          node --check teacherpro-polish.js
           node --check sw.js
 
       - name: Set up SSH from GitHub encrypted secrets
