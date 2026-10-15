@@ -8,6 +8,9 @@ on:
       - 'index.html'
       - 'app.js'
       - 'calendar-stage1.js'
+      - 'soft-editorial.js'
+      - 'soft-editorial.css'
+      - 'assets/studio-botanical.svg'
       - 'style.css'
       - 'sw.js'
       - 'cloud-config.js'
@@ -37,11 +40,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html app.js calendar-stage1.js style.css sw.js cloud-config.js manifest.webmanifest icon.svg; do
+          for f in index.html app.js calendar-stage1.js soft-editorial.js style.css soft-editorial.css assets/studio-botanical.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do
             test -s "$f" || { echo "Missing file: $f"; exit 1; }
           done
           node --check app.js
           node --check calendar-stage1.js
+          node --check soft-editorial.js
           node --check sw.js
 
       - name: Set up SSH from GitHub encrypted secrets
@@ -71,8 +75,8 @@ jobs:
           set -euo pipefail
           SSH_OPTS="-i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "mkdir -p /srv/teacherpro/releases/$RELEASE"
-          rsync -az --chmod=F644,D755 -e "ssh $SSH_OPTS" \
-            index.html app.js calendar-stage1.js style.css sw.js cloud-config.js manifest.webmanifest icon.svg \
+          rsync -az --relative --chmod=F644,D755 -e "ssh $SSH_OPTS" \
+            index.html app.js calendar-stage1.js soft-editorial.js style.css soft-editorial.css assets/studio-botanical.svg sw.js cloud-config.js manifest.webmanifest icon.svg \
             "$VPS_USER@$VPS_HOST:/srv/teacherpro/releases/$RELEASE/"
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
             "test -s /srv/teacherpro/releases/$RELEASE/index.html && \
