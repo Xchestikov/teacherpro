@@ -134,7 +134,7 @@
       const n=i-starting+1;
       if(n<1||n>lastDate)return '<div class="se-month-day se-month-empty" aria-hidden="true"></div>';
       const key=monthKey+'-'+String(n).padStart(2,'0');
-      const events=db.lessons.filter(l=>l.date===key&&(calendarClientFilter==='all'||String(l.clientId)===String(calendarClientFilter))).sort((a,b)=>a.time.localeCompare(b.time));
+      const events=db.lessons.filter(l=>l.date===key&&(window.tpCalendarShowCancelled?.()!==false||!lessonIsCancelled(l.status))&&(calendarClientFilter==='all'||String(l.clientId)===String(calendarClientFilter))).sort((a,b)=>a.time.localeCompare(b.time));
       const today=key===todayISO()?' is-today':'';
       return '<button class="se-month-day'+today+'" type="button" data-date="'+key+'" onclick="studioOpenCalendarDay(this.dataset.date)" aria-label="'+n+' число, занятий: '+events.length+'"><span class="se-month-num">'+n+'</span>'+
         (events.length?'<span class="se-month-count">'+events.length+' '+plural(events.length,'занятие','занятия','занятий')+'</span>':'')+
