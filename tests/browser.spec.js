@@ -802,3 +802,98 @@ test('Mobile V2 lesson long hold prevents selection and pointer drop still moves
  expect(await page.evaluate(()=>db.lessons[0].time)).toBe('11:00');
  expect(errors).toEqual([]);
 });
+
+
+test('Cancelled and no-show lesson status keeps full one-hour height, time and student name',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Имя остаётся в событии','15.10');
+ await page.evaluate(()=>{
+   db.lessons=[{id:'ux-preserve',clientId:db.clients[0].id,date:todayISO(),time:'10:00',
+     duration:60,status:'planned'}];
+   calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ const item=page.locator('[data-lesson-id="ux-preserve"]');
+ await item.scrollIntoViewIfNeeded();
+ const height=await item.evaluate(el=>el.getBoundingClientRect().height);
+ const dialogs=[];page.on('dialog',d=>{dialogs.push(d.message());d.dismiss();});
+ await item.locator('.tp-event-more').click();
+ await page.locator('.lesson-quick-menu [data-action="status:cancelled"]').click();
+ expect(dialogs).toEqual([]);
+ expect(await page.evaluate(()=>db.lessons[0].status)).toBe('cancelled');
+ await expect(item).toContainText('Имя остаётся в событии');
+ await expect(item).toContainText('10:00–11:00');
+ await expect(item).toContainText('Отменён');
+ const cancelledHeight=await item.evaluate(el=>el.getBoundingClientRect().height);
+ expect(Math.abs(cancelledHeight-height)).toBeLessThanOrEqual(2);
+ expect(errors).toEqual([]);
+});
+
+test('Calendar drag and resizing apply without routine dialogs but preserve Undo',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Перенос без диалога','15.10');
+ await page.evaluate(()=>{
+   db.lessons=[{id:'ux-move',clientId:db.clients[0].id,date:todayISO(),time:'10:00',duration:60,status:'planned'}];
+   calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ const dialogs=[];page.on('dialog',d=>{dialogs.push(d.message());d.dismiss();});
+ expect(await page.evaluate(()=>tpCalendarMove(db.lessons[0],todayISO(),'10:15'))).toBe(true);
+ expect(await page.evaluate(()=>db.lessons[0].time)).toBe('10:15');
+ await expect(page.locator('.cv2-toast')).toContainText('10:15');
+ await page.locator('.cv2-toast').getByRole('button',{name:'Отменить'}).click();
+ expect(await page.evaluate(()=>db.lessons[0].time)).toBe('10:00');
+ expect(await page.evaluate(()=>tpCalendarResize('ux-move',75))).toBe(true);
+ expect(await page.evaluate(()=>db.lessons[0].duration)).toBe(75);
+ expect(dialogs).toEqual([]);
+ expect(errors).toEqual([]);
+});
+
+test('Backdated subscription receipt uses actual selected payment date, not today',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Августовская оплата','15.10');
+ await page.clock.install({time:new Date('2026-10-15T12:00:00')});
+ await page.evaluate(()=>openSubscription());
+ await page.locator('#sStart').fill('2026-08-03');
+ await expect(page.locator('#sPaidAt')).toHaveValue('2026-08-03');
+ await page.locator('#sPaidAt').fill('2026-08-12');
+ await page.locator('#sStart').fill('2026-08-04');
+ await expect(page.locator('#sPaidAt')).toHaveValue('2026-08-12');
+ await page.locator('#sPrice').fill('13500');
+ await page.locator('#modalBody button.primary').click();
+ const actual=await page.evaluate(()=>({
+   start:db.subscriptions[0].startDate,
+   date:db.payments[0].date,paidAt:db.payments[0].paidAt,reported:paymentDate(db.payments[0])
+ }));
+ expect(actual).toEqual({start:'2026-08-04',date:'2026-08-12',paidAt:'2026-08-12',reported:'2026-08-12'});
+ await page.evaluate(()=>setPage('payments'));
+ await expect(page.locator('.finance-cards .stat').first().locator('.value')).toContainText('0 ₽');
+ await expect(page.locator('.finance-cards .stat').nth(1).locator('.value')).toContainText('13 500 ₽');
+ // Existing receipts are not silently rewritten. Their date is correctable via payment editor.
+ await page.evaluate(()=>tpOpenPaymentEdit(db.payments[0].id));
+ await expect(page.locator('#tpEditDate')).toHaveValue('2026-08-12');
+ expect(errors).toEqual([]);
+});
+
+test('Day and week calendar date headings stay sticky as the schedule scrolls vertically',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Закреплённые даты','15.10');
+ await page.setViewportSize({width:390,height:844});
+ for(const mode of ['day','week']){
+   await page.evaluate(mode=>{
+     calendarMode=mode;calendarSelectedDate=todayISO();setPage('schedule');
+   },mode);
+   const result=await page.evaluate(()=>{
+     const shell=document.querySelector('.calendar-shell');
+     shell.scrollTop=0;
+     const header=shell.querySelector('.calendar-day-head');
+     const first=header.getBoundingClientRect().top;
+     const initialRow=shell.querySelector('.calendar-cell').getBoundingClientRect().top;
+     shell.scrollTop=400;
+     return {scrollTop:shell.scrollTop,first,after:header.getBoundingClientRect().top,
+       rowShift:shell.querySelector('.calendar-cell').getBoundingClientRect().top-initialRow,
+       position:getComputedStyle(header).position,shellTop:shell.getBoundingClientRect().top};
+   });
+   expect(result.scrollTop).toBeGreaterThan(100);
+   expect(result.position).toBe('sticky');
+   expect(Math.abs(result.after-result.first)).toBeLessThan(3);
+   expect(result.rowShift).toBeLessThan(-100);
+   expect(Math.abs(result.after-result.shellTop)).toBeLessThan(4);
+ }
+ expect(errors).toEqual([]);
+});
