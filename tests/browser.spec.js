@@ -212,7 +212,7 @@ test('Deleting a consumed lesson asks before refunding and respects cancellation
     setPage('schedule');
   });
   const lesson=page.locator('.calendar-event[data-lesson-id="charged-refund"]');
-  await lesson.click();
+  await page.evaluate(()=>openLessonByKey('charged-refund'));
   page.once('dialog',dialog=>{
     expect(dialog.message()).toContain('вернётся в остаток');
     return dialog.dismiss();
@@ -223,4 +223,55 @@ test('Deleting a consumed lesson asks before refunding and respects cancellation
   await page.locator('#modalBody button[data-lesson-id]').first().click();
   expect(await page.evaluate(()=>({count:db.lessons.length,remaining:db.subscriptions[0].remaining}))).toEqual({count:0,remaining:8});
   expect(errors).toEqual([]);
+});
+
+
+test('Soft Editorial uses real workload data and presents actions on mobile',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Тестовая София','09.08');
+ await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>{
+   const d=todayISO();
+   db.settings.name='Елена';
+   db.lessons=[
+     {id:'se-completed',date:d,time:'08:00',duration:60,status:'done',clientId:db.clients[0].id},
+     {id:'se-planned',date:d,time:'16:00',duration:60,status:'planned',clientId:db.clients[0].id}
+   ];
+   setPage('dashboard');
+ });
+ await expect(page.locator('body')).toHaveClass(/soft-editorial/);
+ await expect(page.locator('.se-greeting h2')).toContainText('Елена');
+ await expect(page.locator('.se-overview .se-card')).toHaveCount(2);
+ await expect(page.locator('.se-hero')).toContainText('16:00');
+ await expect(page.locator('.se-donut')).toHaveAttribute('aria-label',/50 процентов/);
+ await expect(page.locator('.se-actions button')).toHaveCount(4);
+ await expect(page.locator('.se-week-bar')).toHaveCount(7);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)).toBeLessThanOrEqual(2);
+ await page.screenshot({path:'test-results/studio-mobile-390-dashboard.png',fullPage:true});
+ expect(errors).toEqual([]);
+});
+
+test('Soft Editorial calendar quick actions, month grid and day navigation',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Месячный урок','15.12');
+ await page.setViewportSize({width:1280,height:900});
+ await page.evaluate(()=>{
+   const day=todayISO();
+   db.lessons=[{id:'se-menu-event',clientId:db.clients[0].id,date:day,time:'10:00',duration:120,status:'planned'}];
+   calendarMode='day';calendarSelectedDate=day;setPage('schedule');
+ });
+ await expect(page.locator('.calendar-grid-day')).toBeVisible();
+ await page.locator('.calendar-event[data-lesson-id="se-menu-event"]').click();
+ await expect(page.locator('.lesson-quick-menu')).toBeVisible();
+ await expect(page.locator('#modal')).not.toHaveClass(/open/);
+ await page.locator('.lesson-quick-menu [data-action="edit"]').click();
+ await expect(page.locator('#modal')).toHaveClass(/open/);
+ await page.locator('#modalClose').click();
+ await page.evaluate(()=>calendarSetMode('month'));
+ await expect(page.locator('.se-month-grid .se-month-day')).toHaveCount(42);
+ const target=page.locator('.se-month-day.is-today');
+ await target.click();
+ await expect(page.locator('.calendar-grid-day')).toBeVisible();
+ await page.screenshot({path:'test-results/studio-desktop-calendar.png',fullPage:true});
+ expect(errors).toEqual([]);
 });
