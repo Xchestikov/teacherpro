@@ -47,7 +47,7 @@ test('WebKit iPhone viewport keeps lesson text unselectable and mobile payment m
 });
 
 
-test('WebKit long press disables selection on time gutter and moves a lesson using native touch events',async({page})=>{
+test('WebKit long press disables hour selection and moves a lesson through touch event handlers',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
  await page.route('https://fonts.googleapis.com/**',r=>r.abort());
@@ -90,9 +90,10 @@ test('WebKit long press disables selection on time gutter and moves a lesson usi
  const to={x:cellRect.x+Math.min(cellRect.width/3,45),y:cellRect.y+8};
  const prevented=await page.evaluate(({from})=>{
   const el=document.querySelector('[data-lesson-id="native-ios-lesson"] .event-time');
-  const touch=new Touch({identifier:31,target:el,clientX:from.x,clientY:from.y});
-  const start=new TouchEvent('touchstart',{bubbles:true,cancelable:true,
-    touches:[touch],targetTouches:[touch],changedTouches:[touch]});
+  // Linux WebKit forbids constructing Touch objects. Dispatch a cancelable
+  // touchstart-shaped event to verify the real handler in a WebKit engine.
+  const start=new Event('touchstart',{bubbles:true,cancelable:true});
+  Object.defineProperty(start,'changedTouches',{value:[{identifier:31,clientX:from.x,clientY:from.y,target:el}]});
   el.dispatchEvent(start);
   return start.defaultPrevented;
  },{from});
@@ -101,11 +102,12 @@ test('WebKit long press disables selection on time gutter and moves a lesson usi
  await expect(lesson).toHaveClass(/touch-dragging/);
  page.on('dialog',dialog=>dialog.accept());
  await page.evaluate(({to})=>{
-  const touch=new Touch({identifier:31,target:document.body,clientX:to.x,clientY:to.y});
-  document.dispatchEvent(new TouchEvent('touchmove',{bubbles:true,cancelable:true,
-    touches:[touch],changedTouches:[touch]}));
-  document.dispatchEvent(new TouchEvent('touchend',{bubbles:true,cancelable:true,
-    touches:[],changedTouches:[touch]}));
+  const touch={identifier:31,target:document.body,clientX:to.x,clientY:to.y};
+  for(const kind of ['touchmove','touchend']){
+    const event=new Event(kind,{bubbles:true,cancelable:true});
+    Object.defineProperty(event,'changedTouches',{value:[touch]});
+    document.dispatchEvent(event);
+  }
  },{to});
  expect(await page.evaluate(()=>db.lessons[0].time)).toBe('11:00');
  await expect(page.locator('.cv2-toast')).toContainText('11:00');
