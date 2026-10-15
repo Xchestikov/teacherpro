@@ -77,7 +77,7 @@
       stats('◷',pending.length,'Ожидают оплаты')+
       stats('₽',money(income),'Доход за месяц')+
       '</div></section></div>'+
-      (db.clients.some(c=>c.birthday)?'<section class="se-birthday">'+birthdaysWidget()+'</section>':'')+
+      (typeof upcomingBirthdays==='function'&&upcomingBirthdays().some(x=>x.birthday.days<=14)?'<section class="se-birthday">'+birthdaysWidget()+'</section>':'')+
       '</div>';
   }
   dashboard=renderStudioDashboard;
