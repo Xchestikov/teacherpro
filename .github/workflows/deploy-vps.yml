@@ -11,6 +11,7 @@ on:
       - 'soft-editorial.js'
       - 'soft-editorial.css'
       - 'assets/studio-botanical.svg'
+      - 'assets/studio-mark.svg'
       - 'style.css'
       - 'sw.js'
       - 'cloud-config.js'
@@ -40,7 +41,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html app.js calendar-stage1.js soft-editorial.js style.css soft-editorial.css assets/studio-botanical.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do
+          for f in index.html app.js calendar-stage1.js soft-editorial.js style.css soft-editorial.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do
             test -s "$f" || { echo "Missing file: $f"; exit 1; }
           done
           node --check app.js
