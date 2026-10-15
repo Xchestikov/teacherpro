@@ -80,7 +80,9 @@ jobs:
             index.html app.js calendar-stage1.js soft-editorial.js style.css soft-editorial.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg \
             "$VPS_USER@$VPS_HOST:/srv/teacherpro/releases/$RELEASE/"
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "test -s /srv/teacherpro/releases/$RELEASE/index.html && \
+            "set -e; for file in index.html app.js calendar-stage1.js soft-editorial.js style.css soft-editorial.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do \
+               test -s /srv/teacherpro/releases/$RELEASE/\$file || exit 1; \
+             done; \
              ln -sfn /srv/teacherpro/releases/$RELEASE /srv/teacherpro/current-next && \
              mv -Tf /srv/teacherpro/current-next /srv/teacherpro/current && \
              ls -l /srv/teacherpro/current"
@@ -95,5 +97,12 @@ jobs:
           set -euo pipefail
           test -n "$VPS_DOMAIN"
           ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=yes \
-            "$VPS_USER@$VPS_HOST" \
-            "curl --fail --silent --show-error --resolve '$VPS_DOMAIN:443:127.0.0.1' 'https://$VPS_DOMAIN/' -o /dev/null"
+            "$VPS_USER@$VPS_HOST" "bash -s -- '$VPS_DOMAIN'" <<'REMOTE'
+          set -euo pipefail
+          domain="$1"
+          for path in "" style.css soft-editorial.css app.js calendar-stage1.js soft-editorial.js sw.js assets/studio-botanical.svg assets/studio-mark.svg; do
+            curl --fail --silent --show-error --location --max-time 15 \
+              --resolve "$domain:443:127.0.0.1" "https://$domain/$path" -o /dev/null
+          done
+          echo "TeacherPro homepage and all editorial runtime assets respond through local HTTPS"
+          REMOTE
