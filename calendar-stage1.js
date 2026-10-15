@@ -65,21 +65,26 @@
   document.addEventListener('keydown',e=>{if(e.key==='Escape')dismiss();});
   document.addEventListener('pointerdown',e=>{
     if(e.pointerType!=='touch'||!e.isPrimary)return;
+    if(e.target.closest?.('.tp-event-more,.cv2-resize-handle'))return;
     const el=eventButton(e.target);
-    if(!el)return;
+    if(!el||!lessonFor(el)||lessonFor(el).status!=='planned')return;
     dismiss();
-    gesture={id:el.dataset.lessonId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,active:false,element:el};
+    // Keep iOS Safari's native callout/selection and scrolling from stealing the pointer.
+    try{el.setPointerCapture(e.pointerId);}catch(_){}
+    gesture={id:el.dataset.lessonId,pointerId:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,active:false,element:el};
     clearTimeout(holdTimer);
     holdTimer=setTimeout(()=>{
       if(!gesture)return;
       gesture.active=true;
       suppressClickUntil=Date.now()+800;
       el.classList.add('touch-dragging');
+      window.getSelection?.()?.removeAllRanges();
       if(navigator.vibrate)navigator.vibrate(25);
     },420);
-  },{passive:true});
+  },{passive:false});
   document.addEventListener('pointermove',e=>{
-    if(!gesture||e.pointerType!=='touch')return;
+    if(!gesture||e.pointerType!=='touch'||e.pointerId!==gesture.pointerId)return;
+    if(gesture.active&&e.cancelable)e.preventDefault();
     gesture.x=e.clientX;gesture.y=e.clientY;
     if(!gesture.active&&Math.hypot(e.clientX-gesture.startX,e.clientY-gesture.startY)>10){
       clearTimeout(holdTimer);gesture=null;return;
@@ -90,11 +95,15 @@
       document.querySelectorAll('.calendar-cell.touch-drop-target').forEach(el=>el.classList.remove('touch-drop-target'));
       if(cell)cell.classList.add('touch-drop-target');
     }
-  },{passive:true});
+  },{passive:false});
+  document.addEventListener('selectstart',e=>{if(eventButton(e.target))e.preventDefault();},true);
+  document.addEventListener('dragstart',e=>{if(eventButton(e.target)&&e.pointerType!=='mouse')e.preventDefault();},true);
   function finishGesture(e,cancelled){
-    if(!gesture)return;
+    if(!gesture||e.pointerId!==gesture.pointerId)return;
     clearTimeout(holdTimer);
     const g=gesture;gesture=null;
+    if(g.active&&e.cancelable)e.preventDefault();
+    try{if(g.element.hasPointerCapture?.(g.pointerId))g.element.releasePointerCapture(g.pointerId);}catch(_){}
     g.element.classList.remove('touch-dragging');
     document.querySelectorAll('.calendar-cell.touch-drop-target').forEach(el=>el.classList.remove('touch-drop-target'));
     if(!g.active||cancelled)return;
@@ -108,8 +117,8 @@
       if(event)openMenu(event,g.x,g.y);
     }
   }
-  document.addEventListener('pointerup',e=>{if(e.pointerType==='touch')finishGesture(e,false);});
-  document.addEventListener('pointercancel',e=>{if(e.pointerType==='touch')finishGesture(e,true);});
+  document.addEventListener('pointerup',e=>{if(e.pointerType==='touch')finishGesture(e,false);},{passive:false});
+  document.addEventListener('pointercancel',e=>{if(e.pointerType==='touch')finishGesture(e,true);},{passive:false});
   /* Add a real weekly workload counter without changing stored data. */
   const originalDashboard=dashboard;
   dashboard=function(){
