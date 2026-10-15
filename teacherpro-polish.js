@@ -64,10 +64,12 @@
        !mustCharge&&charged?'\nРанее списанное занятие вернётся в остаток.':'');
     if(!confirm(message))return;
     const snapshot=JSON.stringify(db);
+    const fact=client(lesson.clientId)?.billingMode==='fact';
     if(charged&&!mustCharge)refundLesson(lesson);
-    if(mustCharge&&!charged&&!consumeLesson(lesson.clientId,lesson)){
+    if(!fact&&mustCharge&&!charged&&!consumeLesson(lesson.clientId,lesson)){
       db=normalizeDb(JSON.parse(snapshot));return;
     }
+    lesson.factBillable=fact&&mustCharge;
     lesson.status=status;save();render();
   };
 
