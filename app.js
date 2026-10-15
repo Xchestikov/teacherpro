@@ -264,7 +264,7 @@ const all=db.subscriptions.filter(s=>!s.archivedAt&&String(s.clientId)===String(
 const eligible=all.filter(s=>s.paymentStatus!=='pending'&&Number(s.remaining)>0&&(!s.endDate||s.endDate>=todayISO())&&(!s.startDate||s.startDate<=todayISO())).sort((a,b)=>(a.endDate||'9999-12-31').localeCompare(b.endDate||'9999-12-31'));
 const latest=all.slice().sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''))[0];
 const selected=eligible[0]||latest||null;
-if(!selected){c.package='';c.remaining=0;c.price=0;c.status='inactive';return;}
+if(!selected){c.package='';c.remaining=0;c.price=0;c.status=c.billingMode==='per_lesson'?'active':'inactive';return;}
 c.package=selected.name;c.remaining=selected.remaining;c.price=selected.price;c.status=Number(selected.remaining)>2?'active':Number(selected.remaining)>0?'ending':'inactive';
 }
 
