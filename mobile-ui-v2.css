@@ -126,3 +126,33 @@ body.soft-editorial .tp-mobile-drag-ghost .tp-mobile-drag-time{
     opacity:.16!important;transform:none!important;box-shadow:none!important;
   }
 }
+
+
+/* The touch drop guide follows the actual snapped quarter-hour instead of
+   outlining an entire 60-minute row. Keep this above long overlapping events. */
+body.soft-editorial .calendar-grid .calendar-cell.touch-drop-target{
+  outline:none!important;
+  box-shadow:none!important;
+  background-color:inherit!important;
+}
+body.soft-editorial .calendar-grid .calendar-cell .tp-mobile-quarter-guide{
+  position:absolute!important;
+  left:0!important;right:0!important;
+  height:0!important;
+  z-index:110!important;
+  border-top:2px dashed #c77357!important;
+  pointer-events:none!important;
+  overflow:visible!important;
+  padding:0!important;margin:0!important;
+  box-sizing:border-box!important;
+  opacity:1!important;
+}
+body.soft-editorial .calendar-grid .calendar-cell .tp-mobile-quarter-guide>span{
+  position:absolute;right:8px;top:-15px;
+  display:block;min-width:48px;text-align:center;
+  color:#9b4b38;background:#fffaf5;
+  border:1px solid #e2b7a4;border-radius:7px;
+  padding:4px 5px;font-size:11px;line-height:15px;font-weight:800;
+  box-shadow:0 2px 8px #754a3522;
+  pointer-events:none!important;
+}
