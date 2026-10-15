@@ -348,3 +348,90 @@ test('Current-time marker and cancelled card rendering',async({page})=>{
  await expect(page.locator('.calendar-event[data-lesson-id="cancel-event"]')).toHaveClass(/event-cancelled/);
  expect(errors).toEqual([]);
 });
+
+
+test('Calendar V2 assigns side-by-side lanes to lessons starting in different hours',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Пересечения В2','08.07');
+ await page.setViewportSize({width:1280,height:900});
+ await page.evaluate(()=>{
+   const date=todayISO(),id=db.clients[0].id;
+   db.lessons=[
+     {id:'lane-a',clientId:id,date,time:'10:00',duration:120,status:'planned',hourlyRate:1000},
+     {id:'lane-b',clientId:id,date,time:'11:00',duration:60,status:'planned',hourlyRate:1000},
+     {id:'lane-c',clientId:id,date,time:'12:00',duration:60,status:'planned',hourlyRate:1000}
+   ];
+   calendarMode='day';calendarSelectedDate=date;setPage('schedule');
+ });
+ const layout=await page.evaluate(()=>{
+   const a=document.querySelector('[data-lesson-id="lane-a"]'),b=document.querySelector('[data-lesson-id="lane-b"]'),c=document.querySelector('[data-lesson-id="lane-c"]');
+   const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
+   return {a:a.dataset.laneCount,b:b.dataset.laneCount,c:c.dataset.laneCount,separated:ar.right<br.left+8||br.right<ar.left+8};
+ });
+ expect(layout).toEqual({a:'2',b:'2',c:'1',separated:true});
+ expect(errors).toEqual([]);
+});
+
+test('Calendar V2 keyboard resize changes duration and undo restores previous value',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Длительность В2','08.07');
+ await page.evaluate(()=>{
+   db.lessons=[{id:'resize-v2',clientId:db.clients[0].id,date:todayISO(),time:'10:00',duration:60,status:'planned',hourlyRate:1000}];
+   calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ const grip=page.locator('[data-lesson-id="resize-v2"] .cv2-resize-handle');
+ await expect(grip).toBeVisible();
+ await grip.focus();await page.keyboard.press('ArrowDown');
+ expect(await page.evaluate(()=>db.lessons[0].duration)).toBe(75);
+ await expect(page.locator('.cv2-toast')).toContainText('75 мин.');
+ await page.locator('.cv2-toast').getByRole('button',{name:'Отменить'}).click();
+ expect(await page.evaluate(()=>db.lessons[0].duration)).toBe(60);
+ await page.evaluate(()=>openLessonByKey('resize-v2'));
+ await expect(page.locator('#lDuration')).toHaveValue('60');
+ await page.locator('#modalClose').click();
+ expect(errors).toEqual([]);
+});
+
+test('Calendar V2 cancelled filter affects day and month without mutating lesson data',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Отмена В2','08.07');
+ await page.evaluate(()=>{
+   db.lessons=[{id:'cancel-v2',clientId:db.clients[0].id,date:todayISO(),time:'10:00',duration:60,status:'cancelled_by_teacher'},
+     {id:'planned-v2',clientId:db.clients[0].id,date:todayISO(),time:'12:00',duration:60,status:'planned'}];
+   calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ await expect(page.locator('.calendar-event')).toHaveCount(2);
+ await page.locator('.cv2-filter').click();
+ await expect(page.locator('.calendar-event')).toHaveCount(1);
+ await expect(page.locator('.cv2-filter')).toHaveAttribute('aria-pressed','false');
+ await page.evaluate(()=>calendarSetMode('month'));
+ await expect(page.locator('.se-month-day.is-today')).toContainText('1 занятие');
+ await page.locator('.cv2-filter').click();
+ await expect(page.locator('.se-month-day.is-today')).toContainText('2 занятия');
+ expect(await page.evaluate(()=>db.lessons.length)).toBe(2);
+ expect(errors).toEqual([]);
+});
+
+test('Calendar V2 moving lessons has an accessible undo and mobile layout',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Перенос В2','08.07');
+ await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>{
+   db.lessons=[{id:'move-v2',clientId:db.clients[0].id,date:todayISO(),time:'10:00',duration:60,status:'planned'}];
+   calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ const changed=await page.evaluate(()=>window.tpCalendarMove(db.lessons[0],todayISO(),'11:15'));
+ expect(changed).toBe(true);
+ expect(await page.evaluate(()=>db.lessons[0].time)).toBe('11:15');
+ await expect(page.locator('.cv2-toast')).toContainText('11:15');
+ await page.locator('.cv2-toast').getByRole('button',{name:'Отменить'}).click();
+ expect(await page.evaluate(()=>db.lessons[0].time)).toBe('10:00');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)).toBeLessThanOrEqual(2);
+ await page.screenshot({path:'test-results/calendar-v2-mobile-day.png',fullPage:true});
+ await page.setViewportSize({width:1280,height:900});
+ await page.evaluate(()=>{calendarMode='week';weekOffset=0;setPage('schedule');});
+ await page.screenshot({path:'test-results/calendar-v2-desktop-week.png',fullPage:true});
+ expect(errors).toEqual([]);
+});
