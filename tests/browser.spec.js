@@ -248,6 +248,9 @@ test('Soft Editorial uses real workload data and presents actions on mobile',asy
  await expect(page.locator('.se-week-bar')).toHaveCount(7);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)).toBeLessThanOrEqual(2);
  await page.screenshot({path:'test-results/studio-mobile-390-dashboard.png',fullPage:true});
+ await page.setViewportSize({width:1280,height:900});
+ await page.evaluate(()=>setPage('dashboard'));
+ await page.screenshot({path:'test-results/studio-desktop-1280-dashboard.png',fullPage:true});
  expect(errors).toEqual([]);
 });
 
@@ -273,5 +276,17 @@ test('Soft Editorial calendar quick actions, month grid and day navigation',asyn
  await target.click();
  await expect(page.locator('.calendar-grid-day')).toBeVisible();
  await page.screenshot({path:'test-results/studio-desktop-calendar.png',fullPage:true});
+ await page.evaluate(()=>{
+   calendarSetMode('week');
+   const monday=new Date(todayISO()+'T12:00:00');
+   monday.setDate(monday.getDate()-(monday.getDay()+6)%7);
+   const d=new Date(monday);d.setDate(d.getDate()+1);
+   db.lessons.push({id:'se-second',clientId:db.clients[0].id,date:localDateISO(d),time:'14:00',duration:90,status:'planned'});
+   setPage('schedule');
+ });
+ await page.screenshot({path:'test-results/studio-desktop-week-calendar.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>calendarSetMode('day'));
+ await page.screenshot({path:'test-results/studio-mobile-day-calendar.png',fullPage:true});
  expect(errors).toEqual([]);
 });
