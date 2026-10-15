@@ -184,10 +184,25 @@ body.soft-editorial[data-theme="night"]{
 body.soft-editorial .primary{background:linear-gradient(115deg,color-mix(in srgb,var(--accent) 82%,#fff),var(--accent));box-shadow:0 5px 13px color-mix(in srgb,var(--accent) 23%,transparent)}
 body.soft-editorial .primary:hover{background:var(--accent-deep)}
 body.soft-editorial .brand-mark{font-size:0!important;display:grid;place-items:center;background:transparent!important;box-shadow:none!important}
-body.soft-editorial .brand-mark:after{content:"❦";font-family:Georgia,serif;font-size:29px;color:#c76551;line-height:1}
+body.soft-editorial .brand-mark:after{content:"";display:block;width:30px;height:30px;background:url("./assets/studio-mark.svg") center / contain no-repeat}
 body.soft-editorial[data-theme="night"] .sidebar{background:#262838!important}
 body.soft-editorial[data-theme="night"] .calendar-shell,body.soft-editorial[data-theme="night"] .calendar-grid .calendar-hour,
 body.soft-editorial[data-theme="night"] .calendar-grid .calendar-cell,
 body.soft-editorial[data-theme="night"] .calendar-grid .calendar-day-head{background:#303142;color:#f3eced;border-color:#4b4958}
 body.soft-editorial[data-theme="night"] .se-stat{background:#343544;color:#f3eced;border-color:#4b4958}
 body.soft-editorial[data-theme="night"] .se-donut-inner{background:#2b2e3c;color:#e6d8d0}
+
+/* Compact recognizable TeacherPro branding in the phone toolbar. */
+@media(max-width:700px){
+  body.soft-editorial .topbar:before{
+    content:"TeacherPro";font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:700;
+    color:var(--studio-ink);background:url("./assets/studio-mark.svg") left center / 25px 25px no-repeat;
+    padding-left:29px;white-space:nowrap;align-self:center;
+  }
+  body.soft-editorial .topbar #todayLabel{display:none}
+  body.soft-editorial .topbar h1{display:none}
+  body.soft-editorial .topbar #cloudStatusGlobal.ok{font-size:0;min-width:31px;width:31px;max-width:31px;padding:6px}
+  body.soft-editorial .topbar #cloudStatusGlobal.ok:after{content:"✓";font-size:13px;color:#287a53}
+  body.soft-editorial .topbar .top-actions{gap:5px}
+}
+@media(max-width:355px){body.soft-editorial .topbar:before{font-size:17px;padding-left:25px;background-size:21px}}
