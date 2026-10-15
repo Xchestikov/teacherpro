@@ -117,7 +117,7 @@ window.tpAddTemplate=id=>{
 };
 window.tpDeleteTemplate=(id,templateId)=>{
  if(!student(id)||!templates().some(t=>String(t.id)===String(templateId)))return;
- if(!confirm('Удалить шаблон? Уже созданные домашние задания не изменятся.'))return;
+
  db.homeworkTemplates=templates().filter(t=>String(t.id)!==String(templateId));
  save();window.tpTemplatesManager(id);
 };
@@ -141,7 +141,7 @@ openHomeworkEditor=function(...args){
  select.onchange=()=>{
   const t=templates().find(t=>String(t.id)===String(select.value));if(!t)return;
   const title=qs('#hwTitle'),description=qs('#hwDescription');
-  if((title?.value||description?.value)&&!confirm('Заменить текст задания содержимым шаблона?'))return;
+
   if(title)title.value=t.title;if(description)description.value=t.description;
  };
  container.prepend(block);
