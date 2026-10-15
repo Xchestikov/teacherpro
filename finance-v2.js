@@ -139,7 +139,7 @@
        linked.reduce((n,p)=>n+cents(p.amount),0)!==expected||
        cents(pending.amount)!==expected-receipts)
       return alert('Сумма долга расходится с платежами. Операция остановлена, чтобы не испортить учёт.');
-    if(!confirm('Записать поступление '+fmt(rub(amount))+' по абонементу?'))return;
+    // Explicit Save already confirms the receipt; no second browser dialog.
     const remainder=due-amount;
     if(remainder===0)db.payments=db.payments.filter(p=>p!==pending);
     else pending.amount=rub(remainder);
