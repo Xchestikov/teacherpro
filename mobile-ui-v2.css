@@ -1,0 +1,68 @@
+/* TeacherPro Mobile UI 2.0 — same data/actions, compact touch-friendly presentation. */
+.tp-mobile-list{display:none}
+@media(max-width:720px){
+  body.soft-editorial .tp-mobile-original-table{display:none!important}
+  body.soft-editorial .tp-mobile-list{display:grid;grid-template-columns:minmax(0,1fr);gap:11px;margin:13px 0 20px;min-width:0}
+  body.soft-editorial .tp-mobile-record{
+    position:relative;min-width:0;width:100%;background:#fffdfb;border:1px solid #eddcd0;border-radius:17px;
+    padding:14px 50px 14px 14px;box-shadow:0 5px 18px #604a3612;
+    color:#4f3a33;cursor:pointer;text-align:left;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body.soft-editorial .tp-mobile-record[hidden]{display:none!important}
+  body.soft-editorial .tp-mobile-record:focus-visible{outline:3px solid #c77968;outline-offset:3px}
+  body.soft-editorial .tp-mobile-record.tp-mobile-menu-open{z-index:31}
+  body.soft-editorial .tp-mobile-main{display:flex;align-items:center;gap:11px;min-width:0}
+  body.soft-editorial .tp-mobile-avatar{width:43px;height:43px;min-width:43px;display:grid;place-items:center;
+    border-radius:50%;background:#efd8cd;color:#924b41;overflow:hidden;font-size:17px}
+  body.soft-editorial .tp-mobile-headings{display:grid;gap:4px;min-width:0;overflow-wrap:anywhere}
+  body.soft-editorial .tp-mobile-title{display:block;font-size:14px;line-height:1.35;font-weight:750;color:#4a3530}
+  body.soft-editorial .tp-mobile-amount{display:block;font-size:20px;font-weight:800;line-height:1.25;color:#4b322d}
+  body.soft-editorial .tp-mobile-meta{display:block;font-size:11px;color:#968276;line-height:1.5}
+  body.soft-editorial .tp-mobile-subline{font-size:12px;line-height:1.45;color:#856e62;margin-top:9px;overflow-wrap:anywhere}
+  body.soft-editorial .tp-mobile-muted{font-size:11px;color:#927d70;margin-top:6px}
+  body.soft-editorial .tp-mobile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  body.soft-editorial .tp-mobile-pair{display:grid;gap:4px}
+  body.soft-editorial .tp-mobile-pair>span{font-size:11px;color:#958075}
+  body.soft-editorial .tp-mobile-pair>strong{font-size:15px;color:#523a31}
+  body.soft-editorial .tp-mobile-footer{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px;min-width:0}
+  body.soft-editorial .tp-mobile-badge{display:inline-block;border-radius:9px;background:#f9eddf;color:#9b6252;
+    font-size:11px;line-height:1.45;padding:5px 8px}
+  body.soft-editorial .tp-mobile-badge-ok{background:#e8f0e9;color:#52785c}
+  body.soft-editorial .tp-mobile-more{position:absolute;z-index:2;top:10px;right:9px;
+    display:grid;place-items:center;min-height:43px;min-width:43px;background:#fff3eb;
+    border:1px solid #eddfd3;border-radius:13px;font-size:24px;line-height:1;color:#855f52;
+    touch-action:manipulation;-webkit-user-select:none;user-select:none}
+  body.soft-editorial .tp-mobile-more:focus-visible{outline:3px solid #ba735d}
+  body.soft-editorial .tp-mobile-actions{position:absolute;right:9px;top:58px;z-index:33;
+    width:min(230px,calc(100vw - 48px));padding:6px;background:#fffdfb;
+    border:1px solid #ebd7c9;border-radius:14px;box-shadow:0 15px 42px #402e2a3a}
+  body.soft-editorial .tp-mobile-actions[hidden]{display:none!important}
+  body.soft-editorial .tp-mobile-action{display:block;width:100%;text-align:left;line-height:1.35;
+    border:0;background:transparent;color:#4a3630;border-radius:9px;padding:11px 10px;min-height:43px;font-size:13px}
+  body.soft-editorial .tp-mobile-action:active,body.soft-editorial .tp-mobile-action:focus-visible{background:#faeee7}
+  body.soft-editorial .tp-mobile-action.tp-mobile-danger{color:#b94e57}
+  body.soft-editorial .tp-mobile-payment .tp-mobile-subline{display:-webkit-box;-webkit-box-orient:vertical;
+    -webkit-line-clamp:2;overflow:hidden}
+  body.soft-editorial .tp-mobile-payment-footer{justify-content:space-between}
+  /* iOS Safari: disable text selection, image dragging and callouts on lesson surfaces.
+     Other calendar cells still support normal scrolling. */
+  body.soft-editorial .calendar-grid .calendar-event,
+  body.soft-editorial .calendar-grid .calendar-event *{
+    -webkit-user-select:none!important;user-select:none!important;
+    -webkit-touch-callout:none!important;-webkit-user-drag:none!important;
+  }
+  body.soft-editorial .calendar-grid .calendar-event.event-planned,
+  body.soft-editorial .calendar-grid .calendar-event[draggable="true"]{
+    touch-action:none!important;
+  }
+  body.soft-editorial .calendar-grid .calendar-event.touch-dragging{
+    opacity:.9!important;z-index:45!important;
+    box-shadow:0 12px 27px #4a342a48!important;
+    transform:scale(1.018);transition:none!important;
+  }
+  body.soft-editorial .calendar-grid .calendar-event.touch-dragging .tp-event-more,
+  body.soft-editorial .calendar-grid .calendar-event.touch-dragging .cv2-resize-handle{
+    pointer-events:none
+  }
+}
