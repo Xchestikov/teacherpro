@@ -65,6 +65,7 @@ function applyPolicy(c,p){
   if(p.billingMode==='per_lesson')l.hourlyRate=p.hourlyRate;
  }
 }
+window.tpApplyBillingPolicy=applyPolicy;
 const baseSaveClient=saveClient;
 saveClient=function(id){
  const policy=readPolicy();if(policy===false)return;
