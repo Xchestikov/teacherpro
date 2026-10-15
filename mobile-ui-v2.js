@@ -127,7 +127,7 @@ function subscriptionsCards(){
   const detail=el('div','tp-mobile-grid');
   detail.append(pair('Осталось',Number(sub.remaining||0)+' из '+Number(sub.total||0)),pair('Стоимость',fmt(Number(sub.price)||0)));
   card.append(detail);
-  const status=inner(row,5,'.status')||cell(row,5),due=inner(row,7,'.tp-finance-due');
+  const status=inner(row,5,'.status')||cell(row,5),due=row.querySelector('.tp-finance-due')?.textContent?.trim()||'';
   const footer=el('div','tp-mobile-footer');
   footer.append(badge(status,/актив|оплачено/i.test(status)));
   if(due)footer.append(el('small','tp-mobile-meta',due));
