@@ -812,7 +812,7 @@ test('Cancelled and no-show lesson status keeps full one-hour height, time and s
      duration:60,status:'planned'}];
    calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
  });
- const item=page.locator('[data-lesson-id="ux-preserve"]');
+ const item=page.locator('.calendar-event[data-lesson-id="ux-preserve"]');
  await item.scrollIntoViewIfNeeded();
  const height=await item.evaluate(el=>el.getBoundingClientRect().height);
  const dialogs=[];page.on('dialog',d=>{dialogs.push(d.message());d.dismiss();});
