@@ -45,3 +45,16 @@ body.soft-editorial .cv2-toast .cv2-toast-close{background:transparent;color:#f2
 @media(prefers-reduced-motion:reduce){
  body.soft-editorial .calendar-grid .calendar-event.cv2-resizing{transition:none}
 }
+
+/* Long events must paint above ALL following hour rows. Hour cells should not
+   establish stacking contexts; their positioned children share the grid layer. */
+body.soft-editorial .calendar-grid .calendar-cell,
+body.soft-editorial .calendar-grid .calendar-cell:has(> .calendar-event),
+body.soft-editorial .calendar-grid .calendar-cell:hover,
+body.soft-editorial .calendar-grid .calendar-cell.touch-drop-target{
+  position:relative;z-index:auto!important;
+}
+body.soft-editorial .calendar-grid .calendar-event{z-index:6}
+body.soft-editorial .calendar-grid .calendar-event:hover,
+body.soft-editorial .calendar-grid .calendar-event:focus-within{z-index:8}
+body.soft-editorial .calendar-grid .calendar-cell.drop-target{outline:2px dashed #c96f59;outline-offset:-2px}
