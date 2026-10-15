@@ -1046,3 +1046,103 @@ test('Long calendar has fast jump controls that scroll within the calendar only'
  expect(morning).toBeLessThan(evening.scroll);
  expect(errors).toEqual([]);
 });
+
+
+test('Mistaken subscription can be deleted with linked receipts audited and student balance cleared',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Ошибочный пакет','04.05');
+ await page.evaluate(()=>openSubscription());
+ await page.locator('#sTotal').fill('10');
+ await page.locator('#sPrice').fill('13000');
+ await page.locator('#modalBody button.primary').last().click();
+ const before=await page.evaluate(()=>({subs:db.subscriptions.length,payments:db.payments.length,received:db.payments[0]?.amount}));
+ expect(before).toEqual({subs:1,payments:1,received:13000});
+ await page.evaluate(()=>setPage('subscriptions'));
+ await expect(page.locator('#content .tp-sub-manage-btn').first()).toBeVisible();
+ await page.locator('#content .tp-sub-manage-btn').first().click();
+ await expect(page.locator('#modalBody')).toContainText('Удалить ошибочный абонемент');
+ await page.getByRole('button',{name:'Удалить ошибочный абонемент'}).click();
+ const result=await page.evaluate(()=>({subs:db.subscriptions.length, payments:db.payments.length,
+   remaining:db.clients[0].remaining, package:db.clients[0].package,
+   voids:db.paymentChanges?.filter(x=>x.kind==='void').length||0}));
+ expect(result).toEqual({subs:0,payments:0,remaining:0,package:'',voids:1});
+ await page.evaluate(()=>setPage('payments'));
+ expect(await page.evaluate(()=>db.payments.filter(x=>x.status==='paid').length)).toBe(0);
+ expect(errors).toEqual([]);
+});
+
+test('Used subscription can only be closed; conducted lesson and paid receipt remain unchanged',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Закрытие пакета','04.05');
+ await page.evaluate(()=>{
+  const c=db.clients[0],date=todayISO();
+  db.subscriptions=[{id:'real-package',clientId:c.id,name:'10 занятий',total:10,remaining:8,price:12000,
+     paymentStatus:'paid',status:'active',startDate:date}];
+  db.payments=[{id:'real-receipt',clientId:c.id,subscriptionId:'real-package',type:'subscription',status:'paid',amount:12000,date,paidAt:date}];
+  db.lessons=[{id:'used-lesson',clientId:c.id,date,time:'10:00',duration:60,status:'done',consumedSubscriptionId:'real-package'}];
+  syncClientSubscription(db.subscriptions[0]);setPage('subscriptions');
+ });
+ await page.locator('#content .tp-sub-manage-btn').first().click();
+ await expect(page.getByRole('button',{name:'Удалить ошибочный абонемент'})).toHaveCount(0);
+ await page.getByRole('button',{name:'Закрыть абонемент',exact:true}).click();
+ const result=await page.evaluate(()=>({
+   archived:!!db.subscriptions[0].archivedAt,status:db.subscriptions[0].status,
+   paid:db.payments[0].amount, lesson:db.lessons[0].consumedSubscriptionId,
+   remaining:db.clients[0].remaining,activeRate:suggestedLessonRate(db.clients[0].id,todayISO())}));
+ expect(result).toEqual({archived:true,status:'archived',paid:12000,lesson:'real-package',remaining:0,activeRate:0});
+ await page.evaluate(()=>setPage('payments'));
+ await expect(page.locator('#paymentRows')).toContainText('12 000');
+ await page.evaluate(()=>setPage('subscriptions'));
+ await expect(page.locator('#content .tp-sub-manage-btn')).toContainText('Восстановить');
+ expect(errors).toEqual([]);
+});
+
+test('Closing a partially paid package cancels only pending invoice and keeps received revenue',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Частичная оплата','04.05');
+ await page.evaluate(()=>{
+  const c=db.clients[0],date=todayISO();
+  db.subscriptions=[{id:'partial-close',clientId:c.id,name:'10 занятий',total:10,remaining:10,price:13000,
+     paymentStatus:'pending',status:'active',startDate:date}];
+  db.payments=[
+   {id:'paid-partial',clientId:c.id,subscriptionId:'partial-close',status:'paid',type:'subscription',amount:5000,date,paidAt:date},
+   {id:'waiting-partial',clientId:c.id,subscriptionId:'partial-close',status:'pending',type:'subscription',amount:8000,date}];
+  setPage('subscriptions');
+ });
+ await page.locator('#content .tp-sub-manage-btn').first().click();
+ await page.getByRole('button',{name:'Закрыть абонемент',exact:true}).click();
+ const report=await page.evaluate(()=>({
+   statuses:db.payments.map(x=>x.status),income:db.payments.filter(x=>x.status==='paid').reduce((n,x)=>n+x.amount,0),
+   archived:!!db.subscriptions[0].archivedAt, voids:db.paymentChanges?.filter(x=>x.kind==='void').length||0
+ }));
+ expect(report).toEqual({statuses:['paid'],income:5000,archived:true,voids:1});
+ await page.evaluate(()=>setPage('payments'));
+ await expect(page.locator('.finance-cards .stat').nth(2).locator('.value')).toContainText('0 ₽');
+ expect(errors).toEqual([]);
+});
+
+test('Switch to pay-per-lesson archives existing plan and updates only future planned lessons',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Перешёл на факт','04.05');
+ await page.evaluate(()=>{
+  const c=db.clients[0],today=todayISO();
+  const tomorrow=new Date(today+'T12:00:00');tomorrow.setDate(tomorrow.getDate()+1);
+  db.subscriptions=[{id:'transition-plan',clientId:c.id,name:'10 занятий',total:10,remaining:8,
+    price:12000,paymentStatus:'paid',status:'active',startDate:today}];
+  db.payments=[{id:'transition-payment',clientId:c.id,subscriptionId:'transition-plan',type:'subscription',status:'paid',amount:12000,date:today,paidAt:today}];
+  db.lessons=[
+    {id:'old-completed',clientId:c.id,date:today,time:'10:00',duration:60,status:'done',consumedSubscriptionId:'transition-plan',billingMode:'subscription'},
+    {id:'next-lesson',clientId:c.id,date:localDateISO(tomorrow),time:'11:00',duration:60,status:'planned',billingMode:'subscription'}];
+  syncClientSubscription(db.subscriptions[0]);
+  setPage('subscriptions');
+ });
+ await page.locator('#content .tp-sub-manage-btn').first().click();
+ await page.locator('#tpSwitchHourlyRate').fill('1750');
+ await page.getByRole('button',{name:'Закрыть и перейти на оплату по факту'}).click();
+ const report=await page.evaluate(()=>({
+  archived:!!db.subscriptions[0].archivedAt,mode:db.clients[0].billingMode,rate:db.clients[0].hourlyRate,
+  past:db.lessons[0].billingMode,future:db.lessons[1].billingMode,
+  futureRate:db.lessons[1].hourlyRate,linked:db.lessons[0].consumedSubscriptionId,
+  receipt:db.payments[0].amount}));
+ expect(report).toEqual({archived:true,mode:'per_lesson',rate:1750,past:'subscription',
+   future:'per_lesson',futureRate:1750,linked:'transition-plan',receipt:12000});
+ await page.evaluate(()=>openLesson(null,todayISO(),'13:00'));
+ await expect(page.locator('#lHourlyRate')).toHaveValue('1750');
+ expect(errors).toEqual([]);
+});
