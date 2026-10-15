@@ -363,7 +363,7 @@ function saveLesson(id){
   if(!db.clients.length)return alert('Сначала добавь ученика.');
   const previous=id?db.lessons.find(x=>String(x.id)===String(id)):null;
   const l={id:id||crypto.randomUUID(),clientId:+$('#lClient').value,date:$('#lDate').value,time:$('#lTime').value,type:$('#lType').value,duration:+$('#lDuration').value||60,hourlyRate:Number($('#lHourlyRate')?.value),status:$('#lStatus').value};
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(l.date)||!/^\d{2}:\d{2}$/.test(l.time)||lessonMinutes(l.time)<300||lessonMinutes(l.time)>=1440||lessonMinutes(l.time)+l.duration>1440)return alert('Укажи дату и время с 05:00 до 23:59. Занятие должно закончиться до полуночи.');if(!Number.isFinite(l.hourlyRate)||l.hourlyRate<0||l.hourlyRate>100000000||Math.abs(l.hourlyRate*100-Math.round(l.hourlyRate*100))>1e-6)return alert('Укажи корректную стоимость часа.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(l.date)||! /^(?:0[5-9]|1\d|2[0-3]):[0-5]\d$/.test(l.time)||lessonMinutes(l.time)<300||lessonMinutes(l.time)>=1440||lessonMinutes(l.time)+l.duration>1440)return alert('Укажи дату и время с 05:00 до 23:59. Занятие должно закончиться до полуночи.');if(!Number.isFinite(l.hourlyRate)||l.hourlyRate<0||l.hourlyRate>100000000||Math.abs(l.hourlyRate*100-Math.round(l.hourlyRate*100))>1e-6)return alert('Укажи корректную стоимость часа.');
   const mode=previous?'none':($('#lRecurrence')?.value||'none');
   const weeks=previous?1:(mode==='biweekly'?26:52);
   const candidates=[];
@@ -395,4 +395,4 @@ initCloud();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 window.addEventListener('online',()=>{if(cloudUser&&cloudDirty&&!cloudConflict)syncCloud()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudUser&&cloudDirty&&!cloudConflict)syncCloud()});
-window.addEventListener('beforeunload',e=>{if(cloudUser&&cloudDirty){e.preventDefault();e.returnValue='';}});
+
