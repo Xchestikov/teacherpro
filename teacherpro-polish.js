@@ -61,8 +61,7 @@
     const mustCharge=lessonCharges(status);
     // Explicit paid absences still need a debit warning. Routine status changes
     // are applied immediately; consume/refund and rollback safeguards remain.
-    if((status==='no_show_charged'||status==='cancelled_charged')&&!charged&&
-       !confirm('Пропуск со списанием: списать одно занятие из абонемента?'))return;
+
     const snapshot=JSON.stringify(db);
     if(charged&&!mustCharge)refundLesson(lesson);
     if(mustCharge&&!charged&&!consumeLesson(lesson.clientId,lesson)){
@@ -124,7 +123,7 @@
     const grid=document.querySelector('.calendar-grid');grid?.querySelector('.tp-now-indicator')?.remove();
     if(!grid)return;
     const now=new Date(),minutes=now.getHours()*60+now.getMinutes();
-    if(minutes<480||minutes>=1380)return;
+    if(minutes<300||minutes>=1440)return;
     const hour=Math.floor(minutes/60)*60;
     const today=document.querySelector('.calendar-cell[data-date="'+todayISO()+'"][data-minute="'+hour+'"]');
     if(!today)return;
