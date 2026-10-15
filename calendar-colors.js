@@ -18,10 +18,9 @@ const palette=[
 ];
 window.tpStudentCalendarPalette=palette;
 const assigned=id=>{
- const students=db.clients||[];
- const i=students.findIndex(c=>String(c.id)===String(id));
- if(i>=0)return palette[i%palette.length];
- const key=String(id||'');
+ // A stable palette index: removing or sorting another student must not
+ // change the color already associated with this student's identifier.
+ const key=String(id??'');
  const code=Array.from(key).reduce((acc,char)=>(acc*31+char.charCodeAt(0))>>>0,0);
  return palette[code%palette.length];
 };
