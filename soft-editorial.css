@@ -1,0 +1,208 @@
+/* TeacherPro • Soft Editorial — Тёплая студия
+   Decorative surfaces never cover interactive content or hour-grid geometry.
+   Deliberately separated from legacy styles for a reversible review. */
+body.soft-editorial{
+  --studio-ink:#49332e;--studio-muted:#887970;--studio-terracotta:#c76551;--studio-sage:#748e77;
+  --studio-border:#eaded4;--studio-surface:#fffdfa;--studio-shadow:0 12px 35px rgba(91,60,43,.075);
+  --app-bg:#f9f2ea;--app-bg2:#f4e6dd;--ink:#49332e;--muted:#887970;--line:#eaded4;
+  --accent:#c76551;--accent-deep:#a54b3b;--accent-soft:#fbe6df;--editorial-accent:#c76551;
+  --editorial-surface:#fffdfa;--card-shadow:var(--studio-shadow);
+  color:#49332e;font-family:Manrope,Inter,system-ui,sans-serif;
+  background:radial-gradient(ellipse at 94% 0%,#f1d6c8a0,transparent 36%),
+    radial-gradient(ellipse at 2% 95%,#e8d0b777,transparent 32%),#faf5ee;
+}
+body.soft-editorial[data-theme="night"]{--studio-ink:#f4ece8;--studio-muted:#c7b6b6;--studio-surface:#2b2e3c;--studio-border:#555260;--studio-shadow:0 12px 35px #0c071026;color:#f4ece8}
+body.soft-editorial[data-theme="night"] .se-card,body.soft-editorial[data-theme="night"] .se-action{background:#2b2e3c;color:#f4ece8}
+body.soft-editorial[data-theme="night"] .se-hero,body.soft-editorial[data-theme="night"] .se-greeting{background:#343342;color:#f4ece8}
+body.soft-editorial[data-theme="night"] .se-subtitle,body.soft-editorial[data-theme="night"] .se-soft-label,body.soft-editorial[data-theme="night"] .se-row-sub{color:#c7b6b6}
+body.soft-editorial[data-theme="night"] .se-month-day{background:#2b2e3c;color:#f4ece8}
+body.soft-editorial[data-theme="night"] .se-month-empty{background:#242533}
+body.soft-editorial:not([data-theme="night"]) .sidebar{background:linear-gradient(180deg,#fffbf7,#f7eee8)!important}
+body.soft-editorial .sidebar{border-right:1px solid var(--studio-border);box-shadow:2px 0 14px #8d644509}
+body.soft-editorial .sidebar .brand{font-family:'Playfair Display',Georgia,serif;font-weight:700;color:var(--studio-ink);letter-spacing:-.035em}
+body.soft-editorial .brand-mark{background:linear-gradient(140deg,#dc8a73,#c76652)!important;border-radius:12px;box-shadow:none}
+body.soft-editorial .sidebar nav button,body.soft-editorial .sidebar-bottom button{border-radius:11px;transition:background .15s,color .15s}
+body.soft-editorial .sidebar button.active,body.soft-editorial .sidebar nav button:hover{background:#f8e4dc;color:#a94b39}
+body.soft-editorial .main{position:relative;isolation:isolate}
+body.soft-editorial .main:before{content:"";position:absolute;z-index:-1;right:0;top:10px;width:210px;height:210px;background:url("./assets/studio-botanical.svg") center / contain no-repeat;opacity:.24;pointer-events:none}
+body.soft-editorial .topbar{border-bottom-color:var(--studio-border)}
+body.soft-editorial .topbar h1,body.soft-editorial .calendar-range{font-family:'Playfair Display',Georgia,serif;font-weight:650;color:var(--studio-ink)}
+body.soft-editorial .topbar .icon-btn,body.soft-editorial .top-settings-btn{border-radius:12px;background:#fffaf6;color:#b55846;border:1px solid #eadbd0}
+body.soft-editorial .avatar{background:#f7e2d8;color:#9e4b3d}
+body.soft-editorial .primary{background:linear-gradient(115deg,#d47865,#bb574a);color:#fff;border-color:transparent;box-shadow:0 5px 13px #bb574a20;border-radius:12px}
+body.soft-editorial .primary:hover{background:linear-gradient(115deg,#cb6b57,#a9463a)}
+body.soft-editorial .secondary{background:#fffaf6;border-color:#ead8ca;color:#8c5144;border-radius:12px}
+body.soft-editorial .form input,body.soft-editorial .form select,body.soft-editorial .form textarea,
+body.soft-editorial .calendar-filters input,body.soft-editorial .calendar-filters select{background:#fffdfa;border-color:#eaded4;border-radius:12px}
+body.soft-editorial .setting,body.soft-editorial .student-section,body.soft-editorial .table-wrap,
+body.soft-editorial .panel,body.soft-editorial .modal{border-radius:20px;border-color:var(--studio-border);box-shadow:var(--studio-shadow)}
+body.soft-editorial .modal-head h2{font-family:'Playfair Display',Georgia,serif}
+body.soft-editorial button:focus-visible,body.soft-editorial a:focus-visible{outline:3px solid #b4775b;outline-offset:3px}
+
+/* Editorial dashboard — single useful viewport, no decorative information cards. */
+body.soft-editorial.se-dashboard-page #pageTitle{display:none}
+body.soft-editorial .se-dashboard{display:grid;gap:15px;padding:8px 0 26px;color:var(--studio-ink)}
+body.soft-editorial .se-greeting{position:relative;padding:12px 4px 3px;overflow:visible}
+body.soft-editorial .se-greeting h2{font-family:'Playfair Display',Georgia,serif;font-weight:650;letter-spacing:-.035em;font-size:clamp(27px,3vw,42px);line-height:1.14;margin:0 0 7px;color:var(--studio-ink)}
+body.soft-editorial .se-subtitle{color:var(--studio-muted);font-size:13px;margin:0}
+body.soft-editorial .se-overview{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px}
+body.soft-editorial .se-card{position:relative;min-width:0;overflow:hidden;border:1px solid var(--studio-border);background:var(--studio-surface);box-shadow:var(--studio-shadow);border-radius:19px;padding:20px;color:var(--studio-ink)}
+body.soft-editorial .se-card h3{font-size:16px;font-family:'Playfair Display',Georgia,serif;font-weight:700;margin:0;letter-spacing:-.02em;color:var(--studio-ink)}
+body.soft-editorial .se-hero{background:linear-gradient(110deg,#fff8f2,#f8e6da);min-height:189px;padding:21px 23px}
+body.soft-editorial .se-hero:after{content:"";position:absolute;right:-45px;bottom:-85px;width:245px;height:265px;background:url("./assets/studio-botanical.svg") center / contain no-repeat;opacity:.55;pointer-events:none}
+body.soft-editorial .se-hero>*{position:relative;z-index:1}
+body.soft-editorial .se-card-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:16px}
+body.soft-editorial .se-soft-label{font-size:11px;color:var(--studio-muted)}
+body.soft-editorial .se-soon{display:inline-flex;gap:5px;align-items:center;background:#fce4da;color:#a64c3e;font-size:10px;font-weight:800;border-radius:100px;padding:6px 9px}
+body.soft-editorial .se-next-row{display:flex;align-items:center;gap:13px;margin:11px 0}
+body.soft-editorial .se-avatar{width:47px;height:47px;min-width:47px;border-radius:15px;background:#edd7c8;display:grid;place-items:center;color:#8b5344;font:700 20px 'Playfair Display',Georgia,serif;box-shadow:inset 0 0 0 1px #ffffff88}
+body.soft-editorial .se-time{font-family:'Playfair Display',Georgia,serif;font-size:25px;font-weight:700;line-height:1.2}
+body.soft-editorial .se-person{font-weight:750;font-size:12px;margin-top:5px}
+body.soft-editorial .se-row-sub{font-size:11px;color:var(--studio-muted);margin-top:3px}
+body.soft-editorial .se-cta{margin-left:60px;font-size:12px;min-height:36px;padding:7px 15px}
+body.soft-editorial .se-load-body{display:flex;gap:13px;align-items:center;justify-content:space-between}
+body.soft-editorial .se-hours{font-family:'Playfair Display',Georgia,serif;font-size:34px;font-weight:700}
+body.soft-editorial .se-donut{width:87px;height:87px;flex-shrink:0;border-radius:50%;background:conic-gradient(#77977e var(--se-ratio),#f0e4dc 0);display:grid;place-items:center}
+body.soft-editorial .se-donut-inner{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:#fffdfa;font-size:14px;font-weight:800;color:#546a5b}
+body.soft-editorial .se-week-bars{display:flex;gap:7px;justify-content:flex-end;align-items:end;min-height:80px}
+body.soft-editorial .se-week-bar{height:77px;width:13px;border-radius:9px;background:#f3e8e0;position:relative;overflow:hidden;display:flex;align-items:flex-end}
+body.soft-editorial .se-week-bar span{display:block;width:100%;background:linear-gradient(#a0b49d,#718f7c);border-radius:8px 8px 0 0;min-height:2px}
+body.soft-editorial .se-week-labels{display:flex;gap:7px;justify-content:flex-end;margin-top:4px}
+body.soft-editorial .se-week-labels span{font-size:9px;color:var(--studio-muted);width:13px;text-align:center}
+body.soft-editorial .se-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+body.soft-editorial .se-action{display:flex;align-items:center;gap:10px;text-align:left;padding:12px 14px;background:linear-gradient(120deg,#fff5ef,#fffcf9);border:1px solid #f0dfd4;border-radius:14px;color:var(--studio-ink);font-size:12px;font-weight:800;min-width:0;min-height:66px}
+body.soft-editorial .se-action:nth-child(2){background:linear-gradient(120deg,#eef5ee,#fdfefa)}
+body.soft-editorial .se-action:nth-child(3){background:linear-gradient(120deg,#fff1e5,#fffaf5)}
+body.soft-editorial .se-action:nth-child(4){background:linear-gradient(120deg,#f5eee9,#fffaf8)}
+body.soft-editorial .se-action span:first-child{display:grid;place-items:center;flex:0 0 39px;width:39px;height:39px;border-radius:13px;background:#f7dcd3;color:#a74638;font-size:20px}
+body.soft-editorial .se-action:nth-child(2) span:first-child{background:#e1ebe0;color:#54765f}
+body.soft-editorial .se-action:nth-child(3) span:first-child{background:#f9e3d4;color:#b9683e}
+body.soft-editorial .se-action:nth-child(4) span:first-child{background:#ebe2de;color:#8f6262}
+body.soft-editorial .se-action:hover{transform:translateY(-1px);border-color:#d7b5a7}
+body.soft-editorial .se-bottom{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:14px}
+body.soft-editorial .se-link{background:transparent;color:#b85442;font-size:11px;font-weight:750;padding:7px;border-radius:9px}
+body.soft-editorial .se-lesson-list{display:grid;gap:0}
+body.soft-editorial .se-lesson{display:flex;align-items:center;gap:11px;min-width:0;width:100%;border-top:1px solid #f1e8e1;background:transparent;padding:12px 0;text-align:left;color:var(--studio-ink)}
+body.soft-editorial .se-lesson:hover{background:#fff6ef}
+body.soft-editorial .se-dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px;background:#d67e64}
+body.soft-editorial .se-dot.done{background:#78987e}
+body.soft-editorial .se-date{flex:0 0 66px;font-size:11px;color:var(--studio-muted)}
+body.soft-editorial .se-lesson-time{font-size:11px;flex:0 0 88px;font-weight:800}
+body.soft-editorial .se-lesson-name{font-size:12px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+body.soft-editorial .se-lesson-arrow{color:#b75e4e}
+body.soft-editorial .se-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+body.soft-editorial .se-stat{display:flex;align-items:center;gap:9px;background:#fcf7f2;border:1px solid #f1e9e0;border-radius:12px;padding:11px 12px;min-width:0}
+body.soft-editorial .se-stat span:first-child{display:grid;place-items:center;width:32px;height:32px;background:#ecf0e9;border-radius:50%;flex:0 0 32px}
+body.soft-editorial .se-stat strong{display:block;font-size:17px;line-height:1.4;color:var(--studio-ink)}
+body.soft-editorial .se-empty{font-size:12px;color:var(--studio-muted);padding:14px 0;line-height:1.5}
+body.soft-editorial .se-birthday .birthday-widget{margin:0}
+body.soft-editorial .se-birthday .birthday-heading{font-family:'Playfair Display',Georgia,serif}
+body.soft-editorial .se-hero-empty{min-height:170px}
+body.soft-editorial .se-note{display:block;margin-top:12px;font-size:11px;color:var(--studio-muted)}
+
+/* Calendar = same palette and hierarchy; hour precision stays in app.js. */
+body.soft-editorial .calendar-top{margin:17px 0 15px;gap:11px}
+body.soft-editorial .calendar-kicker{color:#bd7462;letter-spacing:1px}
+body.soft-editorial .calendar-range{font-size:clamp(23px,2.3vw,31px)}
+body.soft-editorial .calendar-summary{color:#917b70}
+body.soft-editorial .calendar-actions{gap:7px}
+body.soft-editorial .calendar-arrow,body.soft-editorial .calendar-today{background:#fffaf7;border:1px solid #e9d9ce;color:#875144;border-radius:11px}
+body.soft-editorial .calendar-view-switch{background:#fffaf7;border-color:#e9d9ce;border-radius:12px}
+body.soft-editorial .calendar-view-switch button.active{background:#f8e0d7;color:#a94c3d}
+body.soft-editorial .calendar-shell{border-radius:20px;border-color:#e8ded5;box-shadow:var(--studio-shadow);background:#fffdfa}
+body.soft-editorial .calendar-grid .calendar-hour,body.soft-editorial .calendar-grid .calendar-corner,
+body.soft-editorial .calendar-grid .calendar-day-head{background:#fdf8f4;border-color:#f0e6e0;color:#826e67}
+body.soft-editorial .calendar-grid .calendar-cell{background-color:#fffdfa;border-color:#f0e7df}
+body.soft-editorial .calendar-grid .calendar-cell.is-today{background-color:#fffbf6}
+body.soft-editorial .calendar-day-head.is-today b{background:#c96f59;color:#fff}
+body.soft-editorial .calendar-grid .calendar-event{box-shadow:0 3px 9px #87644b19;border-radius:9px;border-left-width:4px}
+body.soft-editorial .calendar-grid .calendar-event .event-time{font-weight:800}
+body.soft-editorial .calendar-grid .calendar-event.event-done{background:#e6f0e8!important;border-color:#70987d!important;color:#3b694a!important}
+body.soft-editorial .calendar-grid .calendar-event.event-done .event-time{color:#3b694a!important}
+body.soft-editorial .calendar-grid .calendar-cell.drop-target{outline-color:#c96f59}
+body.soft-editorial .lesson-quick-menu{background:#fffdfa;border-color:#e9d9ce;border-radius:15px;box-shadow:0 18px 40px #64403328;color:#553b33}
+body.soft-editorial .lesson-quick-menu button:hover{background:#fcf0e9}
+body.soft-editorial .calendar-footnote{color:#947d73}
+body.soft-editorial .se-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;padding:10px}
+body.soft-editorial .se-month-weekday{text-align:center;font-size:11px;color:#88766d;padding:8px}
+body.soft-editorial .se-month-day{border:1px solid #efe3d9;background:#fffdfa;border-radius:12px;text-align:left;min-width:0;min-height:101px;padding:9px;color:#533b34;display:flex;flex-direction:column;gap:6px}
+body.soft-editorial .se-month-day:hover{background:#fff2e9;border-color:#dcb8a9}
+body.soft-editorial .se-month-day.is-today{border-color:#ca7660;background:#fff4ed}
+body.soft-editorial .se-month-num{font-weight:800;font-size:13px}
+body.soft-editorial .se-month-lesson{font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#876b61}
+body.soft-editorial .se-month-empty{background:#f8f1ec;border-color:transparent;opacity:.45;min-height:101px}
+body.soft-editorial .se-month-count{color:#a84f3f;font-size:10px;font-weight:800}
+body.soft-editorial .se-month-head{font-size:11px;color:#947d73;padding:7px 15px}
+
+/* Small screens: mobile day by default, stacked information and tappable actions. */
+@media(max-width:1050px){
+ body.soft-editorial .se-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body.soft-editorial .se-overview{grid-template-columns:1fr 1fr}
+ body.soft-editorial .se-load-body{gap:8px;flex-wrap:wrap}
+}
+@media(max-width:720px){
+ body.soft-editorial .main:before{width:135px;height:135px;opacity:.16}
+ body.soft-editorial .se-dashboard{gap:11px;padding-top:0}
+ body.soft-editorial .se-greeting h2{font-size:27px}
+ body.soft-editorial .se-overview{grid-template-columns:1fr}
+ body.soft-editorial .se-card{padding:14px;border-radius:16px}
+ body.soft-editorial .se-hero{min-height:180px}
+ body.soft-editorial .se-hero:after{width:180px;height:200px;right:-35px;bottom:-58px;opacity:.4}
+ body.soft-editorial .se-next-row{margin:8px 0}
+ body.soft-editorial .se-action{padding:10px;min-height:58px;font-size:11px}
+ body.soft-editorial .se-bottom{grid-template-columns:1fr}
+ body.soft-editorial .se-donut{width:76px;height:76px}
+ body.soft-editorial .se-donut-inner{width:57px;height:57px}
+ body.soft-editorial .se-load-body{flex-wrap:nowrap}
+ body.soft-editorial .se-lesson-time{flex-basis:75px}
+ body.soft-editorial .se-date{flex-basis:55px}
+ body.soft-editorial .calendar-grid-day{grid-template-columns:46px minmax(0,1fr)}
+ body.soft-editorial .se-month-grid{gap:2px;padding:6px}
+ body.soft-editorial .se-month-day{min-height:62px;padding:4px;border-radius:7px}
+ body.soft-editorial .se-month-weekday{font-size:10px;padding:5px 0}
+ body.soft-editorial .se-month-lesson{display:none}
+}
+@media(max-width:370px){
+ body.soft-editorial .se-stats{grid-template-columns:1fr 1fr}
+ body.soft-editorial .se-action{font-size:10px;padding:8px;gap:7px}
+ body.soft-editorial .se-action span:first-child{flex-basis:31px;width:31px;height:31px}
+ body.soft-editorial .se-card{padding:12px}
+}
+@media(prefers-reduced-motion:reduce){body.soft-editorial .se-action:hover{transform:none}}
+
+/* Honor existing saved theme choices while keeping the editorial layout. */
+body.soft-editorial[data-theme="sage"]{--accent:#77927d;--accent-deep:#4d7357;--accent-soft:#e7f0e7;--editorial-accent:#77927d}
+body.soft-editorial[data-theme="peach"]{--accent:#ce8d6d;--accent-deep:#a75d45;--accent-soft:#ffebdf;--editorial-accent:#ce8d6d}
+body.soft-editorial[data-theme="ocean"]{--accent:#7599b8;--accent-deep:#456e94;--accent-soft:#e7eff7;--editorial-accent:#7599b8}
+body.soft-editorial[data-theme="sand"]{--accent:#a3947f;--accent-deep:#796959;--accent-soft:#f2ede5;--editorial-accent:#a3947f}
+body.soft-editorial[data-theme="wine"]{--accent:#8e4248;--accent-deep:#71313a;--accent-soft:#f4e6e6;--editorial-accent:#8e4248}
+body.soft-editorial[data-theme="night"]{
+ --app-bg:#252737;--app-bg2:#2f3040;--ink:#f3eced;--muted:#b9b5c4;--line:#494657;
+ --accent:#cc8f7d;--accent-deep:#edb6a2;--accent-soft:#4b3a42;--editorial-accent:#cc8f7d;
+ --background-texture:linear-gradient(125deg,#222432,#32303b);
+}
+body.soft-editorial .primary{background:linear-gradient(115deg,color-mix(in srgb,var(--accent) 82%,#fff),var(--accent));box-shadow:0 5px 13px color-mix(in srgb,var(--accent) 23%,transparent)}
+body.soft-editorial .primary:hover{background:var(--accent-deep)}
+body.soft-editorial .brand-mark{font-size:0!important;display:grid;place-items:center;background:transparent!important;box-shadow:none!important}
+body.soft-editorial .brand-mark:after{content:"";display:block;width:30px;height:30px;background:url("./assets/studio-mark.svg") center / contain no-repeat}
+body.soft-editorial[data-theme="night"] .sidebar{background:#262838!important}
+body.soft-editorial[data-theme="night"] .calendar-shell,body.soft-editorial[data-theme="night"] .calendar-grid .calendar-hour,
+body.soft-editorial[data-theme="night"] .calendar-grid .calendar-cell,
+body.soft-editorial[data-theme="night"] .calendar-grid .calendar-day-head{background:#303142;color:#f3eced;border-color:#4b4958}
+body.soft-editorial[data-theme="night"] .se-stat{background:#343544;color:#f3eced;border-color:#4b4958}
+body.soft-editorial[data-theme="night"] .se-donut-inner{background:#2b2e3c;color:#e6d8d0}
+
+/* Compact recognizable TeacherPro branding in the phone toolbar. */
+@media(max-width:700px){
+  body.soft-editorial .topbar:before{
+    content:"TeacherPro";font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:700;
+    color:var(--studio-ink);background:url("./assets/studio-mark.svg") left center / 25px 25px no-repeat;
+    padding-left:29px;white-space:nowrap;align-self:center;
+  }
+  body.soft-editorial .topbar #todayLabel{display:none}
+  body.soft-editorial .topbar h1{display:none}
+  body.soft-editorial .topbar #cloudStatusGlobal.ok{font-size:0;min-width:31px;width:31px;max-width:31px;padding:6px}
+  body.soft-editorial .topbar #cloudStatusGlobal.ok:after{content:"✓";font-size:13px;color:#287a53}
+  body.soft-editorial .topbar .top-actions{gap:5px}
+}
+@media(max-width:355px){body.soft-editorial .topbar:before{font-size:17px;padding-left:25px;background-size:21px}}

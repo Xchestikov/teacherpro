@@ -23,7 +23,7 @@ async function addStudent(page,name,birthday){
  await page.locator('#addBtn').click();
  await page.locator('#fName').fill(name);
  await page.locator('#fBirthday').fill(birthday);
- await page.getByRole('button',{name:'Добавить ученика'}).click();
+ await page.locator('#modalBody').getByRole('button',{name:'Добавить ученика'}).click();
  await page.evaluate(()=>setPage('clients'));
  await expect(page.locator('#content')).toContainText(name);
  await page.evaluate(()=>syncCloud());
@@ -166,5 +166,127 @@ test('Session restore never reveals login gate while a session exists',async({pa
  await page.reload();
  await expect(page.locator('#authGate')).toBeHidden();
  await expect(page.locator('body')).not.toHaveClass(/teacherpro-loading/);
+ expect(errors).toEqual([]);
+});
+
+
+test('Two-hour event is visible across both hour cells, with usable actions',async({page})=>{
+  const errors=await setup(page);
+  await login(page);
+  await addStudent(page,'Проверка двух часов','15.12');
+  await page.setViewportSize({width:1280,height:900});
+  await page.evaluate(()=>{
+    const day=todayISO();
+    db.lessons=[{id:'two-hour-lesson',clientId:db.clients[0].id,date:day,time:'10:00',duration:120,status:'planned',hourlyRate:1000}];
+    calendarMode='day';
+    calendarSelectedDate=day;
+    setPage('schedule');
+  });
+  const metrics=await page.evaluate(()=>{
+    const event=document.querySelector('.calendar-event[data-lesson-id="two-hour-lesson"]');
+    const cell=event.closest('.calendar-cell');
+    const rect=event.getBoundingClientRect();
+    const slot=cell.getBoundingClientRect();
+    const hit=document.elementFromPoint(rect.left+rect.width/2,slot.top+slot.height*1.5);
+    return {durationRatio:rect.height/slot.height,hitId:hit?.closest('.calendar-event')?.dataset.lessonId||''};
+  });
+  expect(metrics.durationRatio).toBeGreaterThan(1.9);
+  expect(metrics.durationRatio).toBeLessThan(2.1);
+  expect(metrics.hitId).toBe('two-hour-lesson');
+  await page.locator('.calendar-event[data-lesson-id="two-hour-lesson"]').click({button:'right'});
+  await expect(page.locator('.lesson-quick-menu')).toBeVisible();
+  await expect(page.locator('.lesson-quick-menu')).toContainText('Редактировать');
+  await expect(page.locator('.lesson-quick-menu')).toContainText('Удалить');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.lesson-quick-menu')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('Deleting a consumed lesson asks before refunding and respects cancellation',async({page})=>{
+  const errors=await setup(page);await login(page);
+  await addStudent(page,'Проверка подтверждения','15.12');
+  await page.evaluate(()=>{
+    const student=db.clients[0];
+    db.subscriptions=[{id:'sub-refund',clientId:student.id,total:8,remaining:7,price:8000,paymentStatus:'paid',status:'active'}];
+    db.lessons=[{id:'charged-refund',clientId:student.id,date:todayISO(),time:'11:00',duration:60,status:'done',consumedSubscriptionId:'sub-refund'}];
+    setPage('schedule');
+  });
+  const lesson=page.locator('.calendar-event[data-lesson-id="charged-refund"]');
+  await page.evaluate(()=>openLessonByKey('charged-refund'));
+  page.once('dialog',dialog=>{
+    expect(dialog.message()).toContain('вернётся в остаток');
+    return dialog.dismiss();
+  });
+  await page.locator('#modalBody button[data-lesson-id]').first().click();
+  expect(await page.evaluate(()=>({count:db.lessons.length,remaining:db.subscriptions[0].remaining}))).toEqual({count:1,remaining:7});
+  page.once('dialog',dialog=>dialog.accept());
+  await page.locator('#modalBody button[data-lesson-id]').first().click();
+  expect(await page.evaluate(()=>({count:db.lessons.length,remaining:db.subscriptions[0].remaining}))).toEqual({count:0,remaining:8});
+  expect(errors).toEqual([]);
+});
+
+
+test('Soft Editorial uses real workload data and presents actions on mobile',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Тестовая София','09.08');
+ await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>{
+   const d=todayISO();
+   db.settings.name='Елена';
+   db.lessons=[
+     {id:'se-completed',date:d,time:'08:00',duration:60,status:'done',clientId:db.clients[0].id},
+     {id:'se-planned',date:d,time:'16:00',duration:60,status:'planned',clientId:db.clients[0].id}
+   ];
+   setPage('dashboard');
+ });
+ await expect(page.locator('body')).toHaveClass(/soft-editorial/);
+ await expect(page.locator('.se-greeting h2')).toContainText('Елена');
+ await expect(page.locator('.se-overview .se-card')).toHaveCount(2);
+ await expect(page.locator('.se-hero')).toContainText('16:00');
+ await expect(page.locator('.se-donut')).toHaveAttribute('aria-label',/50 процентов/);
+ await expect(page.locator('.se-actions button')).toHaveCount(4);
+ await expect(page.locator('.se-week-bar')).toHaveCount(7);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)).toBeLessThanOrEqual(2);
+ await page.screenshot({path:'test-results/studio-mobile-390-dashboard.png',fullPage:true});
+ await page.setViewportSize({width:1280,height:900});
+ await page.evaluate(()=>setPage('dashboard'));
+ await page.screenshot({path:'test-results/studio-desktop-1280-dashboard.png',fullPage:true});
+ expect(errors).toEqual([]);
+});
+
+test('Soft Editorial calendar quick actions, month grid and day navigation',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Месячный урок','15.12');
+ await page.setViewportSize({width:1280,height:900});
+ await page.evaluate(()=>{
+   const day=todayISO();
+   db.lessons=[{id:'se-menu-event',clientId:db.clients[0].id,date:day,time:'10:00',duration:120,status:'planned'}];
+   calendarMode='day';calendarSelectedDate=day;setPage('schedule');
+ });
+ await expect(page.locator('.calendar-grid-day')).toBeVisible();
+ await page.locator('.calendar-event[data-lesson-id="se-menu-event"]').click();
+ await expect(page.locator('.lesson-quick-menu')).toBeVisible();
+ await expect(page.locator('#modal')).not.toHaveClass(/open/);
+ await page.locator('.lesson-quick-menu [data-action="edit"]').click();
+ await expect(page.locator('#modal')).toHaveClass(/open/);
+ await page.locator('#modalClose').click();
+ await page.evaluate(()=>calendarSetMode('month'));
+ await expect(page.locator('.se-month-grid .se-month-day')).toHaveCount(42);
+ const target=page.locator('.se-month-day.is-today');
+ await target.click();
+ await expect(page.locator('.calendar-grid-day')).toBeVisible();
+ await page.screenshot({path:'test-results/studio-desktop-calendar.png',fullPage:true});
+ await page.evaluate(()=>{
+   calendarSetMode('week');
+   const monday=new Date(todayISO()+'T12:00:00');
+   monday.setDate(monday.getDate()-(monday.getDay()+6)%7);
+   const d=new Date(monday);d.setDate(d.getDate()+1);
+   db.lessons.push({id:'se-second',clientId:db.clients[0].id,date:localDateISO(d),time:'14:00',duration:90,status:'planned'});
+   setPage('schedule');
+ });
+ await page.screenshot({path:'test-results/studio-desktop-week-calendar.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>calendarSetMode('day'));
+ await page.screenshot({path:'test-results/studio-mobile-day-calendar.png',fullPage:true});
  expect(errors).toEqual([]);
 });
