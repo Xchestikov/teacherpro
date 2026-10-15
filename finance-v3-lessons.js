@@ -18,8 +18,9 @@ saveLesson=function(id){
  const l={id:id||crypto.randomUUID(),clientId:Number(selected.id),date,time,
    type:document.querySelector('#lType').value,duration,hourlyRate:amount,
    status:document.querySelector('#lStatus').value,billingMode:'per_lesson'};
- if(previous&&lessonIsCancelled(l.status)&&l.status!==previous.status&&
-    !confirm('Установить статус «'+lessonStatusText(l.status)+'»? Стоимость урока будет автоматически пересчитана.'))return;
+ if(previous&&l.status!==previous.status&&
+    (l.status==='no_show_charged'||l.status==='cancelled_charged')&&
+    !confirm('Пропуск со списанием: начислить стоимость занятия?'))return;
  const recurrence=previous?'none':(document.querySelector('#lRecurrence')?.value||'none');
  const weeks=previous?1:Math.min(52,Math.max(1,Number(document.querySelector('#lWeeks')?.value)||4));
  const events=[];

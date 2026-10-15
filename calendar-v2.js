@@ -49,10 +49,7 @@
       const names=conflict.slice(0,3).map(l=>(client(l.clientId)?.name||'Ученик')+' · '+l.time).join('\n');
       if(!confirm('В выбранном интервале уже есть занятия:\n'+names+'\n\nВсё равно продолжить?'))return false;
     }
-    const prompt=kind==='resize'?
-      'Изменить длительность занятия на '+next.duration+' мин.?':
-      'Перенести занятие на '+next.date+' в '+next.time+'?';
-    if(!confirm(prompt))return false;
+    // Move/resize is reversible via toast. Only overlap overrides ask confirmation.
     const previous={date:lesson.date,time:lesson.time,duration:Number(lesson.duration)||60};
     const expected={date:next.date,time:next.time,duration:next.duration};
     Object.assign(lesson,changes);save();render();

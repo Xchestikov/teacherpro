@@ -59,10 +59,10 @@
     if(!lesson||lesson.status===status)return;
     const charged=Boolean(lesson.consumedSubscriptionId||lesson.consumedClientFallback);
     const mustCharge=lessonCharges(status);
-    const message='Установить статус «'+lessonStatusText(status)+'»?'+
-      (mustCharge&&!charged?'\nБудет списано одно оплаченное занятие.':
-       !mustCharge&&charged?'\nРанее списанное занятие вернётся в остаток.':'');
-    if(!confirm(message))return;
+    // Explicit paid absences still need a debit warning. Routine status changes
+    // are applied immediately; consume/refund and rollback safeguards remain.
+    if((status==='no_show_charged'||status==='cancelled_charged')&&!charged&&
+       !confirm('Пропуск со списанием: списать одно занятие из абонемента?'))return;
     const snapshot=JSON.stringify(db);
     if(charged&&!mustCharge)refundLesson(lesson);
     if(mustCharge&&!charged&&!consumeLesson(lesson.clientId,lesson)){
@@ -107,7 +107,10 @@
       more.setAttribute('role','button');more.setAttribute('tabindex','0');more.setAttribute('aria-label','Статус и действия занятия');
       more.textContent='⋮';
       el.append(more);
-      if(cancelled){const label=el.querySelector('.event-time');if(label)label.textContent='⊘ · '+lessonStatusText(lesson.status);}
+      if(cancelled){
+        const details=el.querySelector('small');
+        if(details){details.classList.add('tp-event-status');details.textContent=lessonStatusText(lesson.status);}
+      }
     });
   }
   document.addEventListener('keydown',event=>{
