@@ -45,3 +45,52 @@ test('WebKit iPhone viewport keeps lesson text unselectable and mobile payment m
  await expect(page.locator('#modalTitle')).toContainText('Исправить оплату');
  expect(errors).toEqual([]);
 });
+
+
+test('Native iOS touches drag a planned lesson without selecting time labels',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
+ await page.route('https://fonts.googleapis.com/**',r=>r.abort());
+ await page.route('https://fonts.gstatic.com/**',r=>r.abort());
+ await page.addInitScript({content:mock});
+ await page.goto('/');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
+ await page.locator('#authPassword').fill('DemoPass123');
+ await page.locator('#authSubmit').click();
+ await expect(page.locator('#authGate')).toBeHidden();
+ await page.evaluate(()=>{
+  db.clients=[{id:123,name:'Жесты',billingMode:'subscription'}];
+  db.lessons=[{id:'native-drag',clientId:123,date:todayISO(),time:'10:00',duration:60,status:'planned'}];
+  calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ const event=page.locator('.calendar-event[data-lesson-id="native-drag"]');
+ await event.scrollIntoViewIfNeeded();
+ const moved=await page.evaluate(async()=>{
+   const source=document.querySelector('.calendar-event[data-lesson-id="native-drag"]');
+   const cell=source.closest('.calendar-cell');
+   const a=source.getBoundingClientRect(),b=cell.getBoundingClientRect();
+   const x=a.left+Math.min(a.width/3,24),y=a.top+Math.min(a.height/4,12);
+   // Use the following hour's slot; coordinates stay inside the visible viewport.
+   const next=document.querySelector('.calendar-cell[data-date="'+cell.dataset.date+'"][data-minute="660"]');
+   next.scrollIntoView({block:'center'});
+   const r=next.getBoundingClientRect(),endX=r.left+r.width*.5,endY=r.top+r.height*.1;
+   const fire=(kind,cx,cy)=> {
+     const touch=new Touch({identifier:47,target:source,clientX:cx,clientY:cy,pageX:cx+scrollX,pageY:cy+scrollY});
+     const ev=new TouchEvent(kind,{bubbles:true,cancelable:true,touches:kind==='touchend'?[]:[touch],
+       targetTouches:kind==='touchend'?[]:[touch],changedTouches:[touch]});
+     source.dispatchEvent(ev);return ev.defaultPrevented;
+   };
+   // Touch start after repositioning: source may move due to scroll.
+   const updated=source.getBoundingClientRect();
+   const sx=updated.left+25,sy=updated.top+10;
+   const prevented=fire('touchstart',sx,sy);
+   await new Promise(resolve=>setTimeout(resolve,480));
+   fire('touchmove',endX,endY);
+   fire('touchend',endX,endY);
+   return {prevented,selection:String(window.getSelection()),time:db.lessons[0].time};
+ });
+ expect(moved.prevented).toBe(true);
+ expect(moved.selection).toBe('');
+ expect(moved.time).toBe('11:00');
+ expect(errors).toEqual([]);
+});
