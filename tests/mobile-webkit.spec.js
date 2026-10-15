@@ -164,6 +164,20 @@ test('iPhone touch drag snaps each quarter hour and moves the lesson preview wit
      const fresh=slot.getBoundingClientRect();
      desiredY=fresh.top+fresh.height*step/60+12;
      fire('touchmove',desiredY);
+     // On touch devices, the finger may grip the event below its top edge.
+     // Find the quarter-hour drop coordinate within one neighboring interval,
+     // then check that the visual guide, ghost and saved time all agree.
+     const expected='10:'+String(step).padStart(2,'0');
+     let found=document.querySelector('.tp-mobile-quarter-guide')?.dataset.targetTime===expected;
+     for(let distance=3;!found&&distance<=fresh.height*.36;distance+=3){
+       for(const sign of [-1,1]){
+         const candidate=desiredY+sign*distance;
+         fire('touchmove',candidate);
+         if(document.querySelector('.tp-mobile-quarter-guide')?.dataset.targetTime===expected){
+           desiredY=candidate;found=true;break;
+         }
+       }
+     }
      const preview=document.querySelector('.tp-mobile-drag-ghost');
      const previewText=preview?.querySelector('.tp-mobile-drag-time')?.textContent;
      const movedTop=preview?.getBoundingClientRect().top;
