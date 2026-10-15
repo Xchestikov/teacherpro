@@ -23,7 +23,7 @@ async function addStudent(page,name,birthday){
  await page.locator('#addBtn').click();
  await page.locator('#fName').fill(name);
  await page.locator('#fBirthday').fill(birthday);
- await page.getByRole('button',{name:'Добавить ученика'}).click();
+ await page.locator('#modalBody').getByRole('button',{name:'Добавить ученика'}).click();
  await page.evaluate(()=>setPage('clients'));
  await expect(page.locator('#content')).toContainText(name);
  await page.evaluate(()=>syncCloud());
