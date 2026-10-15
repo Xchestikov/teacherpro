@@ -438,3 +438,28 @@ test('Calendar V2 moving lessons has an accessible undo and mobile layout',async
  await page.screenshot({path:'test-results/calendar-v2-desktop-week.png',fullPage:true});
  expect(errors).toEqual([]);
 });
+
+
+test('Calendar V2 pointer resize grip extends event height in 15-minute steps',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Перетягивание В2','08.07');
+ await page.setViewportSize({width:1280,height:900});
+ await page.evaluate(()=>{
+   db.lessons=[{id:'grip-v2',clientId:db.clients[0].id,date:todayISO(),time:'10:00',duration:60,status:'planned',hourlyRate:1000}];
+   calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ const grip=page.locator('.calendar-event[data-lesson-id="grip-v2"] .cv2-resize-handle');
+ const box=await grip.boundingBox();
+ expect(box).toBeTruthy();
+ const x=box.x+box.width/2,y=box.y+box.height/2;
+ await page.mouse.move(x,y);
+ await page.mouse.down();
+ await page.mouse.move(x,y+42,{steps:8});
+ await page.mouse.up();
+ expect(await page.evaluate(()=>db.lessons[0].duration)).toBe(90);
+ await expect(page.locator('.cv2-toast')).toContainText('90 мин.');
+ await page.locator('.cv2-toast').getByRole('button',{name:'Отменить'}).click();
+ expect(await page.evaluate(()=>db.lessons[0].duration)).toBe(60);
+ expect(errors).toEqual([]);
+});
