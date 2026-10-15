@@ -135,7 +135,7 @@
     if(!lesson||lesson.status!=='planned')return;
     e.preventDefault();e.stopImmediatePropagation();
     const cell=event.closest('.calendar-cell'),cellRect=cell.getBoundingClientRect(),rect=event.getBoundingClientRect();
-    drag={handle,event,id:String(lesson.id),startY:rect.top,cellHeight:cellRect.height,
+    drag={handle,event,id:String(lesson.id),startPointerY:e.clientY,cellHeight:cellRect.height,
       initial:Number(lesson.duration)||60,proposed:Number(lesson.duration)||60,
       initialHeight:event.style.height,pointerId:e.pointerId};
     handle.setPointerCapture?.(e.pointerId);
@@ -144,8 +144,8 @@
   function moveResize(e){
     if(!drag||drag.pointerId!==e.pointerId)return;
     e.preventDefault();e.stopImmediatePropagation();
-    const m=Math.round((e.clientY-drag.startY)/drag.cellHeight*60/STEP)*STEP;
-    drag.proposed=clamp(m,MIN_DURATION,MAX_DURATION);
+    const delta=Math.round((e.clientY-drag.startPointerY)/drag.cellHeight*60/STEP)*STEP;
+    drag.proposed=clamp(drag.initial+delta,MIN_DURATION,MAX_DURATION);
     drag.event.style.height='calc('+(drag.proposed/60*100)+'% - 4px)';
     drag.handle.setAttribute('aria-label','Длительность '+drag.proposed+' минут');
     drag.event.dataset.resizePreview=drag.proposed+' мин.';
