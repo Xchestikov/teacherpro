@@ -17,12 +17,21 @@ const palette=[
  ['#edeaf3','#aa9cb9','#706283']  // mauve
 ];
 window.tpStudentCalendarPalette=palette;
+const hashId=key=>Array.from(key).reduce((acc,char)=>(acc*31+char.charCodeAt(0))>>>0,0);
 const assigned=id=>{
- // A stable palette index: removing or sorting another student must not
- // change the color already associated with this student's identifier.
  const key=String(id??'');
- const code=Array.from(key).reduce((acc,char)=>(acc*31+char.charCodeAt(0))>>>0,0);
- return palette[code%palette.length];
+ const students=(db.clients||[]).map(c=>String(c.id)).sort((a,b)=>a.localeCompare(b,'ru',{numeric:true}));
+ // Keep colors distinct for up to 12 students while preferring a
+ // deterministic hash. Newer student IDs do not recolor older students.
+ const assignedColors=new Map(),occupied=new Set();
+ for(const studentId of students){
+   let index=hashId(studentId)%palette.length;
+   if(occupied.size<palette.length){
+     while(occupied.has(index))index=(index+1)%palette.length;
+   }
+   occupied.add(index);assignedColors.set(studentId,index);
+ }
+ return palette[assignedColors.get(key)??(hashId(key)%palette.length)];
 };
 function decorate(){
  const all=document.querySelectorAll('.calendar-grid .calendar-event');
