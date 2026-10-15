@@ -1,0 +1,47 @@
+/* Calendar V2 — builds on Soft Editorial without affecting dashboard or profile. */
+body.soft-editorial .calendar-filters{display:flex;align-items:end;flex-wrap:wrap;gap:10px}
+body.soft-editorial .cv2-filter{flex:0 0 auto;align-self:end;height:38px;padding:0 14px;border:1px solid #e7d6ca;
+  border-radius:12px;background:#fffdfb;color:#966153;font-size:12px;font-weight:750;
+  cursor:pointer;box-shadow:0 3px 12px #7d5b3b0c}
+body.soft-editorial .cv2-filter[aria-pressed="false"]{color:#83736b;background:#f6eeea}
+body.soft-editorial .cv2-filter:focus-visible{outline:3px solid #c77968;outline-offset:2px}
+body.soft-editorial .calendar-grid .calendar-event{isolation:isolate;box-sizing:border-box}
+body.soft-editorial .calendar-grid .calendar-event .cv2-resize-handle{
+  position:absolute;bottom:1px;left:50%;transform:translateX(-50%);
+  z-index:10;min-width:31px;height:11px;padding:0 3px;border-radius:6px 6px 2px 2px;
+  color:color-mix(in srgb,currentColor 65%,transparent);
+  background:#ffffff8f;display:grid;place-items:center;font-size:10px;
+  line-height:8px;letter-spacing:2px;cursor:ns-resize;touch-action:none;
+  opacity:.68;user-select:none;-webkit-user-select:none
+}
+body.soft-editorial .calendar-grid .calendar-event:hover .cv2-resize-handle,
+body.soft-editorial .calendar-grid .calendar-event:focus-within .cv2-resize-handle,
+body.soft-editorial .calendar-grid .calendar-event.cv2-resizing .cv2-resize-handle{
+ opacity:1;background:#fff;border:1px solid #d7b9a8;color:#8a4b3e
+}
+body.soft-editorial .calendar-grid .calendar-event.cv2-resizing{
+  z-index:32!important;opacity:.85;box-shadow:0 0 0 2px #c66c56a3,0 10px 20px #6a4a2a40!important;pointer-events:auto
+}
+body.soft-editorial .calendar-grid .calendar-event.cv2-resizing:after{
+  content:attr(data-resize-preview);position:absolute;left:5px;bottom:14px;background:#fffefb;
+  color:#92533f;border-radius:6px;padding:3px 6px;font-size:10px;font-weight:800;
+  box-shadow:0 3px 9px #4b342a24;pointer-events:none
+}
+body.soft-editorial .cv2-toast{
+  position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(22px,env(safe-area-inset-bottom));
+  z-index:11000;max-width:min(400px,calc(100vw - 26px));display:flex;align-items:center;gap:10px;
+  padding:12px 14px;border-radius:15px;background:#4f3932;color:#fffbf9;font-size:12px;
+  box-shadow:0 14px 40px #3f242748
+}
+body.soft-editorial .cv2-toast span{min-width:0;flex:1}
+body.soft-editorial .cv2-toast button{flex:0 0 auto;background:#fff5ee;color:#954c3d;border:0;
+  border-radius:8px;min-height:32px;padding:5px 10px;font-size:12px;font-weight:800;cursor:pointer}
+body.soft-editorial .cv2-toast .cv2-toast-close{background:transparent;color:#f2d4c6;padding:5px;font-size:20px;font-weight:500}
+@media(max-width:700px){
+ body.soft-editorial .calendar-filters .cv2-filter{margin-top:2px;min-height:40px;white-space:nowrap}
+ body.soft-editorial .cv2-toast{left:12px;right:12px;bottom:max(82px,calc(env(safe-area-inset-bottom) + 80px))}
+ body.soft-editorial .calendar-grid .calendar-event .cv2-resize-handle{height:13px;min-width:35px;opacity:1}
+}
+@media(prefers-reduced-motion:reduce){
+ body.soft-editorial .calendar-grid .calendar-event.cv2-resizing{transition:none}
+}
