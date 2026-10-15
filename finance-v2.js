@@ -62,7 +62,8 @@
       const sub=sorted[i];if(!sub)return;
       const td=document.createElement('td');td.className='tp-finance-balance';
       const receipts=bySub(sub.id);
-      if(!receipts.length&&sub.paymentStatus!=='pending')td.innerHTML='<strong>По старым данным</strong><small>Платёж не привязан к пакету</small>';
+      if(sub.archivedAt)td.innerHTML='<strong>Закрыт</strong><small>Новых начислений нет</small>';
+      else if(!receipts.length&&sub.paymentStatus!=='pending')td.innerHTML='<strong>По старым данным</strong><small>Платёж не привязан к пакету</small>';
       else{
         const received=rub(paidCents(sub.id)),due=rub(dueCents(sub));
         td.innerHTML='<strong>'+fmt(received)+'</strong><small class="'+(due?'tp-finance-due':'')+'">'+
