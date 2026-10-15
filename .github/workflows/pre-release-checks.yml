@@ -23,6 +23,7 @@ jobs:
           node --check teacherpro-polish.js
           node --check calendar-v2.js
           node --check finance-v2.js
+          node --check finance-model-v2.js
           node --check sw.js
           node --check tests/browser.spec.js
           node --check tests/check-release-assets.js
