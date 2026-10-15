@@ -232,7 +232,7 @@
   },true);
   document.addEventListener('dragstart',e=>{
     if(e.target.closest?.('.calendar-grid')&&e.pointerType!=='mouse'&&
-       (gesture?.fromTouch||('ontouchstart' in window)))e.preventDefault();
+       gesture?.fromTouch)e.preventDefault();
   },true);
   /* Add a real weekly workload counter without changing stored data. */
   const originalDashboard=dashboard;
