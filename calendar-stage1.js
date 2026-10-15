@@ -37,6 +37,7 @@
     const minute=calendarSlotAtPoint(cell,clientY);
     if(!lesson||lesson.status!=='planned'||minute===null||minute<480||minute>=1380)return;
     const date=cell.dataset.date,time=minutesToClock(minute);
+    if(typeof window.tpCalendarMove==='function'){window.tpCalendarMove(lesson,date,time);return;}
     if(date===lesson.date&&time===lesson.time)return;
     const conflicts=lessonConflicts({...lesson,date,time},lesson.id);
     if(conflicts.length&&!confirm('В выбранное время уже запланировано занятие. Всё равно перенести?'))return;
@@ -84,6 +85,7 @@
       clearTimeout(holdTimer);gesture=null;return;
     }
     if(gesture.active){
+      window.tpCalendarTouchDragMove?.(e.clientX,e.clientY);
       const cell=document.elementFromPoint(e.clientX,e.clientY)?.closest('.calendar-cell');
       document.querySelectorAll('.calendar-cell.touch-drop-target').forEach(el=>el.classList.remove('touch-drop-target'));
       if(cell)cell.classList.add('touch-drop-target');
