@@ -106,6 +106,87 @@ window.tpSaveSeriesChanges=id=>{
  change.forEach((l,i)=>{l.date=next[i].date;l.time=time;l.duration=duration;});
  save();closeModal();render();
 };
+
+const weekdayNames=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const weekIndex=d=>(d.getDay()+6)%7;
+const fromISO=value=>new Date(value+'T12:00:00');
+const toISO=d=>localDateISO(d);
+function selectedWeekdays(){
+ const selected=[...document.querySelectorAll('#tpRecurrenceDays input[data-weekday]:checked')];
+ return selected.map(field=>{
+   const day=Number(field.dataset.weekday);
+   const input=document.querySelector('#tpWeekdayTime'+day);
+   return {day,time:(input?.value||document.querySelector('#lTime')?.value||'').trim()};
+ }).sort((a,b)=>a.day-b.day);
+}
+window.tpToggleRecurrenceDays=()=>{
+ const mode=document.querySelector('#lRecurrence')?.value||'none';
+ const group=document.querySelector('#tpRecurrenceDays');if(!group)return;
+ group.hidden=mode==='none';
+ const picked=selectedWeekdays();
+ const timeline=document.querySelector('#tpRecurrenceTimes');
+ if(!timeline)return;
+ timeline.innerHTML=picked.length>1?picked.map(p=>'<label class="tp-recurrence-time">'+weekdayNames[p.day]+
+  '<input id="tpWeekdayTime'+p.day+'" data-weekday-time="'+p.day+'" maxlength="5" inputmode="numeric" type="text" value="'+clean(p.time)+'" placeholder="16:30"></label>').join(''):'';
+ const summary=document.querySelector('#tpRecurrenceSummary');
+ if(summary)summary.textContent=mode==='none'?'':picked.length?
+   'Повторение по выбранным дням без настройки количества недель. Можно позже изменить всю серию.':
+   'Выбери хотя бы один день недели.';
+};
+window.tpRecurrenceDateChanged=()=>{
+ const group=document.querySelector('#tpRecurrenceDays');
+ if(!group||group.dataset.customized==='true')return;
+ const idx=weekIndex(fromISO(document.querySelector('#lDate')?.value||todayISO()));
+ for(const field of group.querySelectorAll('input[data-weekday]'))
+   field.checked=Number(field.dataset.weekday)===idx;
+ window.tpToggleRecurrenceDays();
+};
+function readSeriesPlan(){
+ const selected=selectedWeekdays();
+ if(!selected.length)return null;
+ if(selected.some(x=>!validTime(x.time)))return null;
+ const start=document.querySelector('#lDate')?.value;
+ if(!iso(start))return null;
+ const mode=document.querySelector('#lRecurrence')?.value;
+ const first=fromISO(start),baseDay=weekIndex(first),dates=[];
+ // Bound each repeating series to the 52-week window following the chosen date,
+ // even when two or more lessons are scheduled in the same week.
+ for(let n=0;n<364;n++){
+  const day=new Date(first);day.setDate(first.getDate()+n);
+  const dayIndex=weekIndex(day);
+  const pick=selected.find(x=>x.day===dayIndex);
+  if(!pick)continue;
+  const week=Math.floor((n+baseDay)/7);
+  if(mode==='biweekly'&&week%2!==0)continue;
+  dates.push({date:toISO(day),time:pick.time});
+ }
+ return dates;
+}
+window.tpRecurrencePlan=readSeriesPlan;
+function recurrenceControls(){
+ const root=document.querySelector('#modalBody .form');
+ const select=document.querySelector('#lRecurrence');
+ if(!root||!select||root.querySelector('#tpRecurrenceDays'))return;
+ const group=document.createElement('div');group.id='tpRecurrenceDays';
+ group.className='tp-recurrence';
+ group.dataset.customized='false';
+ const day=weekIndex(fromISO(document.querySelector('#lDate')?.value||todayISO()));
+ group.innerHTML='<div class="tp-recurrence-heading">В какие дни недели?</div><div class="tp-recurrence-days">'+
+  weekdayNames.map((name,i)=>'<label class="tp-recurrence-day"><input type="checkbox" data-weekday="'+i+'" '+(i===day?'checked':'')+'><span>'+name+'</span></label>').join('')+
+  '</div><div class="tp-recurrence-times" id="tpRecurrenceTimes"></div><p id="tpRecurrenceSummary" class="muted"></p>';
+ select.closest('label')?.after(group);
+ group.querySelectorAll('input[data-weekday]').forEach(input=>input.addEventListener('change',()=>{
+   group.dataset.customized='true';
+   window.tpToggleRecurrenceDays();
+ }));
+ select.addEventListener('change',window.tpToggleRecurrenceDays);
+ document.querySelector('#lDate')?.addEventListener('change',window.tpRecurrenceDateChanged);
+ document.querySelector('#lTime')?.addEventListener('change',()=>{
+   const times=group.querySelectorAll('[data-weekday-time]');
+   if(times.length===1)times[0].value=document.querySelector('#lTime').value;
+ });
+ window.tpToggleRecurrenceDays();
+}
 const baseOpenLesson=openLesson;
 openLesson=function(...args){
  baseOpenLesson(...args);
@@ -118,10 +199,7 @@ openLesson=function(...args){
   actions.prepend(btn);
  }else if(!existing){
  
-  const rec=$q('#lRecurrence');if(rec){
-   const info=document.createElement('p');info.className='muted s4-hint';info.textContent='При повторении праздники и отпуска из расписания будут пропущены. Пересечения проверяются перед сохранением.';
-   rec.closest('label')?.after(info);
-  }
+  recurrenceControls();
  }
 };
 const baseSaveLesson=saveLesson;
@@ -130,18 +208,17 @@ saveLesson=function(id){
  if(id||!['weekly','biweekly'].includes(recurrence))return baseSaveLesson(id);
  const person=client($q('#lClient')?.value),date=$q('#lDate')?.value,time=$q('#lTime')?.value;
  const status=$q('#lStatus')?.value,rate=Number($q('#lHourlyRate')?.value),duration=Number($q('#lDuration')?.value);
- const count=recurrence==='biweekly'?26:52,kind=$q('#lType')?.value;
- if(!person||!iso(date)||!validTime(time)||!Number.isInteger(count)||count<1||count>52||
-   !Number.isInteger(duration)||duration<15||duration>240||lessonMinutes(time)+duration>1440||
+ const dates=readSeriesPlan(),kind=$q('#lType')?.value;
+ if(!person||!iso(date)||!validTime(time)||!dates?.length||
+   !Number.isInteger(duration)||duration<15||duration>240||dates.some(x=>lessonMinutes(x.time)+duration>1440)||
    !Number.isFinite(rate)||rate<0||rate>100000000||Math.abs(rate*100-Math.round(rate*100))>1e-6)
-   return notify('Проверь параметры повторяющихся занятий.');
+   return notify('Проверь выбранные дни, время занятий и длительность.');
  if(status!=='planned')return notify('Серию можно создавать только с запланированным статусом. После проведения отметь нужные уроки отдельно.');
- const seriesId=crypto.randomUUID(),frequency=recurrence==='biweekly'?14:7;
+ const seriesId=crypto.randomUUID();
  const events=[],skipped=[];
- for(let i=0;i<count;i++){
-  const d=addDays(date,frequency*i);
-  if(blocked(d)){skipped.push(d);continue;}
-  events.push({id:crypto.randomUUID(),seriesId,clientId:person.id,date:d,time,type:kind,duration,hourlyRate:rate,status:'planned',
+ for(const occurrence of dates){
+  if(blocked(occurrence.date)){skipped.push(occurrence.date);continue;}
+  events.push({id:crypto.randomUUID(),seriesId,clientId:person.id,date:occurrence.date,time:occurrence.time,type:kind,duration,hourlyRate:rate,status:'planned',
    recurrence,billingMode:person.billingMode==='per_lesson'?'per_lesson':'subscription'});
  }
  if(!events.length)return notify('Все даты серии попадают на отпуск или каникулы.');
