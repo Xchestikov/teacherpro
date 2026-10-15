@@ -11,7 +11,7 @@ test('WebKit iPhone viewport keeps lesson text unselectable and mobile payment m
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
  await page.goto('/');
- await page.locator('#authEmail').fill('ios@teacherpro.test');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
  await expect(page.locator('#authGate')).toBeHidden();
