@@ -53,10 +53,11 @@ window.tpAddBreak=()=>{
  const start=$q('#s4BreakStart')?.value,end=$q('#s4BreakEnd')?.value,reason=$q('#s4BreakReason')?.value.trim()||'Отдых';
  if(!iso(start)||!iso(end)||end<start||Math.round((at(end)-at(start))/86400000)>365)return notify('Укажи корректный период не больше года.');
  const candidates=db.lessons.filter(l=>future(l)&&l.date>=start&&l.date<=end);
- // New holidays exclude future generated lessons; existing lessons are not silently modified.
+ // Explicitly adding a break cancels only uncharged future planned lessons; no secondary confirmation.
  if(!Array.isArray(db.scheduleBreaks))db.scheduleBreaks=[];
  if(db.scheduleBreaks.some(b=>b.start===start&&b.end===end&&b.reason===reason))return notify('Такой период уже существует.');
  db.scheduleBreaks.push({id:crypto.randomUUID(),start,end,reason});
+ for(const lesson of candidates)lesson.status='cancelled_by_teacher';
 
  save();render();manager();
 };
