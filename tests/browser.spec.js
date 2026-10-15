@@ -573,14 +573,14 @@ test('Series planner creates one group across months and skips holidays',async({
    openLesson(null,first,'10:00');
  });
  await page.locator('#lRecurrence').selectOption('weekly');
- await page.locator('#lWeeks').fill('6');
+ await expect(page.locator('#lWeeks')).toHaveCount(0);
  await page.locator('#modalBody .primary').last().click();
  const stats=await page.evaluate(()=>({
    count:db.lessons.length,series:[...new Set(db.lessons.map(l=>l.seriesId))].length,
    skipped:db.scheduleBreaks.some(b=>db.lessons.some(l=>l.date===b.start)),
    planned:db.lessons.every(l=>l.status==='planned')
  }));
- expect(stats).toEqual({count:5,series:1,skipped:false,planned:true});
+ expect(stats).toEqual({count:51,series:1,skipped:false,planned:true});
  await page.evaluate(()=>{setPage('schedule');tpOpenSeriesManager();});
  await expect(page.locator('#modalBody')).toContainText('Регулярные занятия');
  expect(issues).toEqual([]);
@@ -895,5 +895,86 @@ test('Day and week calendar date headings stay sticky as the schedule scrolls ve
    expect(result.rowShift).toBeLessThan(-100);
    expect(Math.abs(result.after-result.shellTop)).toBeLessThan(4);
  }
+ expect(errors).toEqual([]);
+});
+
+
+test('Students have distinct warm pastel calendar colors and completed/cancelled/deleted status icons',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Янтарь','01.02');await addStudent(page,'Мята','02.02');
+ await page.evaluate(()=>{
+  const a=db.clients[0].id,b=db.clients[1].id,day=todayISO();
+  db.lessons=[
+   {id:'student-first',clientId:a,date:day,time:'06:00',duration:60,status:'planned'},
+   {id:'student-second',clientId:b,date:day,time:'07:00',duration:60,status:'done'},
+   {id:'student-cancelled',clientId:a,date:day,time:'08:00',duration:60,status:'cancelled'},
+   {id:'student-deleted',clientId:b,date:day,time:'09:00',duration:60,status:'deleted'}];
+  calendarMode='day';calendarSelectedDate=day;setPage('schedule');
+ });
+ const color=await page.evaluate(()=>{
+  const a=document.querySelector('.calendar-event[data-lesson-id="student-first"]');
+  const b=document.querySelector('.calendar-event[data-lesson-id="student-second"]');
+  return [getComputedStyle(a).getPropertyValue('--tp-student-edge'),getComputedStyle(b).getPropertyValue('--tp-student-edge')];
+ });
+ expect(color[0]).not.toBe(color[1]);
+ await expect(page.locator('.calendar-event[data-lesson-id="student-second"] .tp-lesson-mark')).toHaveText('✓');
+ await expect(page.locator('.calendar-event[data-lesson-id="student-cancelled"] .tp-lesson-mark')).toHaveText('×');
+ await expect(page.locator('.calendar-event[data-lesson-id="student-deleted"] .tp-lesson-mark')).toHaveText('×');
+ await page.evaluate(()=>deleteLesson('student-first'));
+ expect(await page.evaluate(()=>db.lessons.find(l=>l.id==='student-first').status)).toBe('deleted');
+ await expect(page.locator('.calendar-event[data-lesson-id="student-first"] .tp-lesson-mark')).toHaveText('×');
+ expect(errors).toEqual([]);
+});
+
+test('Custom calendar time accepts 05:15 and 23:00 and rejects sessions past midnight',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Ранние уроки','01.02');
+ await page.evaluate(()=>{calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');});
+ expect(await page.locator('.calendar-hour').allTextContents()).toEqual(expect.arrayContaining(['05:00','23:00']));
+ await page.evaluate(()=>openLesson(null,todayISO(),'05:15'));
+ await expect(page.locator('#lTime')).toHaveAttribute('type','text');
+ await page.locator('#lTime').fill('05:15');
+ await page.locator('#modalBody button.primary').last().click();
+ expect(await page.evaluate(()=>db.lessons[0].time)).toBe('05:15');
+ await page.evaluate(()=>openLesson(null,todayISO(),'23:00'));
+ await page.locator('#lTime').fill('23:00');
+ await page.locator('#lDuration').selectOption('60');
+ await page.locator('#modalBody button.primary').last().click();
+ expect(await page.evaluate(()=>db.lessons.some(l=>l.time==='23:00'))).toBe(true);
+ expect(errors).toEqual([]);
+});
+
+test('Hourly rate is blank without a saved rate and repeat UI has no weeks input',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Новая стоимость','04.05');
+ await page.evaluate(()=>openClient(db.clients[0].id,'overview'));
+ await expect(page.locator('#fLessonRate')).toHaveValue('');
+ await page.locator('#modalClose').click();
+ await page.evaluate(()=>openLesson());
+ await expect(page.locator('#lHourlyRate')).toHaveValue('');
+ await expect(page.locator('#lWeeks')).toHaveCount(0);
+ await expect(page.locator('#lRecurrence')).toBeVisible();
+ expect(errors).toEqual([]);
+});
+
+test('Greeting reflects local browser hour without locale or geolocation access',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Приветствие','04.05');
+ for(const [hour,expected] of [[3,'Доброй ночи'],[8,'Доброе утро'],[14,'Добрый день'],[19,'Добрый вечер']]){
+  await page.clock.setFixedTime(new Date('2026-10-16T'+String(hour).padStart(2,'0')+':10:00'));
+  await page.evaluate(()=>setPage('dashboard'));
+  await expect(page.locator('.se-greeting h2')).toContainText(expected);
+ }
+ expect(errors).toEqual([]);
+});
+
+test('Routine status and repeat actions have no native confirm prompts',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Без лишних окон','04.05');
+ await page.evaluate(()=>{
+  db.lessons=[{id:'no-confirm-lesson',clientId:db.clients[0].id,date:todayISO(),time:'11:00',duration:60,status:'planned'}];
+  calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ const dialogs=[];page.on('dialog',d=>{dialogs.push(d.type());d.dismiss();});
+ await page.locator('.calendar-event[data-lesson-id="no-confirm-lesson"] .tp-event-more').click();
+ await page.locator('.lesson-quick-menu [data-action="status:cancelled"]').click();
+ expect(await page.evaluate(()=>db.lessons[0].status)).toBe('cancelled');
+ expect(dialogs).toEqual([]);
  expect(errors).toEqual([]);
 });
