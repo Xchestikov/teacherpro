@@ -2,6 +2,8 @@
 (function(){
   'use strict';
   let holdTimer=null, gesture=null, suppressClickUntil=0;
+  const snap15=minute=>Math.round(minute/15)*15;
+  const safeRange=minute=>minute>=480&&minute<1380;
   const menu=document.createElement('div');
   menu.className='lesson-quick-menu';
   menu.hidden=true;
@@ -66,12 +68,80 @@
   // iOS Safari and mobile Chromium can cancel pointer gestures to perform a
   // native long-press selection. Use non-passive Touch Events as the authoritative
   // path on actual touchscreens; retain Pointer Events for compatible devices.
+  function createDragGhost(g){
+    if(g.ghost)return;
+    const bounds=g.element.getBoundingClientRect();
+    g.grabOffsetY=Math.max(0,g.startY-bounds.top);
+    g.grabOffsetX=Math.max(0,g.startX-bounds.left);
+    g.eventWidth=bounds.width;g.eventHeight=bounds.height;
+    const ghost=g.element.cloneNode(true);
+    ghost.removeAttribute('data-lesson-id');
+    ghost.removeAttribute('onclick');
+    ghost.removeAttribute('ondragstart');
+    ghost.removeAttribute('ondragend');
+    ghost.removeAttribute('draggable');
+    ghost.setAttribute('aria-hidden','true');
+    ghost.tabIndex=-1;
+    ghost.querySelector('.tp-event-more')?.remove();
+    ghost.querySelector('.cv2-resize-handle')?.remove();
+    ghost.classList.remove('touch-dragging');
+    ghost.classList.add('tp-mobile-drag-ghost');
+    ghost.style.setProperty('width',bounds.width+'px','important');
+    ghost.style.setProperty('height',bounds.height+'px','important');
+    ghost.style.setProperty('left',bounds.left+'px','important');
+    ghost.style.setProperty('top',bounds.top+'px','important');
+    const indicator=document.createElement('span');indicator.className='tp-mobile-drag-time';
+    indicator.textContent='Перенос · '+(lessonFor(g.element)?.time||'');
+    ghost.append(indicator);
+    document.body.append(ghost);
+    g.ghost=ghost;g.indicator=indicator;
+  }
+  function targetForGesture(g,x,y){
+    // Use the event's TOP as the cursor anchor, not the finger's midpoint.
+    // A 60-minute cell is always subdivided into four 15-minute steps.
+    const topY=y-(g.grabOffsetY||0);
+    const cell=cellAt(x,topY,g.element);
+    if(!cell)return null;
+    const r=cell.getBoundingClientRect();
+    const hour=Number(cell.dataset.minute);
+    if(!Number.isFinite(hour)||r.height<=0)return null;
+    const minute=snap15(hour+(topY-r.top)/r.height*60);
+    if(!safeRange(minute))return null;
+    return {cell,date:cell.dataset.date,time:minutesToClock(minute),minute};
+  }
+  function positionGhost(g,target,x,y){
+    if(!g.ghost)return;
+    if(target){
+      const r=target.cell.getBoundingClientRect();
+      // After snapping, visually align to the exact quarter-hour line.
+      const top=r.top+(target.minute-Number(target.cell.dataset.minute))/60*r.height;
+      const width=Math.min(g.eventWidth,r.width-6);
+      g.ghost.style.setProperty('left',(r.left+3)+'px','important');
+      g.ghost.style.setProperty('top',top+'px','important');
+      g.ghost.style.setProperty('width',Math.max(50,width)+'px','important');
+      const original=lessonFor(g.element);
+      const end=minutesToClock(target.minute+(Number(original?.duration)||60));
+      const caption=g.ghost.querySelector('.event-time');
+      if(caption)caption.textContent=target.time+'–'+end;
+      g.indicator.textContent='Перенос · '+target.time;
+    }else{
+      // While outside the calendar, still follow the finger instead of
+      // leaving a stationary card on the original slot.
+      g.ghost.style.setProperty('left',(x-(g.grabOffsetX||0))+'px','important');
+      g.ghost.style.setProperty('top',(y-(g.grabOffsetY||0))+'px','important');
+      g.indicator.textContent='Выбери время';
+    }
+  }
+  function removeDragGhost(g){
+    g?.ghost?.remove();
+    if(g){g.ghost=null;g.indicator=null;g.target=null;}
+  }
   function beginGesture(el,x,y,pointerId=null,fromTouch=false,touchId=null){
     const lesson=lessonFor(el);
     if(!lesson||lesson.status!=='planned')return false;
     dismiss();
     clearTimeout(holdTimer);
-    if(gesture&&gesture.element!==el)gesture.element.classList.remove('touch-dragging');
+    if(gesture){gesture.element.classList.remove('touch-dragging');removeDragGhost(gesture);}
     gesture={id:el.dataset.lessonId,pointerId,touchId,fromTouch,x,y,
       startX:x,startY:y,active:false,element:el};
     holdTimer=setTimeout(()=>{
@@ -80,6 +150,8 @@
       current.active=true;
       suppressClickUntil=Date.now()+900;
       el.classList.add('touch-dragging');
+      createDragGhost(current);
+      positionGhost(current,targetForGesture(current,current.x,current.y),current.x,current.y);
       window.getSelection?.()?.removeAllRanges();
       if(navigator.vibrate)navigator.vibrate(25);
     },450);
@@ -121,10 +193,14 @@
     }
     if(g.active){
       window.getSelection?.()?.removeAllRanges();
-      window.tpCalendarTouchDragMove?.(x,y);
-      const cell=cellAt(x,y,g.element);
+      const target=targetForGesture(g,x,y);
+      g.target=target;
+      positionGhost(g,target,x,y);
       clearDropTargets();
-      if(cell)cell.classList.add('touch-drop-target');
+      if(target)target.cell.classList.add('touch-drop-target');
+      // Scroll after calculating the candidate to avoid changing the
+      // destination when the grid moves beneath the finger.
+      window.tpCalendarTouchDragMove?.(x,y);
     }
   }
   function finishGesture(cancelled){
@@ -133,6 +209,8 @@
     const g=gesture;gesture=null;
     const wasActive=g.active;
     g.element.classList.remove('touch-dragging');
+    const lastTarget=g.target;
+    removeDragGhost(g);
     clearDropTargets();
     try{
       if(g.pointerId!==null&&g.element.hasPointerCapture?.(g.pointerId))
@@ -149,9 +227,10 @@
       return;
     }
     suppressClickUntil=Date.now()+900;
-    const cell=cellAt(g.x,g.y,g.element);
-    if(cell&&Math.hypot(g.x-g.startX,g.y-g.startY)>14){
-      moveLesson(lessonFor(g.element),cell,g.y);
+    const target=lastTarget||targetForGesture(g,g.x,g.y);
+    if(target&&Math.hypot(g.x-g.startX,g.y-g.startY)>14){
+      if(typeof window.tpCalendarMove==='function')window.tpCalendarMove(lessonFor(g.element),target.date,target.time);
+      else moveLesson(lessonFor(g.element),target.cell,target.cell.getBoundingClientRect().top+(target.minute-Number(target.cell.dataset.minute))/60*target.cell.getBoundingClientRect().height);
     }else{
       const event=document.querySelector('.calendar-event[data-lesson-id="'+CSS.escape(g.id)+'"]');
       if(event)openMenu(event,g.x,g.y);
