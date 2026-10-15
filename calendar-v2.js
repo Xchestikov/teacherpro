@@ -41,8 +41,8 @@
     const next={...lesson,duration:Number(lesson.duration)||60,...changes};
     if(!/^\d{4}-\d{2}-\d{2}$/.test(next.date)||!/^\d{2}:\d{2}$/.test(next.time)||!validDuration(Number(next.duration)))return false;
     if(next.date===lesson.date&&next.time===lesson.time&&Number(next.duration)===(Number(lesson.duration)||60))return false;
-    if(minutes(next.time)<300||minutes(next.time)>=1380||minutes(next.time)+Number(next.duration)>1380){
-      alert('Занятие должно начинаться в календаре и завершаться не позднее 23:00.');return false;
+    if(minutes(next.time)<300||minutes(next.time)>=1440||minutes(next.time)+Number(next.duration)>1440){
+      alert('Занятие должно начинаться в календаре и завершаться не позднее 00:00.');return false;
     }
     const conflict=lessonConflicts(next,lesson.id);
     if(conflict.length){
@@ -197,7 +197,7 @@
     lastScrollKey=key;
     if(calendarMode==='day'&&calendarSelectedDate!==today)return;
     if(calendarMode!=='day'&&weekOffset!==0)return;
-    const targetMin=clamp(now.getHours()*60-60,300,1320);
+    const targetMin=clamp(now.getHours()*60-60,300,1380);
     const cell=document.querySelector('.calendar-cell[data-date="'+today+'"][data-minute="'+(Math.floor(targetMin/60)*60)+'"]');
     if(!cell)return;
     requestAnimationFrame(()=>{
