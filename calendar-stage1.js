@@ -168,9 +168,15 @@
     }
     if(nativeTouch.active){
       window.getSelection?.()?.removeAllRanges();
+      // Resolve before edge auto-scroll shifts the grid under the touch.
+      const hovered=slotUnder(t.clientX,t.clientY);
+      if(hovered){
+        const minute=calendarSlotAtPoint(hovered,t.clientY);
+        if(minute!==null)nativeTouch.candidate={date:hovered.dataset.date,time:minutesToClock(minute)};
+      }
       window.tpCalendarTouchDragMove?.(t.clientX,t.clientY);
       document.querySelectorAll('.calendar-cell.touch-drop-target').forEach(node=>node.classList.remove('touch-drop-target'));
-      slotUnder(t.clientX,t.clientY)?.classList.add('touch-drop-target');
+      hovered?.classList.add('touch-drop-target');
     }
   },{capture:true,passive:false});
   document.addEventListener('touchend',e=>{
@@ -186,8 +192,12 @@
       openLessonByKey(state.lessonId);
       return;
     }
-    if(target&&Math.hypot(t.clientX-state.startX,t.clientY-state.startY)>14){
-      moveLesson(db.lessons.find(l=>String(l.id)===String(state.lessonId)),target,t.clientY);
+    if(Math.hypot(t.clientX-state.startX,t.clientY-state.startY)>14&&(state.candidate||target)){
+      const lesson=db.lessons.find(l=>String(l.id)===String(state.lessonId));
+      if(state.candidate&&lesson){
+        if(typeof window.tpCalendarMove==='function')window.tpCalendarMove(lesson,state.candidate.date,state.candidate.time);
+        else if(target)moveLesson(lesson,target,t.clientY);
+      }else moveLesson(lesson,target,t.clientY);
     }else{
       const event=document.querySelector('.calendar-event[data-lesson-id="'+CSS.escape(state.lessonId)+'"]');
       if(event)openMenu(event,t.clientX,t.clientY);
