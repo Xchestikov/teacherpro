@@ -18,14 +18,14 @@ window.tpReconcileSubscription=subId=>{
  const sub=db.subscriptions.find(s=>String(s.id)===String(subId));
  if(!sub)return false;
  const related=db.payments.filter(p=>String(p.subscriptionId)===String(sub.id));
- // Historical corrections to a closed package must not reopen outstanding invoices.
+ const paid=related.filter(p=>p.status==='paid').reduce((sum,p)=>sum+cents(p.amount),0);
+ const total=cents(sub.price);
+ if(paid<0||paid>total)return false;
+ // Closed packages keep the historic receipts but never recreate future invoices.
  if(sub.archivedAt){
    db.payments=db.payments.filter(p=>String(p.subscriptionId)!==String(sub.id)||p.status==='paid');
    syncClientSubscription(sub);return true;
  }
- const paid=related.filter(p=>p.status==='paid').reduce((sum,p)=>sum+cents(p.amount),0);
- const total=cents(sub.price);
- if(paid<0||paid>total)return false;
  const debt=total-paid;
  const waiting=related.filter(p=>p.status!=='paid');
  if(!debt)db.payments=db.payments.filter(p=>!waiting.includes(p));
