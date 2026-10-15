@@ -30,6 +30,7 @@ window.tpApplyPaymentEdit=(id,changes)=>{
 };
 togglePaymentStatus=function(id){
  const p=db.payments.find(x=>String(x.id)===String(id));if(!p)return;
+ if(p.installment && p.status==='paid'){alert('Измени или отмени запись в истории оплат.');return false;}
  return tpApplyPaymentEdit(id,{amount:p.amount,date:p.date||todayISO(),status:p.status==='paid'?'pending':'paid'});
 };
 })();
