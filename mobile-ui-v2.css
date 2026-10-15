@@ -111,7 +111,7 @@ body.soft-editorial .tp-mobile-drag-ghost{
   opacity:.94!important;display:flex!important;flex-direction:column!important;
   justify-content:flex-start!important;align-items:flex-start!important;
   border-radius:12px!important;box-shadow:0 15px 35px #60413656,0 0 0 2px #d18267!important;
-  transition:left 75ms ease-out,top 75ms ease-out!important;
+  transition:none!important;
   -webkit-user-select:none!important;user-select:none!important;
 }
 body.soft-editorial .tp-mobile-drag-ghost .event-time{font-size:12px!important;font-weight:800}
