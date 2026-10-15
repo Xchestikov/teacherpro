@@ -1,0 +1,15 @@
+/* Stage 4: compact series and leave management, Soft Editorial. */
+body.soft-editorial .s4-manager{display:grid;gap:14px}
+body.soft-editorial .s4-manager h3{font-family:'Playfair Display',Georgia,serif;font-size:20px;margin:8px 0 1px}
+body.soft-editorial .s4-manager .muted{font-size:12px}
+body.soft-editorial .s4-series-card{display:flex;align-items:center;justify-content:space-between;gap:12px;
+ border:1px solid #eadbd1;background:#fffaf6;border-radius:13px;padding:12px 14px}
+body.soft-editorial .s4-series-card strong{display:block;font-size:13px;color:#49352e}
+body.soft-editorial .s4-series-card small{display:block;color:#88756c;font-size:11px;margin-top:4px;line-height:1.4}
+body.soft-editorial .s4-break-list{display:grid;gap:6px}
+body.soft-editorial .s4-break-list>div{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #f0e2d8;font-size:12px;padding:8px 0}
+body.soft-editorial .s4-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+body.soft-editorial .s4-row label{display:grid;gap:4px;font-size:12px}
+body.soft-editorial .s4-manager-btn{font-weight:750;padding:9px 12px;min-height:40px}
+body.soft-editorial .s4-hint{font-size:11px;line-height:1.45}
+@media(max-width:700px){body.soft-editorial .s4-manager-btn{font-size:11px;min-height:40px}body.soft-editorial .s4-row{grid-template-columns:1fr}body.soft-editorial .s4-series-card{flex-direction:column;align-items:stretch}}
