@@ -44,7 +44,7 @@ test('Account flows: authentication, distinct student data, logout/login, backup
  await expect(page.locator('#content')).not.toContainText('Ученик Бета');
  expect(errors).toEqual([]);
 });
-test('Real clicks: payments, calendar, birthdays and appearance selection',async({page})=>{
+test('Real clicks: payments, calendar, birthdays and locked style',async({page})=>{
  const errors=await setup(page);await login(page);
  const nextDay=new Date();nextDay.setDate(nextDay.getDate()+1);
  const bday=String(nextDay.getDate()).padStart(2,'0')+'.'+String(nextDay.getMonth()+1).padStart(2,'0');
@@ -52,10 +52,10 @@ test('Real clicks: payments, calendar, birthdays and appearance selection',async
  await page.evaluate(()=>setPage('dashboard'));
  await expect(page.locator('.birthday-widget')).toContainText('Екатерина Тестовая');
  await page.locator('#mobileSettingsBtn').click();
- await page.locator('.background-choice[data-background-id="marble"]').click();
- await expect(page.locator('body')).toHaveAttribute('data-background','marble');
- await page.locator('.theme-choice[data-theme-id="wine"]').click();
- await expect(page.locator('body')).toHaveAttribute('data-theme','wine');
+ await expect(page.locator('.background-choice')).toHaveCount(0);
+ await expect(page.locator('.theme-choice')).toHaveCount(0);
+ await expect(page.locator('body')).toHaveAttribute('data-background','plain');
+ await expect(page.locator('body')).toHaveAttribute('data-theme','peach');
  await page.evaluate(()=>setPage('schedule'));
  await expect(page.locator('.calendar-grid')).toBeVisible();
  await page.evaluate(()=>openSubscription());
@@ -195,7 +195,7 @@ test('Two-hour event is visible across both hour cells, with usable actions',asy
   expect(metrics.hitId).toBe('two-hour-lesson');
   await page.locator('.calendar-event[data-lesson-id="two-hour-lesson"]').click({button:'right'});
   await expect(page.locator('.lesson-quick-menu')).toBeVisible();
-  await expect(page.locator('.lesson-quick-menu')).toContainText('Редактировать');
+  await expect(page.locator('.lesson-quick-menu')).toContainText('Запланирован');
   await expect(page.locator('.lesson-quick-menu')).toContainText('Удалить');
   await page.keyboard.press('Escape');
   await expect(page.locator('.lesson-quick-menu')).toBeHidden();
@@ -264,10 +264,12 @@ test('Soft Editorial calendar quick actions, month grid and day navigation',asyn
    calendarMode='day';calendarSelectedDate=day;setPage('schedule');
  });
  await expect(page.locator('.calendar-grid-day')).toBeVisible();
- await page.locator('.calendar-event[data-lesson-id="se-menu-event"]').click();
+ await page.locator('.calendar-event[data-lesson-id="se-menu-event"] .tp-event-more').click();
  await expect(page.locator('.lesson-quick-menu')).toBeVisible();
+ await expect(page.locator('.lesson-quick-menu')).toContainText('Отменён со списанием');
  await expect(page.locator('#modal')).not.toHaveClass(/open/);
- await page.locator('.lesson-quick-menu [data-action="edit"]').click();
+ await page.keyboard.press('Escape');
+ await page.locator('.calendar-event[data-lesson-id="se-menu-event"]').click({position:{x:30,y:30}});
  await expect(page.locator('#modal')).toHaveClass(/open/);
  await page.locator('#modalClose').click();
  await page.evaluate(()=>calendarSetMode('month'));
@@ -288,5 +290,61 @@ test('Soft Editorial calendar quick actions, month grid and day navigation',asyn
  await page.setViewportSize({width:390,height:844});
  await page.evaluate(()=>calendarSetMode('day'));
  await page.screenshot({path:'test-results/studio-mobile-day-calendar.png',fullPage:true});
+ expect(errors).toEqual([]);
+});
+
+
+test('Lesson menu status transitions charge only once and refund safely',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Статус Тест','15.12');
+ await page.evaluate(()=>{
+   db.subscriptions=[{id:'test-status-sub',clientId:db.clients[0].id,name:'8 занятий',total:8,remaining:8,price:8000,paymentStatus:'paid',status:'active'}];
+   db.lessons=[{id:'status-demo',clientId:db.clients[0].id,date:todayISO(),time:'15:00',duration:60,status:'planned',hourlyRate:1000}];
+   calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ await page.locator('.calendar-event[data-lesson-id="status-demo"] .tp-event-more').click();
+ await page.locator('.lesson-quick-menu [data-action="status:done"]').click();
+ expect(await page.evaluate(()=>({remaining:db.subscriptions[0].remaining,status:db.lessons[0].status}))).toEqual({remaining:7,status:'done'});
+ await page.locator('.calendar-event[data-lesson-id="status-demo"] .tp-event-more').click();
+ await page.locator('.lesson-quick-menu [data-action="status:cancelled_charged"]').click();
+ expect(await page.evaluate(()=>({remaining:db.subscriptions[0].remaining,status:db.lessons[0].status}))).toEqual({remaining:7,status:'cancelled_charged'});
+ await expect(page.locator('.calendar-event[data-lesson-id="status-demo"]')).toHaveClass(/event-cancelled/);
+ await page.locator('.calendar-event[data-lesson-id="status-demo"] .tp-event-more').click();
+ await page.locator('.lesson-quick-menu [data-action="status:cancelled"]').click();
+ expect(await page.evaluate(()=>({remaining:db.subscriptions[0].remaining,status:db.lessons[0].status}))).toEqual({remaining:8,status:'cancelled'});
+ await page.locator('.calendar-event[data-lesson-id="status-demo"] .tp-event-more').click();
+ await page.locator('.lesson-quick-menu [data-action="status:no_show_charged"]').click();
+ expect(await page.evaluate(()=>({remaining:db.subscriptions[0].remaining,status:db.lessons[0].status}))).toEqual({remaining:7,status:'no_show_charged'});
+ expect(errors).toEqual([]);
+});
+
+test('Teacher profile accepts compressed photo and preserves it after refresh',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await page.evaluate(()=>setPage('settings'));
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+XOncAAAAASUVORK5CYII=','base64');
+ await page.locator('.tp-avatar-upload input[type=file]').setInputFiles({name:'photo.png',mimeType:'image/png',buffer:png});
+ await expect.poll(()=>page.evaluate(()=>db.settings.avatarDataUrl?.startsWith('data:image/jpeg;base64,'))).toBe(true);
+ await expect(page.locator('.top-actions .avatar img')).toHaveCount(1);
+ await page.evaluate(()=>syncCloud());
+ await page.reload();
+ await expect(page.locator('.top-actions .avatar img')).toHaveCount(1);
+ await page.evaluate(()=>setPage('settings'));
+ await page.getByRole('button',{name:'Удалить фото'}).click();
+ await expect(page.locator('.top-actions .avatar img')).toHaveCount(0);
+ expect(errors).toEqual([]);
+});
+
+test('Current-time marker and cancelled card rendering',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await page.clock.install({time:new Date('2026-10-15T12:30:00')});
+ await addStudent(page,'Для календаря','15.12');
+ await page.evaluate(()=>{
+   db.lessons=[{id:'cancel-event',clientId:db.clients[0].id,date:todayISO(),time:'13:00',duration:60,status:'cancelled_by_teacher'}];
+   calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ await expect(page.locator('.tp-now-indicator')).toHaveCount(1);
+ await expect(page.locator('.tp-now-clock')).toContainText('12:30');
+ await expect(page.locator('.calendar-event[data-lesson-id="cancel-event"]')).toHaveClass(/event-cancelled/);
  expect(errors).toEqual([]);
 });
