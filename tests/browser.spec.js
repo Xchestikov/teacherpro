@@ -636,3 +636,69 @@ test('Series management and recurring lesson form work at 390px without overflow
  expect(overflow).toBeLessThanOrEqual(2);
  expect(issues).toEqual([]);
 });
+
+
+test('Student Profile V2 saves manual progress and shows the real completed counts',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Прогресс ученика','09.09');
+ await page.evaluate(()=>{
+  const id=db.clients[0].id;
+  db.lessons=[{id:'s5-done',clientId:id,date:todayISO(),time:'11:00',duration:60,status:'done'}];
+  db.homework=[{id:'s5-home',clientId:id,title:'Задание',description:'Текст',status:'done'}];
+  openClient(id,'overview');
+ });
+ await expect(page.locator('.s5-student-banner')).toContainText('Прогресс ученика');
+ await expect(page.locator('.s5-progress')).toContainText('1 / 1');
+ await page.locator('#s5ProgressRange').fill('75');
+ await page.locator('#s5ProgressNote').fill('Решает задачи самостоятельно');
+ await page.getByRole('button',{name:'Сохранить прогресс'}).click();
+ expect(await page.evaluate(()=>({value:db.clients[0].progressPercent,note:db.clients[0].progressNote})))
+   .toEqual({value:75,note:'Решает задачи самостоятельно'});
+ await page.evaluate(()=>syncCloud());await page.reload();
+ await page.evaluate(()=>openClient(db.clients[0].id,'overview'));
+ await expect(page.locator('#s5ProgressRange')).toHaveValue('75');
+ expect(errors).toEqual([]);
+});
+
+test('Student Profile V2 stores and removes a compressed student photo',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Фото ученика','09.09');
+ await page.evaluate(()=>openClient(db.clients[0].id,'overview'));
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+XOncAAAAASUVORK5CYII=','base64');
+ await page.locator('.s5-upload input[type=file]').setInputFiles({name:'student.png',mimeType:'image/png',buffer:png});
+ await expect(page.locator('.s5-avatar-photo')).toHaveCount(1);
+ expect(await page.evaluate(()=>db.clients[0].avatarDataUrl?.startsWith('data:image/jpeg;base64,'))).toBe(true);
+ await page.getByRole('button',{name:'Удалить фото'}).click();
+ await expect(page.locator('.s5-avatar-photo')).toHaveCount(0);
+ expect(errors).toEqual([]);
+});
+
+test('Reusable homework templates fill a new assignment and survive save',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Шаблоны ученика','09.09');
+ await page.evaluate(()=>tpTemplatesManager(db.clients[0].id));
+ await page.locator('#s5TemplateTitle').fill('Чтение');
+ await page.locator('#s5TemplateText').fill('Прочитать главу и ответить на вопросы.');
+ await page.locator('#modalBody').getByRole('button',{name:'Сохранить шаблон'}).click();
+ expect(await page.evaluate(()=>db.homeworkTemplates.length)).toBe(1);
+ await page.locator('.s5-template').getByRole('button',{name:'Использовать'}).click();
+ await expect(page.locator('#hwTitle')).toHaveValue('Чтение');
+ await expect(page.locator('#hwDescription')).toHaveValue('Прочитать главу и ответить на вопросы.');
+ await page.locator('#modalBody').getByRole('button',{name:'Сохранить задание'}).click();
+ expect(await page.evaluate(()=>db.homework.some(h=>h.title==='Чтение'))).toBe(true);
+ expect(errors).toEqual([]);
+});
+
+test('Lesson notes are editable and the profile opens a student-filtered calendar',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Заметка к уроку','09.09');
+ await page.evaluate(()=>{openLesson(null,todayISO(),'17:00');});
+ await page.locator('#s5LessonTeacherNote').fill('Отработали условные предложения');
+ await page.locator('#modalBody button.primary').last().click();
+ const lessonId=await page.evaluate(()=>db.lessons.at(-1)?.id);
+ expect(await page.evaluate(()=>db.lessons.at(-1)?.teacherNote)).toBe('Отработали условные предложения');
+ await page.evaluate(id=>openLessonByKey(id),lessonId);
+ await expect(page.locator('#s5LessonTeacherNote')).toHaveValue('Отработали условные предложения');
+ await page.locator('#modalClose').click();
+ await page.evaluate(()=>openClient(db.clients[0].id,'overview'));
+ await page.getByRole('button',{name:'Открыть расписание ученика'}).click();
+ expect(await page.evaluate(()=>({page,filter:calendarClientFilter}))).toMatchObject({filter:String(await page.evaluate(()=>db.clients[0].id))});
+ await expect(page.locator('.calendar-top')).toBeVisible();
+ expect(errors).toEqual([]);
+});
