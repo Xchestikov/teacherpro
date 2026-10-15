@@ -119,6 +119,86 @@
   }
   document.addEventListener('pointerup',e=>{if(e.pointerType==='touch')finishGesture(e,false);},{passive:false});
   document.addEventListener('pointercancel',e=>{if(e.pointerType==='touch')finishGesture(e,true);},{passive:false});
+
+  // Native Touch Events are the primary gesture route on mobile Safari/Yandex.
+  // Suppress text selection BEFORE the browser initiates its magnifier/callout.
+  let nativeTouch=null,nativeTimer=null;
+  const slotUnder=(x,y)=>document.elementsFromPoint(x,y).map(node=>node.closest?.('.calendar-cell')).find(Boolean);
+  const getTouch=(list,id)=>Array.from(list||[]).find(t=>t.identifier===id);
+  function clearNative(){
+    clearTimeout(nativeTimer);
+    if(nativeTouch?.element)nativeTouch.element.classList.remove('touch-dragging');
+    document.querySelectorAll('.calendar-cell.touch-drop-target').forEach(node=>node.classList.remove('touch-drop-target'));
+    nativeTouch=null;
+  }
+  document.addEventListener('touchstart',e=>{
+    if(!e.touches?.length||e.touches.length>1)return;
+    const target=e.target;
+    // Keep three-dot and resizing controls independent.
+    if(target.closest?.('.tp-event-more,.cv2-resize-handle'))return;
+    const event=eventButton(target);
+    if(!event||lessonFor(event)?.status!=='planned')return;
+    if(e.cancelable)e.preventDefault();
+    window.getSelection?.()?.removeAllRanges();
+    // Reset any pointer-based gesture that may have started on the same tap.
+    clearTimeout(holdTimer);
+    if(gesture?.element)gesture.element.classList.remove('touch-dragging');
+    gesture=null;
+    clearNative();
+    const touch=e.touches[0];
+    nativeTouch={id:touch.identifier,lessonId:event.dataset.lessonId,element:event,
+      x:touch.clientX,y:touch.clientY,startX:touch.clientX,startY:touch.clientY,active:false};
+    nativeTimer=setTimeout(()=>{
+      if(!nativeTouch)return;
+      nativeTouch.active=true;
+      suppressClickUntil=Date.now()+900;
+      event.classList.add('touch-dragging');
+      window.getSelection?.()?.removeAllRanges();
+      navigator.vibrate?.(20);
+    },420);
+  },{capture:true,passive:false});
+  document.addEventListener('touchmove',e=>{
+    if(!nativeTouch)return;
+    const t=getTouch(e.touches,nativeTouch.id);
+    if(!t)return;
+    if(e.cancelable)e.preventDefault();
+    nativeTouch.x=t.clientX;nativeTouch.y=t.clientY;
+    if(!nativeTouch.active&&Math.hypot(t.clientX-nativeTouch.startX,t.clientY-nativeTouch.startY)>12){
+      clearNative();return;
+    }
+    if(nativeTouch.active){
+      window.getSelection?.()?.removeAllRanges();
+      window.tpCalendarTouchDragMove?.(t.clientX,t.clientY);
+      document.querySelectorAll('.calendar-cell.touch-drop-target').forEach(node=>node.classList.remove('touch-drop-target'));
+      slotUnder(t.clientX,t.clientY)?.classList.add('touch-drop-target');
+    }
+  },{capture:true,passive:false});
+  document.addEventListener('touchend',e=>{
+    if(!nativeTouch)return;
+    const t=getTouch(e.changedTouches,nativeTouch.id);
+    if(!t)return;
+    if(e.cancelable)e.preventDefault();
+    const state=nativeTouch;
+    const target=slotUnder(t.clientX,t.clientY);
+    clearNative();
+    suppressClickUntil=Date.now()+850;
+    if(!state.active){
+      openLessonByKey(state.lessonId);
+      return;
+    }
+    if(target&&Math.hypot(t.clientX-state.startX,t.clientY-state.startY)>14){
+      moveLesson(db.lessons.find(l=>String(l.id)===String(state.lessonId)),target,t.clientY);
+    }else{
+      const event=document.querySelector('.calendar-event[data-lesson-id="'+CSS.escape(state.lessonId)+'"]');
+      if(event)openMenu(event,t.clientX,t.clientY);
+    }
+  },{capture:true,passive:false});
+  document.addEventListener('touchcancel',e=>{
+    if(nativeTouch&&getTouch(e.changedTouches,nativeTouch.id))clearNative();
+  },{capture:true,passive:false});
+  document.addEventListener('selectstart',e=>{
+    if(e.target.closest?.('.calendar-shell,.calendar-grid'))e.preventDefault();
+  },true);
   /* Add a real weekly workload counter without changing stored data. */
   const originalDashboard=dashboard;
   dashboard=function(){
