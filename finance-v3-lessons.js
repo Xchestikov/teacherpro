@@ -11,7 +11,7 @@ saveLesson=function(id){
  const amount=Number(document.querySelector('#lHourlyRate')?.value);
  const duration=Number(document.querySelector('#lDuration')?.value);
  const date=document.querySelector('#lDate')?.value,time=document.querySelector('#lTime')?.value;
- if(!selected||!date||!time)return alert('Укажи ученика, дату и время.');
+ if(!selected||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^(?:0[5-9]|1\d|2[0-3]):[0-5]\d$/.test(time)||lessonMinutes(time)+duration>1440)return alert('Проверь дату и время занятия. Диапазон: с 05:00 до полуночи.');
  if(!Number.isFinite(amount)||amount<0||amount>100000000||
     Math.abs(amount*100-Math.round(amount*100))>1e-6)return alert('Укажи корректную ставку.');
  if(!Number.isInteger(duration)||duration<15||duration>240)return alert('Проверь длительность занятия.');
