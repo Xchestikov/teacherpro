@@ -232,26 +232,28 @@ const html='<div class="form"><label>Ученик<select id="sClient" onchange="
 '<label>Осталось занятий<input id="sRemain" type="number" min="0" step="1" value="'+Number(x.remaining??0)+'" oninput="markSubscriptionRemainingEdited()"></label>'+
 (editing?'<p class="muted">Уже списано по этому пакету: '+consumed+' занятий. Нельзя уменьшить пакет ниже использованного.</p>':'')+
 '<label>Стоимость часа, ₽<input id="sHourlyRate" type="number" min="0" step="0.01" value="'+subscriptionHourlyRate(x)+'" oninput="updateSubscriptionPriceFromHour()"></label><label>Стоимость абонемента, ₽<input id="sPrice" type="number" min="0" step="0.01" value="'+Number(x.price||0)+'" oninput="updateSubscriptionHourFromPrice()"></label><p class="muted">Стоимость часа рассчитана для занятий по 60 минут. Итоговую стоимость абонемента можно скорректировать вручную.</p>'+
-'<label>Начало действия / ожидаемая оплата<input id="sStart" type="date" value="'+htmlSafe(x.startDate||todayISO())+'"></label><label>Окончание действия<input id="sEnd" type="date" value="'+htmlSafe(x.endDate||'')+'"></label>'+
-(!editing?'<label>Статус предоплаты<select id="sPaymentStatus"><option value="paid">Оплачено</option><option value="pending">Ожидается</option></select></label><p class="muted">Продление создаёт новый абонемент и одну связанную запись оплаты. Старый пакет и его история сохраняются.</p>':'<p class="muted">При изменении стоимости или даты обновится существующая связанная оплата, если она есть. Новая запись не создаётся.</p>')+
+'<label>Начало действия<input id="sStart" type="date" value="'+htmlSafe(x.startDate||todayISO())+'" oninput="tpSyncSubscriptionPaymentDate(this.value)"></label><label>Окончание действия<input id="sEnd" type="date" value="'+htmlSafe(x.endDate||'')+'"></label>'+
+(!editing?'<label>Дата оплаты / ожидаемая дата<input id="sPaidAt" type="date" value="'+htmlSafe(x.startDate||todayISO())+'" oninput="this.dataset.manuallyEdited=\'true\'"></label><p class="muted">Укажи фактическую дату получения денег. При изменении даты начала абонемента она подставляется сюда, пока ты не выбрал дату вручную.</p><label>Статус предоплаты<select id="sPaymentStatus"><option value="paid">Оплачено</option><option value="pending">Ожидается</option></select></label><p class="muted">Продление создаёт новый абонемент и одну связанную запись оплаты. Старый пакет и его история сохраняются.</p>':'<p class="muted">При изменении стоимости или даты обновится существующая связанная оплата, если она есть. Новая запись не создаётся.</p>')+
 '<div class="form-actions"><button class="secondary" onclick="closeModal()">Отмена</button><button class="primary" data-sub-id="'+htmlSafe(editing?.id||'')+'" onclick="saveSubscription(this.dataset.subId||null)">Сохранить</button></div></div>';
 openModal(editing?'Редактирование абонемента':source?'Продление абонемента':'Новый абонемент',html)
 }
+function tpSyncSubscriptionPaymentDate(value){const field=$('#sPaidAt');if(field&&field.dataset.manuallyEdited!=='true'&&/^\d{4}-\d{2}-\d{2}$/.test(value||''))field.value=value;}
 function saveSubscription(id){
 const existing=id?db.subscriptions.find(s=>String(s.id)===String(id)):null;
 if(id&&!existing)return alert('Абонемент не найден.');
 const total=Number($('#sTotal').value),remaining=Number($('#sRemain').value),price=Number($('#sPrice').value);
-const startDate=$('#sStart').value||todayISO(),endDate=$('#sEnd').value||'',name=total+' '+(total%10===1&&total%100!==11?'занятие':[2,3,4].includes(total%10)&&!(total%100>=12&&total%100<=14)?'занятия':'занятий'),hourlyRate=roundRub(price/total);
+const startDate=$('#sStart').value||todayISO(),endDate=$('#sEnd').value||'',paymentReceivedDate=$('#sPaidAt')?.value||startDate,name=total+' '+(total%10===1&&total%100!==11?'занятие':[2,3,4].includes(total%10)&&!(total%100>=12&&total%100<=14)?'занятия':'занятий'),hourlyRate=roundRub(price/total);
 if(!Number.isInteger(total)||total<1||total>1000)return alert('Количество занятий должно быть целым числом от 1 до 1000.');
 if(!Number.isInteger(remaining)||remaining<0||remaining>total)return alert('Остаток занятий должен быть целым числом от 0 до общего количества.');
 if(!Number.isFinite(price)||price<0||price>100000000||Math.abs(price*100-Math.round(price*100))>1e-6)return alert('Укажи корректную стоимость абонемента с точностью до копеек.');if(!Number.isFinite(hourlyRate)||hourlyRate<0||hourlyRate>100000000)return alert('Не удалось рассчитать стоимость часа.');
 if(endDate&&endDate<startDate)return alert('Дата окончания не может быть раньше даты начала.');
+if(!existing&&!/^\d{4}-\d{2}-\d{2}$/.test(paymentReceivedDate))return alert('Укажи дату платежа.');
 const consumed=existing?db.lessons.filter(l=>String(l.consumedSubscriptionId)===String(existing.id)).length:0;
 if(total<consumed||remaining>total-consumed)return alert('Нельзя уменьшить пакет ниже уже проведённых занятий или увеличить остаток выше неиспользованного количества.');
 const status=existing?(existing.paymentStatus||'paid'):($('#sPaymentStatus').value||'paid');
 const x={id:existing?.id||'sub-'+crypto.randomUUID(),clientId:existing?.clientId??Number($('#sClient').value),name,total,remaining,price,hourlyRate,startDate,endDate,paymentStatus:status,status:remaining>0?'active':'expired'};
 if(existing){const linkedPayments=db.payments.filter(p=>String(p.subscriptionId)===String(existing.id));const paidTotal=roundRub(linkedPayments.filter(p=>p.status==='paid').reduce((n,p)=>n+(Number(p.amount)||0),0));if(paidTotal>0&&Math.abs(price-Number(existing.price))>0.001)return alert('По этому абонементу уже есть полученные платежи. Изменение стоимости заблокировано для сохранения финансовой истории.');const linked=linkedPayments.find(p=>p.status!=='paid')||linkedPayments[0];Object.assign(existing,x);if(linked){if(linked.status!=='paid'){linked.amount=roundRub(price-paidTotal);linked.date=startDate;}linked.description='Предоплата: '+name;}}
-else{db.subscriptions.push(x);db.payments.push({id:crypto.randomUUID(),clientId:x.clientId,amount:price,date:startDate,status,type:'subscription',subscriptionId:x.id,description:'Предоплата: '+name,...(status==='paid'?{paidAt:todayISO()}:{})})}
+else{db.subscriptions.push(x);db.payments.push({id:crypto.randomUUID(),clientId:x.clientId,amount:price,date:paymentReceivedDate,status,type:'subscription',subscriptionId:x.id,description:'Предоплата: '+name,...(status==='paid'?{paidAt:paymentReceivedDate}:{})})}
 syncClientSubscription(x);save();closeModal();render()
 }
 
@@ -362,7 +364,8 @@ function saveLesson(id){
   const previous=id?db.lessons.find(x=>String(x.id)===String(id)):null;
   const l={id:id||crypto.randomUUID(),clientId:+$('#lClient').value,date:$('#lDate').value,time:$('#lTime').value,type:$('#lType').value,duration:+$('#lDuration').value||60,hourlyRate:Number($('#lHourlyRate')?.value),status:$('#lStatus').value};
   if(!l.date||!l.time)return alert('Укажи дату и время.');if(!Number.isFinite(l.hourlyRate)||l.hourlyRate<0||l.hourlyRate>100000000||Math.abs(l.hourlyRate*100-Math.round(l.hourlyRate*100))>1e-6)return alert('Укажи корректную стоимость часа.');
-  if(previous&&lessonIsCancelled(l.status)&&previous.status!==l.status&&!confirm('Установить статус «'+lessonStatusText(l.status)+'»? '+(lessonCharges(l.status)?'Будет списано одно оплаченное занятие, если оно ещё не списано.':'Если занятие ранее списывалось, оно вернётся в остаток.')))return;
+  if(previous&&l.status!==previous.status&&(l.status==='no_show_charged'||l.status==='cancelled_charged')&&
+     !confirm('Пропуск со списанием: списать одно занятие из абонемента?'))return;
   const mode=previous?'none':($('#lRecurrence')?.value||'none');
   const weeks=previous?1:Math.min(52,Math.max(1,+$('#lWeeks')?.value||4));
   const candidates=[];
