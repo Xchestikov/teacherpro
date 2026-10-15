@@ -103,9 +103,8 @@ test('Calendar deletion refunds consumed subscription; hour rate persists',async
  await expect.poll(()=>page.evaluate(()=>db.subscriptions[0].remaining)).toBe(7);
  await page.evaluate(()=>openLessonByKey(db.lessons[0].id));
  await expect(page.locator('#modalBody [data-lesson-id]')).toHaveCount(2);
- page.once('dialog',dialog=>dialog.accept());
  await page.locator('#modalBody button[data-lesson-id]').first().click();
- await expect.poll(()=>page.evaluate(()=>db.lessons.length)).toBe(0);
+ await expect.poll(()=>page.evaluate(()=>db.lessons.find(l=>l.status==='deleted')?.status)).toBe('deleted');
  await expect.poll(()=>page.evaluate(()=>db.subscriptions[0].remaining)).toBe(8);
  expect(errors).toEqual([]);
 });
@@ -203,7 +202,7 @@ test('Two-hour event is visible across both hour cells, with usable actions',asy
   expect(errors).toEqual([]);
 });
 
-test('Deleting a consumed lesson asks before refunding and respects cancellation',async({page})=>{
+test('Deleting a consumed lesson refunds automatically without confirmation and keeps a deleted calendar marker',async({page})=>{
   const errors=await setup(page);await login(page);
   await addStudent(page,'Проверка подтверждения','15.12');
   await page.evaluate(()=>{
@@ -214,15 +213,12 @@ test('Deleting a consumed lesson asks before refunding and respects cancellation
   });
   const lesson=page.locator('.calendar-event[data-lesson-id="charged-refund"]');
   await page.evaluate(()=>openLessonByKey('charged-refund'));
-  page.once('dialog',dialog=>{
-    expect(dialog.message()).toContain('вернётся в остаток');
-    return dialog.dismiss();
-  });
+  const dialogs=[];page.on('dialog',d=>{dialogs.push(d.type());d.dismiss();});
   await page.locator('#modalBody button[data-lesson-id]').first().click();
-  expect(await page.evaluate(()=>({count:db.lessons.length,remaining:db.subscriptions[0].remaining}))).toEqual({count:1,remaining:7});
-  page.once('dialog',dialog=>dialog.accept());
-  await page.locator('#modalBody button[data-lesson-id]').first().click();
-  expect(await page.evaluate(()=>({count:db.lessons.length,remaining:db.subscriptions[0].remaining}))).toEqual({count:0,remaining:8});
+  expect(await page.evaluate(()=>({count:db.lessons.length,remaining:db.subscriptions[0].remaining,status:db.lessons[0].status})))
+    .toEqual({count:1,remaining:8,status:'deleted'});
+  await expect(page.locator('.calendar-event[data-lesson-id="charged-refund"] .tp-lesson-mark')).toHaveText('×');
+  expect(dialogs).toEqual([]);
   expect(errors).toEqual([]);
 });
 
@@ -926,20 +922,27 @@ test('Students have distinct warm pastel calendar colors and completed/cancelled
  expect(errors).toEqual([]);
 });
 
-test('Custom calendar time accepts 05:15 and 23:00 and rejects sessions past midnight',async({page})=>{
+test('Custom calendar time supports 05:15 and closes exactly at 23:00',async({page})=>{
  const errors=await setup(page);await login(page);await addStudent(page,'Ранние уроки','01.02');
  await page.evaluate(()=>{calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');});
- expect(await page.locator('.calendar-hour').allTextContents()).toEqual(expect.arrayContaining(['05:00','23:00']));
+ expect(await page.locator('.calendar-hour').allTextContents()).toEqual(expect.arrayContaining(['05:00','22:00']));
+ expect(await page.locator('.calendar-hour')).toHaveCount(18);
  await page.evaluate(()=>openLesson(null,todayISO(),'05:15'));
  await expect(page.locator('#lTime')).toHaveAttribute('type','text');
  await page.locator('#lTime').fill('05:15');
  await page.locator('#modalBody button.primary').last().click();
  expect(await page.evaluate(()=>db.lessons[0].time)).toBe('05:15');
+ await page.evaluate(()=>openLesson(null,todayISO(),'22:15'));
+ await page.locator('#lTime').fill('22:15');
+ await page.locator('#lDuration').selectOption('30');
+ await page.locator('#modalBody button.primary').last().click();
+ expect(await page.evaluate(()=>db.lessons.some(l=>l.time==='22:15'))).toBe(true);
+ page.once('dialog',dialog=>dialog.dismiss());
  await page.evaluate(()=>openLesson(null,todayISO(),'23:00'));
  await page.locator('#lTime').fill('23:00');
  await page.locator('#lDuration').selectOption('60');
  await page.locator('#modalBody button.primary').last().click();
- expect(await page.evaluate(()=>db.lessons.some(l=>l.time==='23:00'))).toBe(true);
+ expect(await page.evaluate(()=>db.lessons.some(l=>l.time==='23:00'))).toBe(false);
  expect(errors).toEqual([]);
 });
 
