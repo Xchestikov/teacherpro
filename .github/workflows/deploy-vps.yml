@@ -13,6 +13,8 @@ on:
       - 'teacherpro-polish.css'
       - 'calendar-v2.js'
       - 'calendar-v2.css'
+      - 'finance-v2.js'
+      - 'finance-v2.css'
       - 'soft-editorial.css'
       - 'assets/studio-botanical.svg'
       - 'assets/studio-mark.svg'
@@ -45,7 +47,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html app.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do
+          for f in index.html app.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css finance-v2.js finance-v2.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do
             test -s "$f" || { echo "Missing file: $f"; exit 1; }
           done
           node --check app.js
@@ -53,6 +55,7 @@ jobs:
           node --check soft-editorial.js
           node --check teacherpro-polish.js
           node --check calendar-v2.js
+          node --check finance-v2.js
           node --check sw.js
 
       - name: Set up SSH from GitHub encrypted secrets
@@ -83,10 +86,10 @@ jobs:
           SSH_OPTS="-i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "mkdir -p /srv/teacherpro/releases/$RELEASE"
           rsync -az --relative --chmod=F644,D755 -e "ssh $SSH_OPTS" \
-            index.html app.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg \
+            index.html app.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css finance-v2.js finance-v2.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg \
             "$VPS_USER@$VPS_HOST:/srv/teacherpro/releases/$RELEASE/"
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "set -e; for file in index.html app.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do \
+            "set -e; for file in index.html app.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css finance-v2.js finance-v2.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do \
                test -s /srv/teacherpro/releases/$RELEASE/\$file || exit 1; \
              done; \
              ln -sfn /srv/teacherpro/releases/$RELEASE /srv/teacherpro/current-next && \
@@ -106,7 +109,7 @@ jobs:
             "$VPS_USER@$VPS_HOST" "bash -s -- '$VPS_DOMAIN'" <<'REMOTE'
           set -euo pipefail
           domain="$1"
-          for path in "" style.css soft-editorial.css teacherpro-polish.css calendar-v2.css app.js calendar-stage1.js soft-editorial.js teacherpro-polish.js calendar-v2.js sw.js assets/studio-botanical.svg assets/studio-mark.svg; do
+          for path in "" style.css soft-editorial.css teacherpro-polish.css calendar-v2.css finance-v2.css app.js calendar-stage1.js soft-editorial.js teacherpro-polish.js calendar-v2.js finance-v2.js sw.js assets/studio-botanical.svg assets/studio-mark.svg; do
             curl --fail --silent --show-error --location --max-time 15 \
               --resolve "$domain:443:127.0.0.1" "https://$domain/$path" -o /dev/null
           done
