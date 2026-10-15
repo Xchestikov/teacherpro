@@ -123,7 +123,7 @@
     const grid=document.querySelector('.calendar-grid');grid?.querySelector('.tp-now-indicator')?.remove();
     if(!grid)return;
     const now=new Date(),minutes=now.getHours()*60+now.getMinutes();
-    if(minutes<300||minutes>=1440)return;
+    if(minutes<300||minutes>=1380)return;
     const hour=Math.floor(minutes/60)*60;
     const today=document.querySelector('.calendar-cell[data-date="'+todayISO()+'"][data-minute="'+hour+'"]');
     if(!today)return;
