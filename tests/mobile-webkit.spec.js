@@ -65,6 +65,7 @@ test('Native iOS touches drag a planned lesson without selecting time labels',as
  });
  const event=page.locator('.calendar-event[data-lesson-id="native-drag"]');
  await event.scrollIntoViewIfNeeded();
+ page.on('dialog',dialog=>dialog.accept());
  const moved=await page.evaluate(async()=>{
    const source=document.querySelector('.calendar-event[data-lesson-id="native-drag"]');
    const cell=source.closest('.calendar-cell');
