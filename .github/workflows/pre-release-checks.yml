@@ -19,6 +19,7 @@ jobs:
         run: |
           node --check app.js
           node --check calendar-stage1.js
+          node --check soft-editorial.js
           node --check sw.js
           node --check tests/browser.spec.js
           node --check tests/check-release-assets.js
