@@ -99,3 +99,30 @@
     user-select:none!important;
   }
 }
+
+
+/* A real moving lesson preview, anchored to the 15-minute calendar grid.
+   The original slot fades while the floating card follows the finger. */
+body.soft-editorial .tp-mobile-drag-ghost{
+  position:fixed!important;z-index:15000!important;pointer-events:none!important;
+  margin:0!important;max-width:none!important;max-height:none!important;
+  min-height:0!important;overflow:visible!important;
+  box-sizing:border-box!important;transform:none!important;
+  opacity:.94!important;display:flex!important;flex-direction:column!important;
+  justify-content:flex-start!important;align-items:flex-start!important;
+  border-radius:12px!important;box-shadow:0 15px 35px #60413656,0 0 0 2px #d18267!important;
+  transition:none!important;
+  -webkit-user-select:none!important;user-select:none!important;
+}
+body.soft-editorial .tp-mobile-drag-ghost .event-time{font-size:12px!important;font-weight:800}
+body.soft-editorial .tp-mobile-drag-ghost .tp-mobile-drag-time{
+  display:inline-block!important;position:absolute;bottom:5px;right:5px;z-index:2;
+  padding:4px 7px;background:#fffaf5;color:#995544;border:1px solid #e6c9ba;
+  border-radius:7px;font-size:11px;font-weight:800;white-space:nowrap;
+  box-shadow:0 2px 8px #60413629;
+}
+@media(hover:none),(pointer:coarse){
+  body.soft-editorial .calendar-grid .calendar-event.touch-dragging{
+    opacity:.16!important;transform:none!important;box-shadow:none!important;
+  }
+}

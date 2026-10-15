@@ -113,3 +113,64 @@ test('WebKit long press disables hour selection and moves a lesson through touch
  await expect(page.locator('.cv2-toast')).toContainText('11:00');
  expect(errors).toEqual([]);
 });
+
+
+test('iPhone touch drag snaps each quarter hour and moves the lesson preview with the finger',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
+ await page.route('https://fonts.googleapis.com/**',r=>r.abort());
+ await page.route('https://fonts.gstatic.com/**',r=>r.abort());
+ await page.addInitScript({content:mock});
+ await page.goto('/');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
+ await page.locator('#authPassword').fill('DemoPass123');
+ await page.locator('#authSubmit').click();
+ await expect(page.locator('#authGate')).toBeHidden();
+ await page.evaluate(()=>{
+   db.clients=[{id:1009,name:'Четверть часа'}];
+   db.lessons=[{id:'quarter-touch',clientId:1009,date:todayISO(),time:'10:00',duration:60,status:'planned'}];
+   calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ for(const step of [15,30,45]){
+   await page.locator('[data-lesson-id="quarter-touch"]').scrollIntoViewIfNeeded();
+   const result=await page.evaluate(async step=>{
+     const source=document.querySelector('[data-lesson-id="quarter-touch"]');
+     const slot=source.closest('.calendar-cell');
+     const eventRect=source.getBoundingClientRect(),cellRect=slot.getBoundingClientRect();
+     const x=eventRect.left+Math.min(eventRect.width/3,40);
+     const startY=eventRect.top+12;
+     const desiredY=cellRect.top+cellRect.height*step/60+12;
+     const touch=(y)=>({identifier:93,target:source,clientX:x,clientY:y});
+     const fire=(name,y)=>{
+       const e=new Event(name,{bubbles:true,cancelable:true});
+       Object.defineProperty(e,'changedTouches',{value:[touch(y)]});
+       source.dispatchEvent(e);return e.defaultPrevented;
+     };
+     const prevented=fire('touchstart',startY);
+     await new Promise(resolve=>setTimeout(resolve,520));
+     const original=source.getBoundingClientRect();
+     const ghost=document.querySelector('.tp-mobile-drag-ghost');
+     const exists=Boolean(ghost),initialTop=ghost?.getBoundingClientRect().top;
+     fire('touchmove',desiredY);
+     const preview=document.querySelector('.tp-mobile-drag-ghost');
+     const previewText=preview?.querySelector('.tp-mobile-drag-time')?.textContent;
+     const movedTop=preview?.getBoundingClientRect().top;
+     const unchangedBeforeDrop=db.lessons[0].time==='10:00';
+     fire('touchend',desiredY);
+     return {prevented,exists,initialTop,movedTop,previewText,
+       originalTop:original.top,unchangedBeforeDrop,selection:String(window.getSelection()),
+       time:db.lessons[0].time,ghostRemoved:!document.querySelector('.tp-mobile-drag-ghost')};
+   },step);
+   expect(result.prevented).toBe(true);
+   expect(result.exists).toBe(true);
+   expect(result.previewText).toContain('10:'+String(step).padStart(2,'0'));
+   expect(result.movedTop).toBeGreaterThan(result.initialTop+8);
+   expect(result.unchangedBeforeDrop).toBe(true);
+   expect(result.selection).toBe('');
+   expect(result.time).toBe('10:'+String(step).padStart(2,'0'));
+   expect(result.ghostRemoved).toBe(true);
+   await page.evaluate(()=>{db.lessons[0].time='10:00';render();});
+ }
+ expect(errors).toEqual([]);
+});
