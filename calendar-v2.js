@@ -38,9 +38,9 @@
   function applyChange(lessonId,changes,kind){
     const lesson=eventById(lessonId);
     if(!lesson||lesson.status!=='planned')return false;
-    const next={...lesson,...changes};
+    const next={...lesson,duration:Number(lesson.duration)||60,...changes};
     if(!/^\d{4}-\d{2}-\d{2}$/.test(next.date)||!/^\d{2}:\d{2}$/.test(next.time)||!validDuration(Number(next.duration)))return false;
-    if(next.date===lesson.date&&next.time===lesson.time&&next.duration===lesson.duration)return false;
+    if(next.date===lesson.date&&next.time===lesson.time&&Number(next.duration)===(Number(lesson.duration)||60))return false;
     if(minutes(next.time)<480||minutes(next.time)>=1380||minutes(next.time)+Number(next.duration)>1440){
       alert('Занятие должно начинаться в календаре и завершаться до полуночи.');return false;
     }
@@ -53,7 +53,7 @@
       'Изменить длительность занятия на '+next.duration+' мин.?':
       'Перенести занятие на '+next.date+' в '+next.time+'?';
     if(!confirm(prompt))return false;
-    const previous={date:lesson.date,time:lesson.time,duration:lesson.duration};
+    const previous={date:lesson.date,time:lesson.time,duration:Number(lesson.duration)||60};
     const expected={date:next.date,time:next.time,duration:next.duration};
     Object.assign(lesson,changes);save();render();
     toast(kind==='resize'?'Длительность изменена: '+next.duration+' мин.':'Занятие перенесено: '+next.date+' · '+next.time,previous,expected,String(lesson.id));
