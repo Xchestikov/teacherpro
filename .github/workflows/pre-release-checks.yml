@@ -63,7 +63,7 @@ jobs:
           cat /tmp/teacherpro-test-http.log
           exit 1
       - name: Browser scenarios with mocked Supabase and synthetic students only
-        run: npx playwright test tests --grep-invert "WebKit iPhone viewport" --reporter=list --workers=1
+        run: npx playwright test tests --grep-invert "WebKit" --reporter=list --workers=1
       - name: Save screenshots for review
         if: always()
         uses: actions/upload-artifact@v4

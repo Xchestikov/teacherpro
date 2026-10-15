@@ -63,62 +63,177 @@
     if(!menu.hidden&&!menu.contains(e.target))dismiss();
   },true);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')dismiss();});
-  document.addEventListener('pointerdown',e=>{
-    if(e.pointerType!=='touch'||!e.isPrimary)return;
-    if(e.target.closest?.('.tp-event-more,.cv2-resize-handle'))return;
-    const el=eventButton(e.target);
-    if(!el||!lessonFor(el)||lessonFor(el).status!=='planned')return;
+  // iOS Safari and mobile Chromium can cancel pointer gestures to perform a
+  // native long-press selection. Use non-passive Touch Events as the authoritative
+  // path on actual touchscreens; retain Pointer Events for compatible devices.
+  function beginGesture(el,x,y,pointerId=null,fromTouch=false,touchId=null){
+    const lesson=lessonFor(el);
+    if(!lesson||lesson.status!=='planned')return false;
     dismiss();
-    // Keep iOS Safari's native callout/selection and scrolling from stealing the pointer.
-    try{el.setPointerCapture(e.pointerId);}catch(_){}
-    gesture={id:el.dataset.lessonId,pointerId:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,active:false,element:el};
     clearTimeout(holdTimer);
+    if(gesture&&gesture.element!==el)gesture.element.classList.remove('touch-dragging');
+    gesture={id:el.dataset.lessonId,pointerId,touchId,fromTouch,x,y,
+      startX:x,startY:y,active:false,element:el};
     holdTimer=setTimeout(()=>{
-      if(!gesture)return;
-      gesture.active=true;
-      suppressClickUntil=Date.now()+800;
+      const current=gesture;
+      if(!current||current.element!==el)return;
+      current.active=true;
+      suppressClickUntil=Date.now()+900;
       el.classList.add('touch-dragging');
       window.getSelection?.()?.removeAllRanges();
       if(navigator.vibrate)navigator.vibrate(25);
-    },420);
-  },{passive:false});
-  document.addEventListener('pointermove',e=>{
-    if(!gesture||e.pointerType!=='touch'||e.pointerId!==gesture.pointerId)return;
-    if(gesture.active&&e.cancelable)e.preventDefault();
-    gesture.x=e.clientX;gesture.y=e.clientY;
-    if(!gesture.active&&Math.hypot(e.clientX-gesture.startX,e.clientY-gesture.startY)>10){
-      clearTimeout(holdTimer);gesture=null;return;
+    },450);
+    return true;
+  }
+  function cellAt(x,y,origin){
+    const hit=document.elementFromPoint(x,y);
+    const direct=hit?.closest?.('.calendar-cell');
+    if(direct){
+      const r=direct.getBoundingClientRect();
+      // A long event may visually cover a later grid row. Its closest cell
+      // is then the ORIGINAL hour, not the hour at the finger coordinate.
+      if(x>=r.left&&x<r.right&&y>=r.top&&y<r.bottom)return direct;
     }
-    if(gesture.active){
-      window.tpCalendarTouchDragMove?.(e.clientX,e.clientY);
-      const cell=document.elementFromPoint(e.clientX,e.clientY)?.closest('.calendar-cell');
-      document.querySelectorAll('.calendar-cell.touch-drop-target').forEach(el=>el.classList.remove('touch-drop-target'));
+    const originDate=origin?.closest('.calendar-cell')?.dataset.date;
+    const cells=[...document.querySelectorAll('.calendar-cell[data-minute]')];
+    const atPosition=cells.find(cell=>{
+      const r=cell.getBoundingClientRect();
+      return y>=r.top&&y<r.bottom&&x>=r.left&&x<r.right;
+    });
+    if(atPosition)return atPosition;
+    // Dragging over the sticky hour labels still means the same day's row.
+    if(hit?.closest?.('.calendar-hour')&&originDate)
+      return cells.find(cell=>cell.dataset.date===originDate&&
+        y>=cell.getBoundingClientRect().top&&y<cell.getBoundingClientRect().bottom)||null;
+    return null;
+  }
+  function clearDropTargets(){
+    document.querySelectorAll('.calendar-cell.touch-drop-target')
+      .forEach(el=>el.classList.remove('touch-drop-target'));
+  }
+  function updateGesture(x,y){
+    if(!gesture)return;
+    const g=gesture;g.x=x;g.y=y;
+    if(!g.active&&Math.hypot(x-g.startX,y-g.startY)>12){
+      clearTimeout(holdTimer);
+      g.element.classList.remove('touch-dragging');
+      gesture=null;return;
+    }
+    if(g.active){
+      window.getSelection?.()?.removeAllRanges();
+      window.tpCalendarTouchDragMove?.(x,y);
+      const cell=cellAt(x,y,g.element);
+      clearDropTargets();
       if(cell)cell.classList.add('touch-drop-target');
     }
-  },{passive:false});
-  document.addEventListener('selectstart',e=>{if(eventButton(e.target))e.preventDefault();},true);
-  document.addEventListener('dragstart',e=>{if(eventButton(e.target)&&e.pointerType!=='mouse')e.preventDefault();},true);
-  function finishGesture(e,cancelled){
-    if(!gesture||e.pointerId!==gesture.pointerId)return;
+  }
+  function finishGesture(cancelled){
+    if(!gesture)return;
     clearTimeout(holdTimer);
     const g=gesture;gesture=null;
-    if(g.active&&e.cancelable)e.preventDefault();
-    try{if(g.element.hasPointerCapture?.(g.pointerId))g.element.releasePointerCapture(g.pointerId);}catch(_){}
+    const wasActive=g.active;
     g.element.classList.remove('touch-dragging');
-    document.querySelectorAll('.calendar-cell.touch-drop-target').forEach(el=>el.classList.remove('touch-drop-target'));
-    if(!g.active||cancelled)return;
-    suppressClickUntil=Date.now()+800;
-    const cell=document.elementFromPoint(g.x,g.y)?.closest('.calendar-cell');
+    clearDropTargets();
+    try{
+      if(g.pointerId!==null&&g.element.hasPointerCapture?.(g.pointerId))
+        g.element.releasePointerCapture(g.pointerId);
+    }catch(_){}
+    if(cancelled)return;
+    if(!wasActive){
+      // Preventing touchstart's native selection suppresses a synthetic click
+      // in Safari. Open the lesson explicitly on a clean, short tap.
+      if(g.fromTouch&&Math.hypot(g.x-g.startX,g.y-g.startY)<12){
+        suppressClickUntil=Date.now()+600;
+        openLessonByKey(g.id);
+      }
+      return;
+    }
+    suppressClickUntil=Date.now()+900;
+    const cell=cellAt(g.x,g.y,g.element);
     if(cell&&Math.hypot(g.x-g.startX,g.y-g.startY)>14){
-      const lesson=db.lessons.find(l=>String(l.id)===String(g.id));
-      moveLesson(lesson,cell,g.y);
+      moveLesson(lessonFor(g.element),cell,g.y);
     }else{
       const event=document.querySelector('.calendar-event[data-lesson-id="'+CSS.escape(g.id)+'"]');
       if(event)openMenu(event,g.x,g.y);
     }
   }
-  document.addEventListener('pointerup',e=>{if(e.pointerType==='touch')finishGesture(e,false);},{passive:false});
-  document.addEventListener('pointercancel',e=>{if(e.pointerType==='touch')finishGesture(e,true);},{passive:false});
+  function calendarTouchTarget(target){
+    if(target?.closest?.('.tp-event-more,.cv2-resize-handle'))return null;
+    return eventButton(target);
+  }
+  document.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='touch'||!e.isPrimary)return;
+    const el=calendarTouchTarget(e.target);
+    if(!el)return;
+    if(gesture?.fromTouch&&gesture.element===el){gesture.pointerId=e.pointerId;return;}
+    if(!beginGesture(el,e.clientX,e.clientY,e.pointerId))return;
+    try{el.setPointerCapture(e.pointerId);}catch(_){}
+  },{passive:false});
+  document.addEventListener('pointermove',e=>{
+    if(!gesture||gesture.fromTouch||e.pointerType!=='touch'||
+      gesture.pointerId!==e.pointerId)return;
+    if(gesture.active&&e.cancelable)e.preventDefault();
+    updateGesture(e.clientX,e.clientY);
+  },{passive:false});
+  document.addEventListener('pointerup',e=>{
+    if(gesture?.fromTouch||e.pointerType!=='touch'||
+      gesture?.pointerId!==e.pointerId)return;
+    if(gesture.active&&e.cancelable)e.preventDefault();
+    updateGesture(e.clientX,e.clientY);finishGesture(false);
+  },{passive:false});
+  document.addEventListener('pointercancel',e=>{
+    if(gesture?.fromTouch||e.pointerType!=='touch'||
+      gesture?.pointerId!==e.pointerId)return;
+    finishGesture(true);
+  },{passive:false});
+
+  document.addEventListener('touchstart',e=>{
+    const el=calendarTouchTarget(e.target);
+    if(!el||!lessonFor(el)||lessonFor(el).status!=='planned')return;
+    const t=e.changedTouches?.[0];if(!t)return;
+    // Cancels the Safari text-selection recognizer BEFORE the long-press.
+    if(e.cancelable)e.preventDefault();
+    el.draggable=false; // Avoid native HTML drag interfering with custom touch drag.
+    window.getSelection?.()?.removeAllRanges();
+    if(gesture?.element===el){
+      gesture.fromTouch=true;gesture.touchId=t.identifier;
+      gesture.x=t.clientX;gesture.y=t.clientY;
+    }else beginGesture(el,t.clientX,t.clientY,null,true,t.identifier);
+  },{passive:false,capture:true});
+  document.addEventListener('touchmove',e=>{
+    const g=gesture;
+    if(!g?.fromTouch)return;
+    const t=[...e.changedTouches].find(t=>t.identifier===g.touchId);
+    if(!t)return;
+    if(e.cancelable)e.preventDefault();
+    updateGesture(t.clientX,t.clientY);
+  },{passive:false,capture:true});
+  document.addEventListener('touchend',e=>{
+    const g=gesture;
+    if(!g?.fromTouch)return;
+    const t=[...e.changedTouches].find(t=>t.identifier===g.touchId);
+    if(!t)return;
+    if(e.cancelable)e.preventDefault();
+    updateGesture(t.clientX,t.clientY);finishGesture(false);
+  },{passive:false,capture:true});
+  document.addEventListener('touchcancel',e=>{
+    if(gesture?.fromTouch&&[...e.changedTouches].some(t=>t.identifier===gesture.touchId))
+      finishGesture(true);
+  },{passive:false,capture:true});
+
+  // The hour rail and empty cells need the same selection protection as cards.
+  document.addEventListener('selectstart',e=>{
+    if(e.target.closest?.('.calendar-grid')){
+      e.preventDefault();window.getSelection?.()?.removeAllRanges();
+    }
+  },true);
+  document.addEventListener('contextmenu',e=>{
+    if(e.target.closest?.('.calendar-grid'))e.preventDefault();
+  },true);
+  document.addEventListener('dragstart',e=>{
+    if(e.target.closest?.('.calendar-grid')&&e.pointerType!=='mouse'&&
+       gesture?.fromTouch)e.preventDefault();
+  },true);
   /* Add a real weekly workload counter without changing stored data. */
   const originalDashboard=dashboard;
   dashboard=function(){

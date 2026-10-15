@@ -66,3 +66,36 @@
     pointer-events:none
   }
 }
+
+
+/* iPhone Safari / Yandex mobile: the hour gutter and ALL calendar text are
+   nonselectable too, not just the text inside event buttons. Otherwise a
+   moving finger hits the hour label and triggers iOS text selection handles. */
+@media (hover:none), (pointer:coarse), (max-width:720px){
+  body.soft-editorial .calendar-shell .calendar-grid,
+  body.soft-editorial .calendar-shell .calendar-grid *,
+  body.soft-editorial .calendar-shell .calendar-grid *::before,
+  body.soft-editorial .calendar-shell .calendar-grid *::after{
+    -webkit-user-select:none!important;
+    user-select:none!important;
+    -webkit-touch-callout:none!important;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body.soft-editorial .calendar-shell .calendar-grid .calendar-hour,
+  body.soft-editorial .calendar-shell .calendar-grid .calendar-cell{
+    touch-action:pan-y;
+  }
+  body.soft-editorial .calendar-shell .calendar-grid .calendar-event.event-planned,
+  body.soft-editorial .calendar-shell .calendar-grid .calendar-event[draggable],
+  body.soft-editorial .calendar-shell .calendar-grid .calendar-event .cv2-resize-handle{
+    touch-action:none!important;
+  }
+  body.soft-editorial .calendar-shell .calendar-grid .calendar-event.event-planned{
+    cursor:grab;
+  }
+  body.soft-editorial .calendar-shell .calendar-grid .calendar-event.touch-dragging{
+    cursor:grabbing;
+    -webkit-user-select:none!important;
+    user-select:none!important;
+  }
+}
