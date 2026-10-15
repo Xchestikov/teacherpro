@@ -77,7 +77,7 @@ jobs:
           SSH_OPTS="-i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "mkdir -p /srv/teacherpro/releases/$RELEASE"
           rsync -az --relative --chmod=F644,D755 -e "ssh $SSH_OPTS" \
-            index.html app.js calendar-stage1.js soft-editorial.js style.css soft-editorial.css assets/studio-botanical.svg sw.js cloud-config.js manifest.webmanifest icon.svg \
+            index.html app.js calendar-stage1.js soft-editorial.js style.css soft-editorial.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg \
             "$VPS_USER@$VPS_HOST:/srv/teacherpro/releases/$RELEASE/"
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
             "test -s /srv/teacherpro/releases/$RELEASE/index.html && \
