@@ -182,6 +182,7 @@ test('Two-hour event is visible across both hour cells, with usable actions',asy
     calendarSelectedDate=day;
     setPage('schedule');
   });
+  await page.locator('.calendar-event[data-lesson-id="two-hour-lesson"]').scrollIntoViewIfNeeded();
   const metrics=await page.evaluate(()=>{
     const event=document.querySelector('.calendar-event[data-lesson-id="two-hour-lesson"]');
     const cell=event.closest('.calendar-cell');
@@ -229,6 +230,7 @@ test('Deleting a consumed lesson asks before refunding and respects cancellation
 test('Soft Editorial uses real workload data and presents actions on mobile',async({page})=>{
  const errors=await setup(page);await login(page);
  await addStudent(page,'Тестовая София','09.08');
+ await page.clock.install({time:new Date('2026-10-15T12:00:00')});
  await page.setViewportSize({width:390,height:844});
  await page.evaluate(()=>{
    const d=todayISO();
@@ -363,6 +365,7 @@ test('Calendar V2 assigns side-by-side lanes to lessons starting in different ho
    ];
    calendarMode='day';calendarSelectedDate=date;setPage('schedule');
  });
+ await page.locator('[data-lesson-id="lane-a"]').scrollIntoViewIfNeeded();
  const layout=await page.evaluate(()=>{
    const a=document.querySelector('[data-lesson-id="lane-a"]'),b=document.querySelector('[data-lesson-id="lane-b"]'),c=document.querySelector('[data-lesson-id="lane-c"]');
    const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
@@ -450,6 +453,7 @@ test('Calendar V2 pointer resize grip extends event height in 15-minute steps',a
  });
  page.on('dialog',dialog=>dialog.accept());
  const grip=page.locator('.calendar-event[data-lesson-id="grip-v2"] .cv2-resize-handle');
+ await grip.scrollIntoViewIfNeeded();
  const box=await grip.boundingBox();
  expect(box).toBeTruthy();
  const x=box.x+box.width/2,y=box.y+box.height/2;
@@ -763,7 +767,7 @@ test('Mobile V2 payments: all four KPI remain, filters sync cards, actions reuse
  const card=page.locator('.tp-mobile-payments .tp-mobile-record').filter({hasText:'2 300'}).first();
  await card.getByRole('button',{name:'Действия'}).click();
  await card.getByRole('menuitem',{name:'Редактировать'}).click();
- await expect(page.locator('#modalTitle')).toContainText('Редактировать');
+ await expect(page.locator('#modalTitle')).toContainText('Исправить оплату');
  await page.locator('#modalClose').click();
  await page.setViewportSize({width:1280,height:900});
  await expect(page.locator('#content .tp-mobile-original-table')).toBeVisible();
