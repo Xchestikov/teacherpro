@@ -127,7 +127,7 @@ const isoStart=localDateISO(days[0]),isoEnd=localDateISO(days[days.length-1]);
 const label=calendarMode==='day'?days[0].toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):days[0].toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+' — '+days[6].toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
 const all=db.lessons.filter(l=>l.date>=isoStart&&l.date<=isoEnd);
 const visible=all.filter(l=>calendarClientFilter==='all'||String(l.clientId)===String(calendarClientFilter));
-const slots=Array.from({length:19},(_,i)=>5*60+i*60);
+const slots=Array.from({length:18},(_,i)=>5*60+i*60);
 const clientOptions=db.clients.map(c=>'<option value="'+htmlSafe(c.id)+'" '+(String(c.id)===String(calendarClientFilter)?'selected':'')+'>'+htmlSafe(c.name)+'</option>').join('');
 const options='<div class="calendar-filters"><label>Ученик <select aria-label="Фильтр по ученику" onchange="calendarFilter(this.value)"><option value="all">Все ученики</option>'+clientOptions+'</select></label><label>Перейти к дате <input type="date" aria-label="Дата в календаре" value="'+htmlSafe(calendarMode==='day'?calendarSelectedDate:localDateISO(weekDays[0]))+'" onchange="calendarSelectDate(this.value)"></label><div class="calendar-view-switch" role="group" aria-label="Вид календаря"><button type="button" class="'+(calendarMode==='week'?'active':'')+'" onclick="calendarSetMode(\'week\')">Неделя</button><button type="button" class="'+(calendarMode==='day'?'active':'')+'" onclick="calendarSetMode(\'day\')">День</button></div></div>';
 const cells=slots.map(minute=>'<div class="calendar-hour">'+minutesToClock(minute)+'</div>'+days.map(d=>{
@@ -363,7 +363,7 @@ function saveLesson(id){
   if(!db.clients.length)return alert('Сначала добавь ученика.');
   const previous=id?db.lessons.find(x=>String(x.id)===String(id)):null;
   const l={id:id||crypto.randomUUID(),clientId:+$('#lClient').value,date:$('#lDate').value,time:$('#lTime').value,type:$('#lType').value,duration:+$('#lDuration').value||60,hourlyRate:Number($('#lHourlyRate')?.value),status:$('#lStatus').value};
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(l.date)||! /^(?:0[5-9]|1\d|2[0-3]):[0-5]\d$/.test(l.time)||lessonMinutes(l.time)<300||lessonMinutes(l.time)>=1440||lessonMinutes(l.time)+l.duration>1440)return alert('Укажи дату и время с 05:00 до 23:59. Занятие должно закончиться до полуночи.');if(!Number.isFinite(l.hourlyRate)||l.hourlyRate<0||l.hourlyRate>100000000||Math.abs(l.hourlyRate*100-Math.round(l.hourlyRate*100))>1e-6)return alert('Укажи корректную стоимость часа.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(l.date)||! /^(?:0[5-9]|1\d|2[0-3]):[0-5]\d$/.test(l.time)||lessonMinutes(l.time)<300||lessonMinutes(l.time)>=1380||lessonMinutes(l.time)+l.duration>1380)return alert('Укажи начало с 05:00 и время окончания не позднее 23:00.');if(!Number.isFinite(l.hourlyRate)||l.hourlyRate<0||l.hourlyRate>100000000||Math.abs(l.hourlyRate*100-Math.round(l.hourlyRate*100))>1e-6)return alert('Укажи корректную стоимость часа.');
   const mode=previous?'none':($('#lRecurrence')?.value||'none');
   const weeks=previous?1:(mode==='biweekly'?26:52);
   const candidates=[];
