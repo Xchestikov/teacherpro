@@ -5,6 +5,7 @@ const baseSave=saveLesson;
 saveLesson=function(id){
  const selected=client(Number(document.querySelector('#lClient')?.value));
  const previous=id?db.lessons.find(l=>String(l.id)===String(id)):null;
+ if(previous&&!previous.billingMode&&previous.status!=='planned')return baseSave(id);
  const mode=previous?.billingMode||(selected?.billingMode==='per_lesson'?'per_lesson':'subscription');
  if(mode!=='per_lesson')return baseSave(id);
  const amount=Number(document.querySelector('#lHourlyRate')?.value);
