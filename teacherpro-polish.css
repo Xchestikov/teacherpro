@@ -43,9 +43,10 @@ body.soft-editorial .calendar-grid .calendar-event strong{font-weight:800;line-h
 body.soft-editorial .calendar-grid .calendar-event small{font-size:10px;line-height:1.25}
 body.soft-editorial .calendar-grid .calendar-event .tp-event-more{position:absolute;right:3px;top:3px;height:28px;width:25px;display:grid;place-items:center;z-index:8;cursor:pointer;border-radius:9px;background:#fff7;line-height:1;font-size:21px;font-weight:800;color:#725a51}
 body.soft-editorial .calendar-grid .calendar-event .tp-event-more:hover,body.soft-editorial .calendar-grid .calendar-event .tp-event-more:focus-visible{background:#fffefc;outline:2px solid #c16d57;outline-offset:0;color:#a84e3e}
-body.soft-editorial .calendar-grid .calendar-event.event-cancelled{height:46px!important;min-height:40px!important;max-height:46px!important;background:#efd4c9!important;border-left-color:#b46855!important;color:#9f5045!important;opacity:.88;box-shadow:none}
+body.soft-editorial .calendar-grid .calendar-event.event-cancelled{background:#f1dbd2!important;border-left-color:#b46855!important;color:#894c42!important;opacity:.91;box-shadow:none}
 body.soft-editorial .calendar-grid .calendar-event.event-cancelled .event-time{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;font-size:10px}
-body.soft-editorial .calendar-grid .calendar-event.event-cancelled strong,body.soft-editorial .calendar-grid .calendar-event.event-cancelled small{display:none!important}
+body.soft-editorial .calendar-grid .calendar-event.event-cancelled strong{display:block!important;color:#754b40;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+body.soft-editorial .calendar-grid .calendar-event.event-cancelled .tp-event-status{display:block!important;color:#a46252;font-size:10px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.soft-editorial .calendar-grid .calendar-event.event-cancelled.event-no-show{background:#f4e7d7!important;border-left-color:#c28d59!important;color:#986541!important}
 body.soft-editorial .lesson-quick-menu{width:min(290px,calc(100vw - 18px));max-height:min(75vh,580px);overflow-y:auto;overscroll-behavior:contain;padding:8px;border-radius:17px;background:#fffdfa;border:1px solid #eeddd2;box-shadow:0 22px 55px #482b2933}
 body.soft-editorial .lesson-quick-menu button{font-size:13px;padding:10px 12px;margin:2px 0;min-height:39px;color:#4e3934}
