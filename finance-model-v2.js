@@ -85,7 +85,22 @@
    const used=db.lessons.some(l=>String(l.consumedSubscriptionId)===String(p.subscriptionId));
    const linked=db.payments.filter(x=>String(x.subscriptionId)===String(p.subscriptionId));
    if(!sub)return alert('Абонемент не найден. Запись не изменена.');
-   if(used)return alert('У этого абонемента уже есть списанные занятия. Удалять связанную оплату нельзя: потребуется отдельная корректировка и проверка долга.');
+   if(p.status==='paid'){
+     const sum=linked.reduce((n,x)=>n+cents(x.amount),0),price=cents(sub.price);
+     if(sum!==price||linked.some(x=>x.status!=='paid'&&x.status!=='pending'))
+       return alert('Связанные суммы не совпадают со стоимостью пакета. Автоматическая коррекция остановлена.');
+     if(!confirm('Отменить ошибочную запись о получении '+money(cents(p.amount))+'?\nДоход уменьшится, а задолженность по абонементу восстановится. Уже списанные занятия останутся в истории.'))return;
+     if(!Array.isArray(db.paymentCorrections))db.paymentCorrections=[];
+     db.paymentCorrections.push({id:crypto.randomUUID(),paymentId:id,at:new Date().toISOString(),kind:'void-linked-receipt',before:{...p}});
+     db.payments=db.payments.filter(x=>x!==p);
+     let remaining=price-db.payments.filter(x=>String(x.subscriptionId)===String(sub.id)&&x.status==='paid').reduce((n,x)=>n+cents(x.amount),0);
+     let pending=db.payments.find(x=>String(x.subscriptionId)===String(sub.id)&&x.status==='pending');
+     if(pending)pending.amount=Math.round(remaining)/100;
+     else db.payments.push({id:crypto.randomUUID(),clientId:sub.clientId,subscriptionId:sub.id,type:'subscription',
+       amount:Math.round(remaining)/100,date:todayISO(),status:'pending',description:'Ожидает оплаты: '+sub.name});
+     sub.paymentStatus='pending';syncClientSubscription(sub);save();render();return;
+   }
+   if(used)return alert('Нельзя удалить ожидаемый счёт, если по пакету уже списаны занятия. Можно исправить связанную оплаченную запись, восстановив задолженность.');
    if(p.status==='pending'&&linked.length===1){
      if(!confirm('Удалить ошибочно созданный неоплаченный абонемент вместе с записью ожидаемой оплаты?'))return;
      db.payments=db.payments.filter(x=>x!==p);
