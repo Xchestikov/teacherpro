@@ -9,7 +9,7 @@ async function setup(page){
  await page.addInitScript({content:mock});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');
- await page.locator('#authEmail').fill('finance@teacherpro.test');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
  await expect(page.locator('#authGate')).toBeHidden();
