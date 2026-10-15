@@ -75,7 +75,8 @@ window.tpEditSeries=id=>{
  '<p class="muted">Изменяются только запланированные уроки серии. Проведённые уроки и списания не затрагиваются.</p>'+
  '<label>Дата, начиная с которой изменить серию<input type="date" id="s4SeriesFrom" value="'+clean(first.date)+'"></label>'+
  '<label>Переместить даты на количество дней<input id="s4DayShift" type="number" step="1" min="-60" max="60" value="0"></label>'+
- '<label>Новое время<input id="s4NewTime" type="text" inputmode="numeric" maxlength="5" placeholder="06:15" value="'+clean(first.time)+'"></label>'+
+ '<label><input id="s4KeepTimes" type="checkbox" '+(new Set(futureLessons.map(x=>x.time)).size>1?'checked':'')+' onchange="document.querySelector(\'#s4NewTime\').disabled=this.checked"> Сохранить время каждого дня</label>'+
+ '<label>Новое время для всех дней<input id="s4NewTime" type="text" inputmode="numeric" maxlength="5" placeholder="06:15" value="'+clean(first.time)+'" '+(new Set(futureLessons.map(x=>x.time)).size>1?'disabled':'')+'></label>'+
  '<label>Длительность<select id="s4Duration">'+[30,45,60,75,90,105,120,150,180,240].map(n=>'<option value="'+n+'" '+(Number(first.duration)===n?'selected':'')+'>'+n+' минут</option>').join('')+'</select></label>'+
  '<div class="form-actions"><button class="secondary" onclick="tpOpenSeriesManager()">Назад</button>'+
  '<button class="primary" data-series-id="'+clean(id)+'" onclick="tpSaveSeriesChanges(this.dataset.seriesId)">Проверить и применить</button></div></div>';
@@ -83,12 +84,13 @@ window.tpEditSeries=id=>{
 };
 window.tpSaveSeriesChanges=id=>{
  const start=$q('#s4SeriesFrom')?.value,shift=Number($q('#s4DayShift')?.value),time=$q('#s4NewTime')?.value,duration=Number($q('#s4Duration')?.value);
- if(!iso(start)||!Number.isInteger(shift)||Math.abs(shift)>60||!validTime(time)||![30,45,60,75,90,105,120,150,180,240].includes(duration)||lessonMinutes(time)+duration>1440)
+ const keepTimes=$q('#s4KeepTimes')?.checked===true;
+ if(!iso(start)||!Number.isInteger(shift)||Math.abs(shift)>60||(!keepTimes&&!validTime(time))||![30,45,60,75,90,105,120,150,180,240].includes(duration)||(!keepTimes&&lessonMinutes(time)+duration>1440))
    return notify('Проверь дату, время, перенос и длительность.');
  const change=seriesLessons(id).filter(l=>future(l)&&l.date>=start);
  if(!change.length)return notify('Будущих занятий для изменения не найдено.');
  const ids=new Set(change.map(x=>String(x.id)));
- const next=change.map(l=>({...l,date:addDays(l.date,shift),time,duration}));
+ const next=change.map(l=>({...l,date:addDays(l.date,shift),time:keepTimes?l.time:time,duration}));
  if(next.some(l=>blocked(l.date)))return notify('Новые даты попадают на каникулы или отпуск. Выбери другой период.');
  // Check against lessons outside the batch AND other target lessons after shift.
  const external=db.lessons.filter(l=>!ids.has(String(l.id))&&!lessonIsCancelled(l.status));
@@ -103,7 +105,7 @@ window.tpSaveSeriesChanges=id=>{
  if(conflicts.length)return notify('Обнаружены пересечения ('+conflicts.length+'). Изменения не применены:\n'+conflicts.slice(0,4).join('\n'));
  const prompt='Изменить '+change.length+' будущих занятий?\nПеренос: '+shift+' дней, время '+time+', длительность '+duration+' минут.\nПроведённые уроки останутся без изменений.';
 
- change.forEach((l,i)=>{l.date=next[i].date;l.time=time;l.duration=duration;});
+ change.forEach((l,i)=>{l.date=next[i].date;l.time=next[i].time;l.duration=duration;});
  save();closeModal();render();
 };
 
