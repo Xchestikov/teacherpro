@@ -156,20 +156,33 @@ test('iPhone touch drag snaps each quarter hour and moves the lesson preview wit
      const preview=document.querySelector('.tp-mobile-drag-ghost');
      const previewText=preview?.querySelector('.tp-mobile-drag-time')?.textContent;
      const movedTop=preview?.getBoundingClientRect().top;
+     const guide=document.querySelector('.tp-mobile-quarter-guide');
+     const targetCell=guide?.closest('.calendar-cell');
+     const guideOffset=guide&&targetCell?
+       (guide.getBoundingClientRect().top-targetCell.getBoundingClientRect().top)/targetCell.getBoundingClientRect().height:null;
+     const guideTime=guide?.dataset.targetTime;
+     const guideLabel=guide?.textContent;
+     const targetOutline=targetCell?getComputedStyle(targetCell).outlineStyle:null;
      const unchangedBeforeDrop=db.lessons[0].time==='10:00';
      fire('touchend',desiredY);
-     return {prevented,exists,initialTop,movedTop,previewText,
+     return {prevented,exists,initialTop,movedTop,previewText,guideTime,guideLabel,guideOffset,targetOutline,
        originalTop:original.top,unchangedBeforeDrop,selection:String(window.getSelection()),
-       time:db.lessons[0].time,ghostRemoved:!document.querySelector('.tp-mobile-drag-ghost')};
+       time:db.lessons[0].time,ghostRemoved:!document.querySelector('.tp-mobile-drag-ghost'),
+       guideRemoved:!document.querySelector('.tp-mobile-quarter-guide')};
    },step);
    expect(result.prevented).toBe(true);
    expect(result.exists).toBe(true);
    expect(result.previewText).toContain('10:'+String(step).padStart(2,'0'));
+   expect(result.guideTime).toBe('10:'+String(step).padStart(2,'0'));
+   expect(result.guideLabel).toBe('10:'+String(step).padStart(2,'0'));
+   expect(result.guideOffset).toBeCloseTo(step/60,1);
+   expect(result.targetOutline).toBe('none');
    expect(result.movedTop).toBeGreaterThan(result.initialTop+8);
    expect(result.unchangedBeforeDrop).toBe(true);
    expect(result.selection).toBe('');
    expect(result.time).toBe('10:'+String(step).padStart(2,'0'));
    expect(result.ghostRemoved).toBe(true);
+   expect(result.guideRemoved).toBe(true);
    await page.evaluate(()=>{db.lessons[0].time='10:00';render();});
  }
  expect(errors).toEqual([]);

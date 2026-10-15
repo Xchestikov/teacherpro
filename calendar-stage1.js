@@ -1,7 +1,7 @@
 /* TeacherPro calendar UX — stage 1, review branch only. */
 (function(){
   'use strict';
-  let holdTimer=null, gesture=null, suppressClickUntil=0;
+  let holdTimer=null, gesture=null, suppressClickUntil=0, quarterGuide=null;
   const snap15=minute=>Math.round(minute/15)*15;
   const safeRange=minute=>minute>=480&&minute<1380;
   const menu=document.createElement('div');
@@ -151,7 +151,11 @@
       suppressClickUntil=Date.now()+900;
       el.classList.add('touch-dragging');
       createDragGhost(current);
-      positionGhost(current,targetForGesture(current,current.x,current.y),current.x,current.y);
+      const target=targetForGesture(current,current.x,current.y);
+      current.target=target;
+      positionGhost(current,target,current.x,current.y);
+      clearDropTargets();
+      showQuarterGuide(target);
       window.getSelection?.()?.removeAllRanges();
       if(navigator.vibrate)navigator.vibrate(25);
     },450);
@@ -180,8 +184,26 @@
     return null;
   }
   function clearDropTargets(){
+    quarterGuide?.remove();
+    quarterGuide=null;
     document.querySelectorAll('.calendar-cell.touch-drop-target')
       .forEach(el=>el.classList.remove('touch-drop-target'));
+  }
+  function showQuarterGuide(target){
+    if(!target)return;
+    const minuteOfHour=target.minute-Number(target.cell.dataset.minute);
+    if(!Number.isFinite(minuteOfHour))return;
+    const line=document.createElement('div');
+    line.className='tp-mobile-quarter-guide';
+    line.setAttribute('aria-hidden','true');
+    line.dataset.targetTime=target.time;
+    line.style.top=(minuteOfHour/60*100)+'%';
+    const label=document.createElement('span');
+    label.textContent=target.time;
+    line.appendChild(label);
+    target.cell.appendChild(line);
+    target.cell.classList.add('touch-drop-target');
+    quarterGuide=line;
   }
   function updateGesture(x,y){
     if(!gesture)return;
@@ -197,7 +219,7 @@
       g.target=target;
       positionGhost(g,target,x,y);
       clearDropTargets();
-      if(target)target.cell.classList.add('touch-drop-target');
+      showQuarterGuide(target);
       // Scroll after calculating the candidate to avoid changing the
       // destination when the grid moves beneath the finger.
       window.tpCalendarTouchDragMove?.(x,y);
