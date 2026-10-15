@@ -80,7 +80,8 @@ test('WebKit long press disables selection on time gutter and moves a lesson usi
  expect(gutter.selectionPrevented).toBe(true);
  expect(gutter.menuPrevented).toBe(true);
  expect(gutter.userSelect).toBe('none');
- expect(gutter.callout).toBe('none');
+ // Desktop Linux WebKit does not expose this iOS-only computed property.
+ if(gutter.callout!==undefined)expect(gutter.callout).toBe('none');
  const eventRect=await lesson.boundingBox();
  const cell=page.locator('.calendar-cell[data-minute="660"]').first();
  const cellRect=await cell.boundingBox();
