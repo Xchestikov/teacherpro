@@ -1,0 +1,39 @@
+/* Stage 5 — student profile identity, progress and reusable homework. */
+body.soft-editorial .s5-student-banner{display:flex;align-items:center;gap:13px;padding:13px 15px;
+ border:1px solid #eeddd2;border-radius:17px;background:linear-gradient(110deg,#fff7f1,#fffdfb);margin-bottom:14px}
+body.soft-editorial .s5-student-avatar{width:60px;height:60px;flex:0 0 60px;display:grid;place-items:center;border-radius:50%;
+ background:#f0d9c9;font-family:'Playfair Display',Georgia,serif;font-size:25px;color:#985447;overflow:hidden}
+body.soft-editorial .s5-avatar-photo{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+body.soft-editorial .s5-student-title{display:grid;gap:5px;min-width:0;flex:1}
+body.soft-editorial .s5-student-title strong{font-family:'Playfair Display',Georgia,serif;font-size:20px;color:#593a32;overflow:hidden;text-overflow:ellipsis}
+body.soft-editorial .s5-student-title span{font-size:11px;color:#94766a}
+body.soft-editorial .s5-photo-controls{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+body.soft-editorial .s5-upload{cursor:pointer;padding:9px 11px;font-size:11px;display:inline-flex!important;align-items:center}
+body.soft-editorial .s5-progress{padding:18px;margin:12px 0;display:grid;gap:11px}
+body.soft-editorial .s5-progress h3{font-family:'Playfair Display',Georgia,serif;font-size:19px;margin:0}
+body.soft-editorial .s5-progress .muted{font-size:11px;margin:0}
+body.soft-editorial .s5-progress-summary{display:flex;gap:18px}
+body.soft-editorial .s5-progress-summary div{display:grid;gap:4px}
+body.soft-editorial .s5-progress-summary strong{font-size:21px;color:#a65b4c}
+body.soft-editorial .s5-progress-summary small{color:#8e7b73;font-size:11px}
+body.soft-editorial .s5-progress>label{display:grid;gap:7px;font-size:12px;color:#634c42}
+body.soft-editorial .s5-progress input[type="range"]{accent-color:#c76b54;width:100%}
+body.soft-editorial .s5-progress-bar{height:8px;background:#f5e6df;border-radius:10px;overflow:hidden}
+body.soft-editorial .s5-progress-bar span{display:block;height:100%;background:linear-gradient(90deg,#d9957d,#a77d69);border-radius:10px}
+body.soft-editorial .s5-progress button{justify-self:start}
+body.soft-editorial .s5-student-calendar{min-height:39px;font-size:12px;margin-bottom:8px}
+body.soft-editorial .s5-template-list{display:grid;gap:9px;margin:12px 0}
+body.soft-editorial .s5-template{display:flex;gap:13px;justify-content:space-between;align-items:start;background:#fffaf6;
+ border:1px solid #eee1d8;border-radius:13px;padding:13px}
+body.soft-editorial .s5-template strong{font-size:13px;color:#4c3732}
+body.soft-editorial .s5-template p{font-size:12px;color:#88786e;white-space:pre-line;max-height:92px;overflow:auto}
+body.soft-editorial .s5-template-actions{display:flex;align-items:center;gap:5px;flex-shrink:0}
+body.soft-editorial .s5-table-avatar{display:inline-grid;place-items:center;vertical-align:middle;width:30px;height:30px;
+ border-radius:50%;background:#f1dbce;overflow:hidden;color:#935546;margin-right:9px;font-weight:700}
+body.soft-editorial .s5-template-picker{background:#fff8f3;border-radius:11px;padding:9px}
+@media(max-width:700px){
+ body.soft-editorial .s5-student-banner{flex-wrap:wrap;padding:11px}
+ body.soft-editorial .s5-photo-controls{flex:1 0 100%;justify-content:flex-start}
+ body.soft-editorial .s5-template{flex-direction:column}
+ body.soft-editorial .s5-template-actions{flex-wrap:wrap}
+}
