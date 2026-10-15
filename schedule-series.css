@@ -13,3 +13,24 @@ body.soft-editorial .s4-row label{display:grid;gap:4px;font-size:12px}
 body.soft-editorial .s4-manager-btn{font-weight:750;padding:9px 12px;min-height:40px}
 body.soft-editorial .s4-hint{font-size:11px;line-height:1.45}
 @media(max-width:700px){body.soft-editorial .s4-manager-btn{font-size:11px;min-height:40px}body.soft-editorial .s4-row{grid-template-columns:1fr}body.soft-editorial .s4-series-card{flex-direction:column;align-items:stretch}}
+
+
+/* A compact weekly pattern editor instead of a number-of-weeks form. */
+body.soft-editorial .tp-recurrence{padding:12px;background:#fff9f4;border:1px solid #f0dfd3;border-radius:13px;display:grid;gap:10px}
+body.soft-editorial .tp-recurrence[hidden]{display:none!important}
+body.soft-editorial .tp-recurrence-heading{font-size:12px;font-weight:800;color:#6e5146}
+body.soft-editorial .tp-recurrence-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+body.soft-editorial .tp-recurrence-day{position:relative;display:block;cursor:pointer;min-width:0}
+body.soft-editorial .tp-recurrence-day input{position:absolute;opacity:0;width:1px;height:1px}
+body.soft-editorial .tp-recurrence-day span{min-height:38px;display:grid;place-items:center;border:1px solid #e9d8c9;border-radius:9px;color:#846f64;background:#fffefd;font-size:12px;font-weight:700}
+body.soft-editorial .tp-recurrence-day input:checked+span{background:#d88e7a;color:#fff;border-color:#c77f69}
+body.soft-editorial .tp-recurrence-day input:focus-visible+span{outline:2px solid #c16e58;outline-offset:2px}
+body.soft-editorial .tp-recurrence-times{display:grid;gap:7px}
+body.soft-editorial .tp-recurrence-time{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;color:#72594e}
+body.soft-editorial .tp-recurrence-time input{flex:1;max-width:140px;height:42px;border-radius:10px}
+body.soft-editorial .tp-recurrence .muted{font-size:11px;line-height:1.45;margin:0}
+body.soft-editorial .cv2-time-jumps{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:3px 0 10px}
+body.soft-editorial .cv2-time-jumps button{min-height:36px;padding:7px 12px;border:1px solid #e7d3c5;border-radius:10px;background:#fffaf6;color:#9f5d4c;font-size:12px;font-weight:700}
+body.soft-editorial .cv2-time-jumps button:focus-visible{outline:2px solid #bf715d}
+body.soft-editorial .cv2-time-jumps .cv2-jump-lessons{background:#f3e5dc;color:#855441}
+@media(max-width:720px){body.soft-editorial .tp-recurrence-days{gap:3px}body.soft-editorial .tp-recurrence-day span{min-height:36px;font-size:11px}body.soft-editorial .cv2-time-jumps{margin-top:0}body.soft-editorial .cv2-time-jumps button{flex:1;min-width:60px;padding:6px 8px}}
