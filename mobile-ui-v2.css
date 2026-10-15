@@ -66,3 +66,26 @@
     pointer-events:none
   }
 }
+
+/* Native iOS callout/selection can begin on the hour label or empty grid,
+   not only on event text. Protect the entire interactive calendar surface. */
+@media (pointer:coarse) {
+  body.soft-editorial .calendar-shell,
+  body.soft-editorial .calendar-grid,
+  body.soft-editorial .calendar-grid *,
+  body.soft-editorial .calendar-hour,
+  body.soft-editorial .calendar-day-head,
+  body.soft-editorial .calendar-corner{
+    -webkit-user-select:none!important;user-select:none!important;
+    -webkit-touch-callout:none!important;
+    -webkit-user-drag:none!important;
+  }
+  body.soft-editorial .calendar-grid .calendar-event,
+  body.soft-editorial .calendar-grid .calendar-event *,
+  body.soft-editorial .calendar-grid .calendar-event.event-planned{
+    touch-action:none!important;
+  }
+  body.soft-editorial .calendar-grid .calendar-cell.touch-drop-target{
+    outline:2px dashed #c9755f!important;outline-offset:-2px;
+  }
+}
