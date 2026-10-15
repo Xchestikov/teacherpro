@@ -922,11 +922,11 @@ test('Students have distinct warm pastel calendar colors and completed/cancelled
  expect(errors).toEqual([]);
 });
 
-test('Custom calendar time supports 05:15 and closes exactly at 23:00',async({page})=>{
+test('Custom calendar time supports 05:15 and lessons ending at 00:00',async({page})=>{
  const errors=await setup(page);await login(page);await addStudent(page,'Ранние уроки','01.02');
  await page.evaluate(()=>{calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');});
- expect(await page.locator('.calendar-hour').allTextContents()).toEqual(expect.arrayContaining(['05:00','22:00']));
- expect(await page.locator('.calendar-hour')).toHaveCount(18);
+ expect(await page.locator('.calendar-hour').allTextContents()).toEqual(expect.arrayContaining(['05:00','23:00']));
+ await expect(page.locator('.calendar-hour')).toHaveCount(19);
  await page.evaluate(()=>openLesson(null,todayISO(),'05:15'));
  await expect(page.locator('#lTime')).toHaveAttribute('type','text');
  await page.locator('#lTime').fill('05:15');
@@ -942,7 +942,13 @@ test('Custom calendar time supports 05:15 and closes exactly at 23:00',async({pa
  await page.locator('#lTime').fill('23:00');
  await page.locator('#lDuration').selectOption('60');
  await page.locator('#modalBody button.primary').last().click();
- expect(await page.evaluate(()=>db.lessons.some(l=>l.time==='23:00'))).toBe(false);
+ expect(await page.evaluate(()=>db.lessons.some(l=>l.time==='23:00'))).toBe(true);
+ await expect(page.locator('#modal')).toBeHidden();
+ await page.evaluate(()=>openLesson(null,todayISO(),'23:30'));
+ await page.locator('#lTime').fill('23:30');
+ await page.locator('#lDuration').selectOption('60');
+ await page.locator('#modalBody button.primary').last().click();
+ expect(await page.evaluate(()=>db.lessons.some(l=>l.time==='23:30'))).toBe(false);
  expect(errors).toEqual([]);
 });
 
@@ -979,5 +985,62 @@ test('Routine status and repeat actions have no native confirm prompts',async({p
  await page.locator('.lesson-quick-menu [data-action="status:cancelled"]').click();
  expect(await page.evaluate(()=>db.lessons[0].status)).toBe('cancelled');
  expect(dialogs).toEqual([]);
+ expect(errors).toEqual([]);
+});
+
+
+test('Recurring lessons can run twice weekly on separate days and at different times',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Два занятия в неделю','04.05');
+ await page.evaluate(()=>openLesson(null,todayISO(),'16:00'));
+ await page.locator('#lRecurrence').selectOption('weekly');
+ await expect(page.locator('#tpRecurrenceDays')).toBeVisible();
+ await expect(page.locator('#lWeeks')).toHaveCount(0);
+ await page.evaluate(()=>{
+   const group=document.querySelector('#tpRecurrenceDays');
+   group.dataset.customized='true';
+   for(const input of group.querySelectorAll('[data-weekday]'))input.checked=['1','4'].includes(input.dataset.weekday);
+   tpToggleRecurrenceDays();
+ });
+ await page.locator('#tpWeekdayTime1').fill('16:00');
+ await page.locator('#tpWeekdayTime4').fill('18:30');
+ await page.locator('#modalBody button.primary').last().click();
+ const result=await page.evaluate(()=>{
+   const all=db.lessons.slice().sort((a,b)=>a.date.localeCompare(b.date));
+   return {count:all.length,series:new Set(all.map(l=>l.seriesId)).size,weekdays:[...new Set(all.map(l=>{const d=new Date(l.date+'T12:00:00');return (d.getDay()+6)%7;}))].sort(),times:[...new Set(all.map(l=>l.time))].sort(),allPlanned:all.every(l=>l.status==='planned')};
+ });
+ expect(result).toEqual({count:104,series:1,weekdays:[1,4],times:['16:00','18:30'],allPlanned:true});
+ expect(errors).toEqual([]);
+});
+
+test('Payments clearly distinguish package total, remaining balance and scheduled lessons',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Пакет десять','04.05');
+ await page.evaluate(()=>{
+   const c=db.clients[0],day=todayISO();
+   db.subscriptions=[{id:'ten-plan',clientId:c.id,name:'10 занятий',total:10,remaining:8,price:13500,paymentStatus:'paid',status:'active',startDate:day}];
+   db.payments=[{id:'ten-payment',clientId:c.id,subscriptionId:'ten-plan',type:'subscription',status:'paid',amount:13500,date:day,paidAt:day,description:'Предоплата: 10 занятий'}];
+   db.lessons=[{id:'pending-a',clientId:c.id,date:day,time:'10:00',duration:60,status:'planned'}];
+   setPage('payments');
+ });
+ await expect(page.locator('#paymentRows .tp-subscription-progress')).toContainText('Всего 10 · осталось 8 · запланировано 1');
+ expect(await page.evaluate(()=>db.subscriptions[0].remaining)).toBe(8);
+ expect(errors).toEqual([]);
+});
+
+test('Long calendar has fast jump controls that scroll within the calendar only',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Навигация по времени','04.05');
+ await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>{calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');});
+ const jumps=page.locator('.cv2-time-jumps');
+ await expect(jumps.getByRole('button',{name:'Утро'})).toBeVisible();
+ await jumps.getByRole('button',{name:'Вечер'}).click();
+ const evening=await page.evaluate(()=>{
+   const shell=document.querySelector('.calendar-shell'),cell=shell.querySelector('.calendar-cell[data-minute="1080"]');
+   return {scroll:shell.scrollTop,near:Math.abs(cell.getBoundingClientRect().top-shell.getBoundingClientRect().top)};
+ });
+ expect(evening.scroll).toBeGreaterThan(400);
+ expect(evening.near).toBeLessThan(140);
+ await jumps.getByRole('button',{name:'Утро'}).click();
+ const morning=await page.evaluate(()=>document.querySelector('.calendar-shell').scrollTop);
+ expect(morning).toBeLessThan(evening.scroll);
  expect(errors).toEqual([]);
 });
