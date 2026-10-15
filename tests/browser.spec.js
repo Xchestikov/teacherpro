@@ -557,3 +557,82 @@ test('Financial history survives account reload without recreating payments',asy
  await expect.poll(()=>page.evaluate(()=>db.subscriptionHistory?.length)).toBe(1);
  expect(errors).toEqual([]);
 });
+
+
+test('Series planner creates one group across months and skips holidays',async({page})=>{
+ const issues=await setup(page);await login(page);await addStudent(page,'Серия проверка','12.04');
+ page.on('dialog',dialog=>dialog.accept());
+ await page.evaluate(()=>{
+   const tomorrow=new Date(todayISO()+'T12:00:00');tomorrow.setDate(tomorrow.getDate()+1);
+   const first=localDateISO(tomorrow),second=new Date(tomorrow);second.setDate(second.getDate()+7);
+   db.scheduleBreaks=[{id:'leave-test',start:localDateISO(second),end:localDateISO(second),reason:'Каникулы'}];
+   openLesson(null,first,'10:00');
+ });
+ await page.locator('#lRecurrence').selectOption('weekly');
+ await page.locator('#lWeeks').fill('6');
+ await page.locator('#modalBody .primary').last().click();
+ const stats=await page.evaluate(()=>({
+   count:db.lessons.length,series:[...new Set(db.lessons.map(l=>l.seriesId))].length,
+   skipped:db.scheduleBreaks.some(b=>db.lessons.some(l=>l.date===b.start)),
+   planned:db.lessons.every(l=>l.status==='planned')
+ }));
+ expect(stats).toEqual({count:5,series:1,skipped:false,planned:true});
+ await page.evaluate(()=>{setPage('schedule');tpOpenSeriesManager();});
+ await expect(page.locator('#modalBody')).toContainText('Регулярные занятия');
+ expect(issues).toEqual([]);
+});
+
+test('Series batch edit changes only future planned lessons and rejects conflicting updates atomically',async({page})=>{
+ const issues=await setup(page);await login(page);await addStudent(page,'Перенос серии','12.04');
+ page.on('dialog',dialog=>dialog.accept());
+ await page.evaluate(()=>{
+   const d=todayISO(),id=db.clients[0].id;
+   const dates=[0,7,14].map(n=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return localDateISO(x)});
+   db.lessons=[
+    {id:'series-old',clientId:id,date:dates[0],time:'10:00',duration:60,status:'done',seriesId:'group-test',recurrence:'weekly'},
+    {id:'series-next',clientId:id,date:dates[1],time:'10:00',duration:60,status:'planned',seriesId:'group-test',recurrence:'weekly'},
+    {id:'series-last',clientId:id,date:dates[2],time:'10:00',duration:60,status:'planned',seriesId:'group-test',recurrence:'weekly'}];
+   setPage('schedule');tpEditSeries('group-test');
+ });
+ await page.locator('#s4NewTime').fill('11:00');
+ await page.locator('#s4Duration').selectOption('90');
+ await page.locator('#modalBody button.primary').click();
+ const results=await page.evaluate(()=>db.lessons.map(l=>[l.id,l.time,l.duration,l.status]));
+ expect(results).toEqual([['series-old','10:00',60,'done'],['series-next','11:00',90,'planned'],['series-last','11:00',90,'planned']]);
+ await page.evaluate(()=>{
+   db.lessons.push({id:'outside',clientId:db.clients[0].id,date:db.lessons[1].date,time:'12:00',duration:60,status:'planned'});
+   tpEditSeries('group-test');
+ });
+ await page.locator('#s4NewTime').fill('12:00');
+ await page.locator('#modalBody button.primary').click();
+ expect(await page.evaluate(()=>db.lessons.find(l=>l.id==='series-next').time)).toBe('11:00');
+ expect(issues).toEqual([]);
+});
+
+test('Adding leave can cancel only planned lessons and does not affect completed debits',async({page})=>{
+ const issues=await setup(page);await login(page);await addStudent(page,'Каникулы','12.04');
+ page.on('dialog',dialog=>dialog.accept());
+ await page.evaluate(()=>{
+   db.lessons=[
+    {id:'lesson-done',clientId:db.clients[0].id,date:todayISO(),time:'09:00',duration:60,status:'done'},
+    {id:'lesson-future',clientId:db.clients[0].id,date:todayISO(),time:'13:00',duration:60,status:'planned'}];
+   setPage('schedule');tpOpenSeriesManager();
+ });
+ await page.locator('#s4BreakReason').fill('Отпуск');
+ await page.locator('#modalBody').getByRole('button',{name:'Добавить период'}).click();
+ expect(await page.evaluate(()=>db.lessons.map(l=>l.status))).toEqual(['done','cancelled_by_teacher']);
+ expect(await page.evaluate(()=>db.scheduleBreaks.length)).toBe(1);
+ expect(issues).toEqual([]);
+});
+
+test('Series management and recurring lesson form work at 390px without overflow',async({page})=>{
+ const issues=await setup(page);await login(page);await addStudent(page,'Телефон серия','12.04');
+ await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>setPage('schedule'));
+ await page.locator('.s4-manager-btn').click();
+ await expect(page.locator('#modalBody')).toContainText('Каникулы и отпуск');
+ await expect(page.locator('#s4BreakStart')).toBeVisible();
+ const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+ expect(overflow).toBeLessThanOrEqual(2);
+ expect(issues).toEqual([]);
+});
