@@ -86,17 +86,25 @@
     return true;
   }
   function cellAt(x,y,origin){
-    const target=document.elementFromPoint(x,y);
-    const direct=target?.closest?.('.calendar-cell');
-    if(direct)return direct;
-    // If the finger crosses the hour-label gutter, keep the originating day
-    // and use the grid row beneath that vertical position.
-    if(target?.closest?.('.calendar-hour')){
-      const date=origin?.closest('.calendar-cell')?.dataset.date;
-      if(date)return [...document.querySelectorAll('.calendar-cell[data-date]')]
-        .find(cell=>cell.dataset.date===date&&
-          y>=cell.getBoundingClientRect().top&&y<cell.getBoundingClientRect().bottom)||null;
+    const hit=document.elementFromPoint(x,y);
+    const direct=hit?.closest?.('.calendar-cell');
+    if(direct){
+      const r=direct.getBoundingClientRect();
+      // A long event may visually cover a later grid row. Its closest cell
+      // is then the ORIGINAL hour, not the hour at the finger coordinate.
+      if(x>=r.left&&x<r.right&&y>=r.top&&y<r.bottom)return direct;
     }
+    const originDate=origin?.closest('.calendar-cell')?.dataset.date;
+    const cells=[...document.querySelectorAll('.calendar-cell[data-minute]')];
+    const atPosition=cells.find(cell=>{
+      const r=cell.getBoundingClientRect();
+      return y>=r.top&&y<r.bottom&&x>=r.left&&x<r.right;
+    });
+    if(atPosition)return atPosition;
+    // Dragging over the sticky hour labels still means the same day's row.
+    if(hit?.closest?.('.calendar-hour')&&originDate)
+      return cells.find(cell=>cell.dataset.date===originDate&&
+        y>=cell.getBoundingClientRect().top&&y<cell.getBoundingClientRect().bottom)||null;
     return null;
   }
   function clearDropTargets(){
@@ -156,7 +164,9 @@
   document.addEventListener('pointerdown',e=>{
     if(e.pointerType!=='touch'||!e.isPrimary)return;
     const el=calendarTouchTarget(e.target);
-    if(!el||!beginGesture(el,e.clientX,e.clientY,e.pointerId))return;
+    if(!el)return;
+    if(gesture?.fromTouch&&gesture.element===el){gesture.pointerId=e.pointerId;return;}
+    if(!beginGesture(el,e.clientX,e.clientY,e.pointerId))return;
     try{el.setPointerCapture(e.pointerId);}catch(_){}
   },{passive:false});
   document.addEventListener('pointermove',e=>{
