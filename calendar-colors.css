@@ -1,0 +1,39 @@
+/* Soft Editorial student colors: low saturation pastels, never a rainbow dashboard. */
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event.event-planned{
+  background:var(--tp-student-fill)!important;
+  color:var(--tp-student-ink)!important;
+  border-left-color:var(--tp-student-edge)!important;
+}
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event .event-time{
+  color:var(--tp-student-ink)!important;
+}
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event strong{
+  color:var(--tp-student-ink)!important;
+}
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event.event-done{
+  background:linear-gradient(110deg,#e4efe4, var(--tp-student-fill))!important;
+  border-left-color:var(--tp-student-edge)!important;
+}
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event.event-cancelled{
+  background:linear-gradient(105deg,#f5e0de,var(--tp-student-fill))!important;
+  border-left-color:var(--tp-student-edge)!important;
+}
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event .tp-lesson-mark{
+  position:absolute;right:34px;top:5px;z-index:7;
+  width:19px;height:19px;display:grid;place-items:center;
+  border-radius:50%;font-size:14px;line-height:1;font-weight:900;
+  pointer-events:none;user-select:none;-webkit-user-select:none;
+}
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event .tp-lesson-mark.tp-lesson-done{
+  color:#2f7b50;background:#e5f4e6;border:1px solid #b0d3b5;
+}
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event .tp-lesson-mark.tp-lesson-cancelled{
+  color:#aa584e;background:#fce7e2;border:1px solid #ebc4bb;
+}
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event.event-cancelled strong,
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event.event-cancelled .tp-event-status{
+  display:block!important;
+}
+body.soft-editorial .calendar-grid .calendar-event.tp-colored-event .tp-event-more{
+  z-index:9;
+}
