@@ -1,7 +1,7 @@
 const ROOT=new URL('./',self.registration.scope).pathname;
-const CACHE='teacherpro-shell-v21';
+const CACHE='teacherpro-shell-v22';
 const PREFIX='teacherpro-shell-v';
-const SHELL=['','index.html','style.css','app.js','calendar-stage1.js','soft-editorial.js','soft-editorial.css','assets/studio-botanical.svg','assets/studio-mark.svg','cloud-config.js','manifest.webmanifest','icon.svg'].map(path=>ROOT+path);
+const SHELL=['','index.html','style.css','app.js','calendar-stage1.js','soft-editorial.js','soft-editorial.css','teacherpro-polish.js','teacherpro-polish.css','assets/studio-botanical.svg','assets/studio-mark.svg','cloud-config.js','manifest.webmanifest','icon.svg'].map(path=>ROOT+path);
 const SHELL_PATHS=new Set(SHELL);
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith(PREFIX)&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});

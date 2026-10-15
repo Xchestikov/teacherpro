@@ -13,14 +13,20 @@
   function openMenu(el,x,y){
     const lesson=lessonFor(el);if(!lesson)return;
     dismiss();
-    const editable=lesson.status==='planned';
-    const actions=[
-      ['edit','✏️ Редактировать'],
-      ...(editable?[['move','↔ Перенести (удержанием)']]:[]),
-      ['delete','🗑 Удалить']
+    const items=[
+      ['status:planned','Запланирован'],
+      ['status:done','Проведён'],
+      ['move','Перенести'],
+      ['status:no_show','Не пришёл (без списания)'],
+      ['status:no_show_charged','Не пришёл (со списанием)'],
+      ['status:cancelled','Отменён (без списания)'],
+      ['status:cancelled_charged','Отменён со списанием'],
+      ['status:cancelled_by_teacher','Отменено мной'],
+      ['delete','Удалить урок']
     ];
     menu.innerHTML='<div class="lesson-quick-heading">'+htmlSafe(client(lesson.clientId)?.name||'Ученик')+' · '+htmlSafe(lesson.time)+'</div>'+
-      actions.map(([key,name])=>'<button type="button" role="menuitem" data-action="'+key+'">'+name+'</button>').join('');
+      items.map(([key,name])=>'<button type="button" role="menuitem" class="'+(key==='delete'?'menu-delete ':key==='status:'+lesson.status?'selected ':'')+'" data-action="'+key+'">'+
+      (key==='status:'+lesson.status?'✓　':'')+name+'</button>').join('');
     menu.dataset.lessonId=String(lesson.id);
     menu.hidden=false;
     menu.style.left=Math.max(8,Math.min(x,innerWidth-menu.offsetWidth-8))+'px';
@@ -44,7 +50,8 @@
     dismiss();
     if(action==='edit')openLessonByKey(id);
     if(action==='delete')deleteLesson(id);
-    if(action==='move')alert('Удерживай занятие на телефоне и перетащи на новый день и час.');
+    if(action==='move'){openLessonByKey(id);document.querySelector('#lDate')?.focus();}
+    if(action.startsWith('status:')&&typeof window.tpUpdateLessonStatus==='function')window.tpUpdateLessonStatus(id,action.slice(7));
   });
   document.addEventListener('contextmenu',e=>{
     const el=eventButton(e.target);if(!el)return;
