@@ -10,7 +10,7 @@ const at=s=>new Date(s+'T12:00:00');
 const addDays=(date,n)=>{const d=at(date);d.setDate(d.getDate()+n);return localDateISO(d);};
 const future=l=>l.status==='planned'&&l.date>=todayISO()&&!l.consumedSubscriptionId&&!l.consumedClientFallback;
 const blocked=date=>(db.scheduleBreaks||[]).some(b=>b.start<=date&&b.end>=date);
-function validTime(v){return /^(?:0[5-9]|1\d|2[0-3]):[0-5]\d$/.test(v)&&lessonMinutes(v)>=300&&lessonMinutes(v)<1380;}
+function validTime(v){return /^(?:0[5-9]|1\d|2[0-3]):[0-5]\d$/.test(v)&&lessonMinutes(v)>=300&&lessonMinutes(v)<1440;}
 function notify(text){alert(text);}
 function snapshot(target){return JSON.parse(JSON.stringify(target));}
 function seriesLessons(id){return db.lessons.filter(l=>String(l.seriesId)===String(id)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));}
@@ -83,7 +83,7 @@ window.tpEditSeries=id=>{
 };
 window.tpSaveSeriesChanges=id=>{
  const start=$q('#s4SeriesFrom')?.value,shift=Number($q('#s4DayShift')?.value),time=$q('#s4NewTime')?.value,duration=Number($q('#s4Duration')?.value);
- if(!iso(start)||!Number.isInteger(shift)||Math.abs(shift)>60||!validTime(time)||![30,45,60,75,90,105,120,150,180,240].includes(duration)||lessonMinutes(time)+duration>1380)
+ if(!iso(start)||!Number.isInteger(shift)||Math.abs(shift)>60||!validTime(time)||![30,45,60,75,90,105,120,150,180,240].includes(duration)||lessonMinutes(time)+duration>1440)
    return notify('Проверь дату, время, перенос и длительность.');
  const change=seriesLessons(id).filter(l=>future(l)&&l.date>=start);
  if(!change.length)return notify('Будущих занятий для изменения не найдено.');
