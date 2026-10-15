@@ -169,3 +169,25 @@ body.soft-editorial .se-month-head{font-size:11px;color:#947d73;padding:7px 15px
  body.soft-editorial .se-card{padding:12px}
 }
 @media(prefers-reduced-motion:reduce){body.soft-editorial .se-action:hover{transform:none}}
+
+/* Honor existing saved theme choices while keeping the editorial layout. */
+body.soft-editorial[data-theme="sage"]{--accent:#77927d;--accent-deep:#4d7357;--accent-soft:#e7f0e7;--editorial-accent:#77927d}
+body.soft-editorial[data-theme="peach"]{--accent:#ce8d6d;--accent-deep:#a75d45;--accent-soft:#ffebdf;--editorial-accent:#ce8d6d}
+body.soft-editorial[data-theme="ocean"]{--accent:#7599b8;--accent-deep:#456e94;--accent-soft:#e7eff7;--editorial-accent:#7599b8}
+body.soft-editorial[data-theme="sand"]{--accent:#a3947f;--accent-deep:#796959;--accent-soft:#f2ede5;--editorial-accent:#a3947f}
+body.soft-editorial[data-theme="wine"]{--accent:#8e4248;--accent-deep:#71313a;--accent-soft:#f4e6e6;--editorial-accent:#8e4248}
+body.soft-editorial[data-theme="night"]{
+ --app-bg:#252737;--app-bg2:#2f3040;--ink:#f3eced;--muted:#b9b5c4;--line:#494657;
+ --accent:#cc8f7d;--accent-deep:#edb6a2;--accent-soft:#4b3a42;--editorial-accent:#cc8f7d;
+ --background-texture:linear-gradient(125deg,#222432,#32303b);
+}
+body.soft-editorial .primary{background:linear-gradient(115deg,color-mix(in srgb,var(--accent) 82%,#fff),var(--accent));box-shadow:0 5px 13px color-mix(in srgb,var(--accent) 23%,transparent)}
+body.soft-editorial .primary:hover{background:var(--accent-deep)}
+body.soft-editorial .brand-mark{font-size:0!important;display:grid;place-items:center;background:transparent!important;box-shadow:none!important}
+body.soft-editorial .brand-mark:after{content:"❦";font-family:Georgia,serif;font-size:29px;color:#c76551;line-height:1}
+body.soft-editorial[data-theme="night"] .sidebar{background:#262838!important}
+body.soft-editorial[data-theme="night"] .calendar-shell,body.soft-editorial[data-theme="night"] .calendar-grid .calendar-hour,
+body.soft-editorial[data-theme="night"] .calendar-grid .calendar-cell,
+body.soft-editorial[data-theme="night"] .calendar-grid .calendar-day-head{background:#303142;color:#f3eced;border-color:#4b4958}
+body.soft-editorial[data-theme="night"] .se-stat{background:#343544;color:#f3eced;border-color:#4b4958}
+body.soft-editorial[data-theme="night"] .se-donut-inner{background:#2b2e3c;color:#e6d8d0}
