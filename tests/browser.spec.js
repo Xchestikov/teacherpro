@@ -788,7 +788,7 @@ test('Mobile V2 lesson long hold prevents selection and pointer drop still moves
  const rect=await event.boundingBox();
  const cell=await drop.boundingBox();
  const startX=rect.x+Math.min(28,rect.width/4),startY=rect.y+Math.min(20,rect.height/3);
- const endX=cell.x+Math.min(45,cell.width/2),endY=cell.y+cell.height*.12;
+ const endX=cell.x+Math.min(45,cell.width/2),endY=cell.y+cell.height*.32;
  page.on('dialog',dialog=>dialog.accept());
  await event.dispatchEvent('pointerdown',{pointerType:'touch',pointerId:8,isPrimary:true,clientX:startX,clientY:startY});
  await page.waitForTimeout(490);
