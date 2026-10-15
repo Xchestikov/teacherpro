@@ -19,7 +19,7 @@ window.tpApplyPaymentEdit=(id,changes)=>{
      alert('Общая сумма превышает стоимость абонемента.');return false;
    }
  }
- if(!confirm('Сохранить исправление оплаты и записать в историю?'))return false;
+ // Saving an audited correction is explicit; no second confirmation dialog.
  const before=JSON.parse(JSON.stringify(p)),snapshot=JSON.stringify(db);
  p.amount=Math.round(Number(changes.amount)*100)/100;p.date=changes.date;p.status=nextStatus;
  if(nextStatus==='paid')p.paidAt=changes.date;else delete p.paidAt;
