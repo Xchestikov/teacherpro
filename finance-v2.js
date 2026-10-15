@@ -10,6 +10,7 @@
   const bySub=id=>db.payments.filter(p=>String(p.subscriptionId)===String(id));
   const paidCents=id=>bySub(id).filter(p=>p.status==='paid').reduce((sum,p)=>sum+cents(p.amount),0);
   const dueCents=s=>{
+    if(s.archivedAt)return 0;
     const payments=bySub(s.id);
     if(!payments.length)return s.paymentStatus==='pending'?cents(s.price):0;
     return Math.max(0,cents(s.price)-paidCents(s.id));
@@ -107,13 +108,14 @@
     const active=db.lessons.filter(l=>String(l.consumedSubscriptionId)===String(id)).length;
     openModal('История абонемента',
       '<div class="tp-history"><p><strong>'+visibleTitle(sub)+'</strong></p>'+
-      '<p>Остаток '+Number(sub.remaining)+' из '+Number(sub.total)+' · Текущих списаний: '+active+'</p>'+
+      '<p>Остаток '+Number(sub.remaining)+' из '+Number(sub.total)+' · Текущих списаний: '+active+
+      (sub.archivedAt?' · Закрыт '+safe(sub.archivedAt.slice(0,10)):'')+'</p>'+
       '<h4>Списания и возвраты</h4>'+(rows||'<p class="muted">Журнал событий ведётся с этого обновления. Ранее проведённые уроки уже учтены в остатке.</p>')+
       '<h4>Платежи по абонементу</h4>'+(pay||'<p class="muted">Связанные платежи отсутствуют в исторических данных.</p>')+
       '<div class="form-actions"><button class="secondary" onclick="closeModal()">Закрыть</button></div></div>');
   };
   window.tpSubscriptionPayment=id=>{
-    const sub=db.subscriptions.find(s=>String(s.id)===String(id));if(!sub)return;
+    const sub=db.subscriptions.find(s=>String(s.id)===String(id));if(!sub||sub.archivedAt)return;
     const due=dueCents(sub);
     if(due<=0)return alert('Абонемент уже полностью оплачен.');
     if(!bySub(sub.id).some(p=>p.status!=='paid'))return alert('Не найдена запись ожидаемого платежа. Не изменяй финансовую историю вручную.');
