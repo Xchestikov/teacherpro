@@ -557,3 +557,85 @@ test('Financial history survives account reload without recreating payments',asy
  await expect.poll(()=>page.evaluate(()=>db.subscriptionHistory?.length)).toBe(1);
  expect(errors).toEqual([]);
 });
+
+
+test('Fact billing uses student tariff, accrues once after marking a lesson done, and pays several lessons at once',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'По факту Тест','09.09');
+ await page.evaluate(()=>{
+   const c=db.clients[0];c.billingMode='fact';c.hourlyRate=1800;c.defaultDuration=90;
+   const d=todayISO();
+   db.lessons=[
+     {id:'fact-one',clientId:c.id,date:d,time:'09:00',duration:90,hourlyRate:1800,status:'planned'},
+     {id:'fact-two',clientId:c.id,date:d,time:'12:00',duration:60,hourlyRate:1800,status:'planned'}];
+   setPage('schedule');
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ await page.evaluate(()=>tpUpdateLessonStatus('fact-one','done'));
+ await page.evaluate(()=>tpUpdateLessonStatus('fact-two','done'));
+ expect(await page.evaluate(()=>tpFactBalance(db.clients[0].id))).toBe(4500);
+ expect(await page.evaluate(()=>db.subscriptions.length)).toBe(0);
+ await page.evaluate(()=>tpUpdateLessonStatus('fact-one','cancelled'));
+ expect(await page.evaluate(()=>tpFactBalance(db.clients[0].id))).toBe(1800);
+ await page.evaluate(()=>tpUpdateLessonStatus('fact-one','done'));
+ expect(await page.evaluate(()=>tpFactBalance(db.clients[0].id))).toBe(4500);
+ await page.evaluate(()=>openPayment());
+ await expect(page.locator('#pAmount')).toHaveValue('4500');
+ await page.locator('#modalBody button.primary').click();
+ expect(await page.evaluate(()=>tpFactBalance(db.clients[0].id))).toBe(0);
+ await page.evaluate(()=>setPage('payments'));
+ await expect(page.locator('.finance-cards .stat')).toHaveCount(4);
+ await expect(page.locator('.tp-fact-debt')).toContainText('Остаток 0 ₽');
+ expect(errors).toEqual([]);
+});
+
+test('Historical completed lessons stay outside new auto-accrual unless re-marked',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'История Ученик','09.09');
+ await page.evaluate(()=>{
+  db.clients[0].hourlyRate=2000;
+  db.lessons=[{id:'old-done',clientId:db.clients[0].id,date:todayISO(),time:'10:00',duration:60,hourlyRate:2000,status:'done'}];
+  db.clients[0].billingMode='fact';
+  setPage('schedule');
+ });
+ expect(await page.evaluate(()=>tpFactBalance(db.clients[0].id))).toBe(0);
+ await page.evaluate(()=>openLessonByKey('old-done'));
+ await page.locator('#lTime').fill('10:15');
+ await page.locator('#modalBody button.primary').click();
+ expect(await page.evaluate(()=>tpFactBalance(db.clients[0].id))).toBe(0);
+ expect(errors).toEqual([]);
+});
+
+test('Mistaken paid subscription invoice can be corrected while preserving consumed lessons',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Оплата Ошибка','09.09');
+ await page.evaluate(()=>{
+   const c=db.clients[0];
+   db.subscriptions=[{id:'sub-mistake',clientId:c.id,name:'8 занятий',total:8,remaining:7,price:13500,paymentStatus:'paid',status:'active'}];
+   db.payments=[{id:'payment-mistake',clientId:c.id,subscriptionId:'sub-mistake',type:'subscription',amount:13500,date:todayISO(),paidAt:todayISO(),status:'paid'}];
+   db.lessons=[{id:'charged-mistake',clientId:c.id,date:todayISO(),time:'11:00',duration:60,status:'done',consumedSubscriptionId:'sub-mistake'}];
+   setPage('payments');
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ await page.evaluate(()=>deletePayment('payment-mistake'));
+ expect(await page.evaluate(()=>({remaining:db.subscriptions[0].remaining,subscriptionStatus:db.subscriptions[0].paymentStatus,pending:db.payments[0].status,amount:db.payments[0].amount,lessons:db.lessons.length,corrections:db.paymentCorrections.length})))
+   .toEqual({remaining:7,subscriptionStatus:'pending',pending:'pending',amount:13500,lessons:1,corrections:1});
+ await expect(page.locator('.finance-cards .stat').first()).toContainText('0 ₽');
+ expect(errors).toEqual([]);
+});
+
+test('Single-payment editor updates an incorrect receipt and preserves payment table and filters',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Исправление Оплаты','09.09');
+ await page.evaluate(()=>{
+   db.clients[0].billingMode='fact';
+   db.payments=[{id:'edit-receipt',clientId:db.clients[0].id,date:todayISO(),paidAt:todayISO(),amount:13500,type:'single',status:'paid',billingV2:true}];
+   setPage('payments');
+ });
+ await page.locator('#paymentRows .finance-actions').getByRole('button',{name:'Редактировать'}).click();
+ await page.locator('#tpEditAmount').fill('1300');
+ page.on('dialog',dialog=>dialog.accept());
+ await page.locator('#modalBody button.primary').click();
+ expect(await page.evaluate(()=>({amount:db.payments[0].amount,logged:db.paymentCorrections.length}))).toEqual({amount:1300,logged:1});
+ await expect(page.locator('#paymentFilter')).toBeVisible();
+ await expect(page.locator('.finance-cards .stat')).toHaveCount(4);
+ expect(errors).toEqual([]);
+});
