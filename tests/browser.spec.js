@@ -1048,6 +1048,12 @@ test('Long calendar has fast jump controls that scroll within the calendar only'
 });
 
 
+async function openMobileSubscriptionManager(page){
+ const card=page.locator('.tp-mobile-subscriptions .tp-mobile-record').first();
+ await expect(card).toBeVisible();
+ await card.getByRole('button',{name:'Действия'}).click();
+ await card.getByRole('menuitem',{name:'Удалить / закрыть'}).click();
+}
 test('Mistaken subscription can be deleted with linked receipts audited and student balance cleared',async({page})=>{
  const errors=await setup(page);await login(page);await addStudent(page,'Ошибочный пакет','04.05');
  await page.evaluate(()=>openSubscription());
@@ -1057,8 +1063,7 @@ test('Mistaken subscription can be deleted with linked receipts audited and stud
  const before=await page.evaluate(()=>({subs:db.subscriptions.length,payments:db.payments.length,received:db.payments[0]?.amount}));
  expect(before).toEqual({subs:1,payments:1,received:13000});
  await page.evaluate(()=>setPage('subscriptions'));
- await expect(page.locator('#content .tp-sub-manage-btn').first()).toBeVisible();
- await page.locator('#content .tp-sub-manage-btn').first().click();
+ await openMobileSubscriptionManager(page);
  await expect(page.locator('#modalBody')).toContainText('Удалить ошибочный абонемент');
  await page.getByRole('button',{name:'Удалить ошибочный абонемент'}).click();
  const result=await page.evaluate(()=>({subs:db.subscriptions.length, payments:db.payments.length,
@@ -1080,7 +1085,7 @@ test('Used subscription can only be closed; conducted lesson and paid receipt re
   db.lessons=[{id:'used-lesson',clientId:c.id,date,time:'10:00',duration:60,status:'done',consumedSubscriptionId:'real-package'}];
   syncClientSubscription(db.subscriptions[0]);setPage('subscriptions');
  });
- await page.locator('#content .tp-sub-manage-btn').first().click();
+ await openMobileSubscriptionManager(page);
  await expect(page.getByRole('button',{name:'Удалить ошибочный абонемент'})).toHaveCount(0);
  await page.getByRole('button',{name:'Закрыть абонемент',exact:true}).click();
  const result=await page.evaluate(()=>({
@@ -1091,7 +1096,8 @@ test('Used subscription can only be closed; conducted lesson and paid receipt re
  await page.evaluate(()=>setPage('payments'));
  await expect(page.locator('#paymentRows')).toContainText('12 000');
  await page.evaluate(()=>setPage('subscriptions'));
- await expect(page.locator('#content .tp-sub-manage-btn')).toContainText('Восстановить');
+ await page.locator('.tp-mobile-subscriptions .tp-mobile-record').first().getByRole('button',{name:'Действия'}).click();
+ await expect(page.locator('.tp-mobile-subscriptions [role="menu"]')).toContainText('Восстановить');
  expect(errors).toEqual([]);
 });
 
@@ -1106,7 +1112,7 @@ test('Closing a partially paid package cancels only pending invoice and keeps re
    {id:'waiting-partial',clientId:c.id,subscriptionId:'partial-close',status:'pending',type:'subscription',amount:8000,date}];
   setPage('subscriptions');
  });
- await page.locator('#content .tp-sub-manage-btn').first().click();
+ await openMobileSubscriptionManager(page);
  await page.getByRole('button',{name:'Закрыть абонемент',exact:true}).click();
  const report=await page.evaluate(()=>({
    statuses:db.payments.map(x=>x.status),income:db.payments.filter(x=>x.status==='paid').reduce((n,x)=>n+x.amount,0),
@@ -1132,7 +1138,7 @@ test('Switch to pay-per-lesson archives existing plan and updates only future pl
   syncClientSubscription(db.subscriptions[0]);
   setPage('subscriptions');
  });
- await page.locator('#content .tp-sub-manage-btn').first().click();
+ await openMobileSubscriptionManager(page);
  await page.locator('#tpSwitchHourlyRate').fill('1750');
  await page.getByRole('button',{name:'Закрыть и перейти на оплату по факту'}).click();
  const report=await page.evaluate(()=>({
