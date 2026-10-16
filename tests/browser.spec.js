@@ -1023,7 +1023,7 @@ test('Payments clearly distinguish package total, remaining balance and schedule
    db.lessons=[{id:'pending-a',clientId:c.id,date:day,time:'10:00',duration:60,status:'planned'}];
    setPage('payments');
  });
- await expect(page.locator('#paymentRows .tp-subscription-progress')).toContainText('Всего 10 · осталось 8 · запланировано 1');
+ await expect(page.locator('#paymentRows .tp-subscription-progress')).toContainText('Осталось 8 из 10 занятий · запланировано 1');
  expect(await page.evaluate(()=>db.subscriptions[0].remaining)).toBe(8);
  expect(errors).toEqual([]);
 });
