@@ -21,10 +21,18 @@ payments=function(){
        const scheduled=db.lessons.filter(l=>String(l.clientId)===String(sub.clientId)&&
          l.status==='planned'&&l.date>=(sub.startDate||'0000-01-01')&&
          (!sub.endDate||l.date<=sub.endDate)).length;
+       // Historical invoice descriptions contained the original package name:
+       // "Остаток оплаты: 10 занятий". That is a money balance, NOT the
+       // number of unused lessons. Show the live subscription balance instead.
+       const details=row.children[3];
+       const description=details.querySelector('.muted');
+       if(description&&/^Остаток оплаты:/i.test(description.textContent.trim())){
+         description.textContent='Ожидаемая доплата за абонемент';
+       }
        const info=document.createElement('div');info.className='muted tp-subscription-progress';
-       info.textContent='Всего '+total+' · осталось '+remaining+
+       info.textContent='Осталось '+remaining+' из '+total+' занятий'+
          (scheduled?' · запланировано '+scheduled:'');
-       row.children[3].append(info);
+       details.append(info);
      }
    }
  });

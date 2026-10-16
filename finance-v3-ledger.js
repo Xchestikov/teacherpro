@@ -33,7 +33,7 @@ window.tpReconcileSubscription=subId=>{
    if(waiting.length){waiting[0].amount=debt/100;waiting[0].status='pending';}
    else db.payments.push({id:crypto.randomUUID(),clientId:sub.clientId,subscriptionId:sub.id,
      type:'subscription',status:'pending',amount:debt/100,date:sub.startDate||todayISO(),
-     description:'Остаток оплаты: '+sub.name});
+     description:'Ожидаемая доплата за абонемент'});
    if(waiting.length>1)db.payments=db.payments.filter(p=>!waiting.slice(1).includes(p));
  }
  sub.paymentStatus=debt>0?'pending':'paid';

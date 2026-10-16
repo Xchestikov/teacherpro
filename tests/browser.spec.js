@@ -1023,7 +1023,7 @@ test('Payments clearly distinguish package total, remaining balance and schedule
    db.lessons=[{id:'pending-a',clientId:c.id,date:day,time:'10:00',duration:60,status:'planned'}];
    setPage('payments');
  });
- await expect(page.locator('#paymentRows .tp-subscription-progress')).toContainText('Всего 10 · осталось 8 · запланировано 1');
+ await expect(page.locator('#paymentRows .tp-subscription-progress')).toContainText('Осталось 8 из 10 занятий · запланировано 1');
  expect(await page.evaluate(()=>db.subscriptions[0].remaining)).toBe(8);
  expect(errors).toEqual([]);
 });
@@ -1150,5 +1150,51 @@ test('Switch to pay-per-lesson archives existing plan and updates only future pl
    future:'per_lesson',futureRate:1750,linked:'transition-plan',receipt:12000});
  await page.evaluate(()=>openLesson(null,todayISO(),'13:00'));
  await expect(page.locator('#lHourlyRate')).toHaveValue('1750');
+ expect(errors).toEqual([]);
+});
+
+
+test('Payments show live remaining lessons, not outdated package size embedded in historical invoice description',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Проверка остатка','04.05');
+ await page.evaluate(()=>{
+   const id=db.clients[0].id,day=todayISO();
+   db.subscriptions=[{id:'ten-pack',clientId:id,name:'10 занятий',total:10,remaining:8,
+      price:15000,paymentStatus:'pending',status:'active',startDate:day}];
+   db.payments=[{id:'old-pending',clientId:id,subscriptionId:'ten-pack',type:'subscription',
+      status:'pending',amount:5000,date:day,description:'Остаток оплаты: 10 занятий'}];
+   setPage('payments');
+ });
+ const row=page.locator('#paymentRows tr').first();
+ await expect(row).toContainText('Ожидаемая доплата за абонемент');
+ await expect(row).toContainText('Осталось 8 из 10 занятий');
+ await expect(row).not.toContainText('Остаток оплаты: 10 занятий');
+ expect(await page.evaluate(()=>db.payments[0].description)).toBe('Остаток оплаты: 10 занятий');
+ await page.evaluate(()=>{db.subscriptions[0].remaining=7;setPage('payments');});
+ await expect(page.locator('#paymentRows tr').first()).toContainText('Осталось 7 из 10 занятий');
+ await expect(page.locator('.tp-mobile-payments .tp-mobile-record')).toContainText('Осталось 7 из 10 занятий');
+ // Rendering corrections never rewrites historic payments or changes the amount due.
+ expect(await page.evaluate(()=>({amount:db.payments[0].amount,paid:db.payments[0].status})))
+   .toEqual({amount:5000,paid:'pending'});
+ expect(errors).toEqual([]);
+});
+
+test('New pending subscription invoice has unambiguous money-balance description',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Новый платёж','04.05');
+ await page.evaluate(()=>{
+   const id=db.clients[0].id;
+   db.subscriptions=[{id:'pkg-debt',clientId:id,name:'10 занятий',total:10,remaining:8,
+      price:15000,paymentStatus:'paid',status:'active',startDate:todayISO()}];
+   db.payments=[{id:'partial-deposit',clientId:id,subscriptionId:'pkg-debt',type:'subscription',
+      status:'paid',amount:9000,date:todayISO(),paidAt:todayISO()}];
+   tpReconcileSubscription('pkg-debt');
+   setPage('payments');
+ });
+ const report=await page.evaluate(()=>({
+   waiting:db.payments.find(p=>p.status==='pending')?.description,
+   amount:db.payments.find(p=>p.status==='pending')?.amount,
+   remaining:db.subscriptions[0].remaining
+ }));
+ expect(report).toEqual({waiting:'Ожидаемая доплата за абонемент',amount:6000,remaining:8});
+ await expect(page.locator('#paymentRows')).toContainText('Осталось 8 из 10 занятий');
  expect(errors).toEqual([]);
 });
