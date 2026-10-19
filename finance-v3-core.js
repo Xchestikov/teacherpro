@@ -3,15 +3,28 @@
 'use strict';
 const cents=n=>Math.round((Number(n)||0)*100);
 const billable=l=>l.billingMode==='per_lesson'&&lessonCharges(l.status);
-function balance(id){
- const lessons=db.lessons.filter(l=>String(l.clientId)===String(id)&&billable(l));
- const earned=lessons.reduce((n,l)=>n+Math.round((Number(l.hourlyRate)||0)*(Number(l.duration)||60)/60*100),0);
- const paid=db.payments.filter(p=>String(p.clientId)===String(id)&&p.financeV3Lesson===true&&p.status==='paid')
+window.tpLessonPriceUnit=l=>l?.priceUnit==='lesson'?'lesson':'hour';
+window.tpLessonPriceCents=l=>{
+ const rate=Number(l?.hourlyRate)||0;
+ const duration=Number(l?.duration)||60;
+ return window.tpLessonPriceUnit(l)==='lesson'?cents(rate):Math.round(rate*duration/60*100);
+};
+window.tpLessonBalance=id=>{
+ const lessons=db.lessons.filter(l=>String(l.clientId)===String(id)&&billable(l))
+   .slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+ const earned=lessons.reduce((n,l)=>n+window.tpLessonPriceCents(l),0);
+ const paid=db.payments.filter(p=>String(p.clientId)===String(id)&&p.financeV3Lesson===true&&!p.subscriptionId&&p.status==='paid')
    .reduce((n,p)=>n+cents(p.amount),0);
+ let covered=paid,oldest=null,unpaidCount=0;
+ for(const l of lessons){
+   const amount=window.tpLessonPriceCents(l);
+   if(covered>=amount){covered-=amount;continue}
+   if(!oldest)oldest=l.date;
+   unpaidCount++;covered=0;
+ }
  return {earned,paid,due:Math.max(0,earned-paid),credit:Math.max(0,paid-earned),
-         count:lessons.length,oldest:lessons.slice().sort((a,b)=>a.date.localeCompare(b.date))[0]?.date||null};
-}
-window.tpLessonBalance=balance;
+   count:lessons.length,unpaidCount,oldest};
+};
 const baseConsume=consumeLesson;
 consumeLesson=function(id,lesson){
  if(lesson?.billingMode==='per_lesson')return true;
