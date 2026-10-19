@@ -1211,7 +1211,7 @@ test('Custom student lesson duration saves arbitrary minutes and populates new l
  await expect(page.locator('#fCustomDurationWrap')).toBeVisible();
  await expect(page.locator('#fCustomDuration')).toHaveValue('');
  await page.locator('#fCustomDuration').fill('50');
- await page.getByRole('button',{name:'Добавить ученика'}).click();
+ await page.locator('#modalBody').getByRole('button',{name:'Добавить ученика'}).click();
  expect(await page.evaluate(()=>db.clients[0].preferredDuration)).toBe(50);
  await page.evaluate(()=>openClient(db.clients[0].id,'overview'));
  await expect(page.locator('#fLessonDuration')).toHaveValue('custom');
@@ -1239,11 +1239,11 @@ test('Custom student lesson duration validates bounds without saving invalid val
  page.on('dialog',d=>{dialogs.push(d.message());d.dismiss();});
  for(const invalid of ['14','241','70.5']){
    await page.locator('#fCustomDuration').fill(invalid);
-   await page.getByRole('button',{name:'Добавить ученика'}).click();
+   await page.locator('#modalBody').getByRole('button',{name:'Добавить ученика'}).click();
    expect(await page.evaluate(()=>db.clients.length)).toBe(0);
  }
  await page.locator('#fCustomDuration').fill('65');
- await page.getByRole('button',{name:'Добавить ученика'}).click();
+ await page.locator('#modalBody').getByRole('button',{name:'Добавить ученика'}).click();
  expect(await page.evaluate(()=>db.clients[0].preferredDuration)).toBe(65);
  expect(dialogs).toHaveLength(3);
  expect(errors).toEqual([]);
