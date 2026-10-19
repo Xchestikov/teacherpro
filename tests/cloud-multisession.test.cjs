@@ -63,7 +63,7 @@ function setup() {
     window: {addEventListener(event, fn) {events['window:'+event] = fn;}},
     document: doc,
     navigator: {onLine:true},
-    setInterval(fn) {interval=fn; return 1;},
+    setInterval(fn, ms) {assert.equal(ms, 5000, 'fallback cloud polling runs every five seconds');interval=fn; return 1;},
     clearInterval() {interval=null;},
     setTimeout(fn) {scheduled=fn; return 2;},
     clearTimeout() {scheduled=null;},
