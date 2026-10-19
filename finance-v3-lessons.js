@@ -41,7 +41,17 @@ saveLesson=function(id){
    // Never replace historical subscription debits by changing a billing mode.
    if(previous.consumedSubscriptionId||previous.consumedClientFallback)
       return alert('Это занятие уже связано со списанием абонемента. Сначала исправь прежнюю запись.');
+   const before={...previous};
    Object.assign(previous,l);
+   const repriced=before.duration!==l.duration||
+     Number(before.hourlyRate)!==amount||window.tpLessonPriceUnit(before)!==priceUnit;
+   if(repriced&&(lessonCharges(before.status)||lessonCharges(l.status))&&
+      typeof window.tpPaymentAudit==='function'){
+     const snap=x=>({id:x.id,clientId:x.clientId,
+       amount:window.tpLessonPriceCents(x)/100,duration:x.duration,
+       hourlyRate:x.hourlyRate,priceUnit:window.tpLessonPriceUnit(x)});
+     window.tpPaymentAudit('lesson_price',snap(before),snap(l));
+   }
  }else db.lessons.push(...events);
  save();closeModal();render();
 };
