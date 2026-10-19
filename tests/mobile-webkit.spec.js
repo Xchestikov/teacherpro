@@ -240,3 +240,32 @@ test('iPhone can type a custom lesson duration directly when adding and editing 
  expect(await page.evaluate(()=>db.clients[0].preferredDuration)).toBe(70);
  expect(errors).toEqual([]);
 });
+
+
+test('iPhone student pricing offers fixed and hourly rates without changing the entered amount',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
+ await page.route('https://fonts.googleapis.com/**',r=>r.abort());
+ await page.route('https://fonts.gstatic.com/**',r=>r.abort());
+ await page.addInitScript({content:mock});
+ await page.goto('/');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
+ await page.locator('#authPassword').fill('DemoPass123');
+ await page.locator('#authSubmit').click();
+ await expect(page.locator('#authGate')).toBeHidden();
+ await page.locator('#addBtn').tap();
+ await page.locator('#fName').fill('iPhone ученик');
+ await expect(page.locator('#fPriceUnit')).toHaveValue('lesson');
+ await page.locator('#fBillingMode').selectOption('per_lesson');
+ await page.locator('#fLessonRate').fill('1000');
+ await page.locator('#fLessonDuration').fill('80');
+ await page.locator('#modalBody').getByRole('button',{name:'Добавить ученика'}).tap();
+ expect(await page.evaluate(()=>db.clients[0].priceUnit)).toBe('lesson');
+ await page.evaluate(()=>openLesson());
+ await expect(page.locator('#lDuration')).toHaveValue('80');
+ await expect(page.locator('#lPriceUnit')).toHaveValue('lesson');
+ await expect(page.locator('#lessonRatePreview')).toContainText('1 000');
+ await page.locator('#lPriceUnit').selectOption('hour');
+ await expect(page.locator('#lessonRatePreview')).toContainText('1 333,33');
+ expect(errors).toEqual([]);
+});
