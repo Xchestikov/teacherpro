@@ -10,10 +10,14 @@ const sw=read('sw.js');
 const workflow=read('.github/workflows/deploy-vps.yml');
 const tags=[
   ...html.matchAll(/<(?:script|link)\b[^>]*?(?:src|href)=["']\.\/([^"']+)["']/g)
-].map(match=>match[1]);
+].map(match=>match[1].split(/[?#]/,1)[0]);
 const shellSection=sw.match(/const SHELL=\[([\s\S]*?)\]\.map\(/);
 assert.ok(shellSection,'Service Worker shell manifest was not found');
-const cacheFiles=[...shellSection[1].matchAll(/'([^']*)'/g)].map(match=>match[1]).filter(Boolean);
+const cacheFiles=[...shellSection[1].matchAll(/'([^']*)'/g)].map(match=>match[1].split(/[?#]/,1)[0]).filter(Boolean);
+const versionedFinance='finance-v3-core.js?v=20261019-46445603';
+assert.ok(html.includes('./'+versionedFinance),'HTML must load revisioned finance script');
+assert.ok(sw.includes("'"+versionedFinance+"'"),'Versioned finance script must be in offline shell');
+assert.ok(sw.includes('SHELL_PATHS.has(url.pathname+url.search)'),'Service worker must handle revisioned shell URLs');
 const required=new Set(['index.html',...tags,...cacheFiles]);
 const releaseSection=workflow.match(/rsync -az[\s\S]*?(\n\s+index\.html [^\n]+)/);
 assert.ok(releaseSection,'Versioned release upload line not found');
