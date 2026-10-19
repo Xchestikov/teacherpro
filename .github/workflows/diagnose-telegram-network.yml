@@ -1,0 +1,52 @@
+name: One-time read-only Telegram and Supabase VPS connectivity test
+
+on:
+  push:
+    branches: [diagnostics/telegram-firstvds-network-20261019]
+    paths: ['.github/workflows/diagnose-telegram-network.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    environment: production-vps
+    timeout-minutes: 6
+    steps:
+      - name: SSH trusted FirstVDS host
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -u
+          for host in api.telegram.org egopcojrzklvytcuhpov.supabase.co; do
+            echo "==== $host ===="
+            echo "DNS_V4=$(getent ahostsv4 "$host" | head -1 | awk '{print $1}')"
+            echo "DNS_V6=$(getent ahostsv6 "$host" | head -1 | awk '{print $1}')"
+            for family in 4 6; do
+              echo "CURL_IPv$family:"
+              curl "-$family" --silent --show-error --connect-timeout 5 --max-time 9 -o /dev/null -w "http=%{http_code}\n" "https://$host/" || true
+            done
+          done
+          "$HOME/teacherpro-bot/bin/node" --input-type=module <<'NODE'
+          for(const host of ['api.telegram.org','egopcojrzklvytcuhpov.supabase.co']){
+            try{
+              const res=await fetch('https://'+host,{signal:AbortSignal.timeout(7000)});
+              console.log('NODE_RESULT',host,res.status);
+            }catch(err){
+              console.log('NODE_ERROR',host,String(err?.cause?.code||err?.name||'unknown'),String(err?.cause?.errors?.map(e=>e.code)||''));
+            }
+          }
+          NODE
+          REMOTE
