@@ -67,34 +67,52 @@ async function refreshCloudSnapshot() {
   const ownerId = cloudUser.id;
   tpCloudReadInFlight = true;
   try {
-    const { data, error } = await cloudClient.from('app_data')
-      .select('payload,updated_at').eq('user_id', ownerId).maybeSingle();
+    // Every five seconds check only the server revision. Avoid downloading the
+    // potentially large profile JSON when another device has not saved anything.
+    const { data:revision, error:revisionError } = await cloudClient.from('app_data')
+      .select('updated_at').eq('user_id', ownerId).maybeSingle();
     if (generation !== authGeneration || cloudUser?.id !== ownerId) return false;
-    if (error) {
-      tpCloudReadFailures++;
-      if (tpCloudReadFailures >= 3) {
-        setCloudStatus('Не удалось проверить обновления на других устройствах. ' +
-          (error.message || 'Проверь подключение.'), 'error');
-      }
-      return false;
-    }
+    if (revisionError) throw revisionError;
     const hadReadWarning = tpCloudReadFailures >= 3;
-    tpCloudReadFailures = 0;
-    if (!data?.updated_at || data.updated_at === cloudRevision) {
+    if (!revision?.updated_at || revision.updated_at === cloudRevision) {
+      tpCloudReadFailures = 0;
       if (hadReadWarning && !cloudDirty && !cloudConflict && cloudLastSyncOk)
         setCloudStatus('Облако синхронизировано · ' + (cloudUser.email || ''), 'ok');
       return false;
     }
     if (cloudDirty || cloudConflict) {
-      // Preserve local changes for an export and a conscious conflict decision.
+      markConflict(); // Preserve local work; never fetch a profile unnecessarily.
+      return false;
+    }
+    if (cloudHasUnsavedFormDraft()) return false;
+
+    // Only a new revision needs the full profile. Read its revision together
+    // with the payload in case another save happened between the two queries.
+    const { data, error } = await cloudClient.from('app_data')
+      .select('payload,updated_at').eq('user_id', ownerId).maybeSingle();
+    if (generation !== authGeneration || cloudUser?.id !== ownerId) return false;
+    if (error) throw error;
+    if (!data?.updated_at || !data.payload) throw new Error('Облачная версия недоступна.');
+
+    // Form edits or a cloud save may have started while the request was in
+    // flight. In that case do not overwrite the current in-memory data.
+    if (cloudHydrating || cloudSyncInFlight || document.hidden) return false;
+    if (data.updated_at === cloudRevision) {
+      tpCloudReadFailures = 0;
+      if (hadReadWarning && !cloudDirty && !cloudConflict && cloudLastSyncOk)
+        setCloudStatus('Облако синхронизировано · ' + (cloudUser.email || ''), 'ok');
+      return false;
+    }
+    if (cloudDirty || cloudConflict) {
       markConflict();
       return false;
     }
-    if (cloudHasUnsavedFormDraft()) return false; // Retry on blur, focus or next poll.
+    if (cloudHasUnsavedFormDraft()) return false;
     db = normalizeDb(data.payload);
     cloudRevision = data.updated_at;
     cloudDirty = false;
     cloudLastSyncOk = true;
+    tpCloudReadFailures = 0;
     persistLocal();
     render();
     setCloudStatus('Облако синхронизировано · ' + (cloudUser.email || ''), 'ok');
@@ -102,7 +120,9 @@ async function refreshCloudSnapshot() {
   } catch (error) {
     if (generation === authGeneration && cloudUser?.id === ownerId) {
       tpCloudReadFailures++;
-      if (tpCloudReadFailures >= 3) setCloudStatus('Нет связи с облаком. Изменения с других устройств пока не загружены.', 'error');
+      if (tpCloudReadFailures >= 3)
+        setCloudStatus('Не удалось проверить обновления на других устройствах. ' +
+          (error.message || 'Проверь подключение.'), 'error');
     }
     return false;
   } finally {
