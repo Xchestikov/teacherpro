@@ -47,7 +47,7 @@ window.tpToggleCustomLessonDuration=()=>{
  if(!select||!wrap)return;
  wrap.hidden=select.value!=='custom';
  const input=document.querySelector('#fCustomDuration');
- if(select.value==='custom'&&input&&!input.value)input.value='60';
+ // Custom minutes are intentionally blank until the teacher enters a value.
 };
 const baseOpenClient=openClient;
 openClient=function(id,tab){
