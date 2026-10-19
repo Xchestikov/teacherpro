@@ -30,6 +30,34 @@ jobs:
           set -euo pipefail
           for f in bot/logic.mjs bot/store.mjs bot/engine.mjs bot/server.mjs bot/setup-webhook.mjs; do node --check "$f"; done
           node --test bot/bot.test.mjs
+      - name: Verify Telegram credentials are available without exposing them
+        shell: bash
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
+            node --input-type=module <<'VERIFY'
+          import {TelegramAPI} from './bot/store.mjs';
+          try {
+            const bot=await new TelegramAPI(process.env.TELEGRAM_BOT_TOKEN).call('getMe',{});
+            if (!bot?.is_bot || bot.username?.toLowerCase()!=='assistant_teacher_pro_bot') {
+              console.error('TELEGRAM_BOT_TOKEN is for another bot'); process.exit(1);
+            }
+            console.log('TELEGRAM_TOKEN_VERIFIED: @Assistant_Teacher_Pro_bot');
+          } catch {
+            console.error('TELEGRAM_TOKEN_INVALID_OR_UNREACHABLE'); process.exit(1);
+          }
+          VERIFY
+          else
+            echo 'TELEGRAM_BOT_TOKEN_MISSING: bot remains disabled'
+          fi
+          if [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo 'SUPABASE_SERVER_KEY_CONFIGURED'
+          else
+            echo 'SUPABASE_SERVER_KEY_MISSING: bot cannot activate yet'
+          fi
       - name: Configure existing VPS SSH deployment credentials
         shell: bash
         env:
