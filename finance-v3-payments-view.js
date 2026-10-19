@@ -83,9 +83,18 @@ payments=function(){
    document.querySelector('.finance-filters')?.before(info);
  }
 };
+window.tpCreditLegacyPayment=id=>{
+ const p=db.payments.find(x=>String(x.id)===String(id));
+ if(!p||p.financeV3Lesson===true||p.status!=='paid'||p.type!=='single'||
+   p.subscriptionId||client(p.clientId)?.billingMode!=='per_lesson')return false;
+ const before=JSON.parse(JSON.stringify(p));
+ p.financeV3Lesson=true;
+ tpPaymentAudit('allocate',before,p);
+ save();render();return true;
+};
 window.tpShowPaymentChanges=()=>{
  const events=(tpPaymentHistory()||[]).slice().reverse();
- const rows=events.map(e=>'<div class="tp-history-row"><strong>'+htmlSafe(e.kind==='void'?'Отмена записи':'Исправление')+
+ const rows=events.map(e=>'<div class="tp-history-row"><strong>'+htmlSafe(e.kind==='void'?'Отмена записи':e.kind==='allocate'?'Зачтено за занятия':e.kind==='lesson_price'?'Стоимость урока':'Исправление')+
  '</strong><span>'+htmlSafe(client(e.clientId)?.name||'Ученик')+'</span><small>'+
  htmlSafe(new Date(e.at).toLocaleString('ru-RU'))+'</small><span>'+
  (e.before?fmt(e.before.amount):'—')+' → '+(e.after?fmt(e.after.amount):'отменено')+'</span></div>').join('');
