@@ -27,7 +27,7 @@
    const tz=pref.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
    const h='<section class="setting tp-telegram-setting"><h3>Telegram · TeacherPro</h3>'+
      '<p class="muted">Один бот для преподавателей и учеников. Для отправки сообщений человек сначала запускает бота.</p>'+
-     (!configured()?'<p class="muted">Бот пока готовится к подключению. Имя бота будет опубликовано после настройки сервера.</p>':'')+
+     (!configured()?'<p class="muted">Бот @'+safe(name())+' пока готовится к подключению. Приглашения будут доступны после настройки сервера.</p>':'')+
      '<div class="tp-telegram-row"><span>Мой аккаунт: '+safe(badge(status('teacher')?.status))+'</span>'+
      (status('teacher')?button('Отключить','onclick="tpTgRevoke(this)"',status('teacher').id):
        button('Подключить','onclick="tpTgInvite(\'teacher\')"') )+'</div>'+
