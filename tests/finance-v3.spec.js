@@ -23,7 +23,7 @@ test('Pay-per-lesson charges conducted sessions and one receipt settles multiple
  await page.evaluate(()=>openClient(db.clients[0].id,'overview'));
  await page.locator('#fBillingMode').selectOption('per_lesson');
  await page.locator('#fLessonRate').fill('1500');
- await page.locator('#fLessonDuration').selectOption('60');
+ await page.locator('#fLessonDuration').fill('60');
  await page.getByRole('button',{name:'Сохранить профиль'}).click();
  await page.evaluate(()=>openLesson());
  await expect(page.locator('#lHourlyRate')).toHaveValue('1500');
