@@ -30,25 +30,14 @@ function policyForm(c){
  '<label>Способ оплаты<select id="fBillingMode"><option value="subscription">По абонементу</option>'+
  '<option value="per_lesson">По факту занятия</option></select></label>'+
  '<label>Стоимость часа, ₽<input id="fLessonRate" type="number" min="0" step="0.01" value="'+(Number(c?.hourlyRate)>0?Number(c.hourlyRate):'')+'" placeholder="Укажи цену часа"></label>'+
- '<label>Обычная длительность<select id="fLessonDuration" onchange="tpToggleCustomLessonDuration()">'+[30,45,60,90,120].map(n=>'<option value="'+n+'">'+n+' минут</option>').join('')+'<option value="custom">Своя длительность…</option></select></label>'+ 
- '<label id="fCustomDurationWrap" hidden>Своя длительность, минут<input id="fCustomDuration" type="number" min="15" max="240" step="1" inputmode="numeric" placeholder="Например, 50" aria-label="Своя длительность занятия в минутах"></label>'+
+ '<label>Обычная длительность, минут<input id="fLessonDuration" type="number" min="15" max="240" step="1" inputmode="numeric" required placeholder="Например, 50" aria-label="Обычная длительность занятия в минутах"></label>'+ 
  '<p class="muted">Ставка переносится в новый урок. Старые проведённые занятия и оплаты не меняются.</p>';
  const actions=form.querySelector('.form-actions');
  if(actions)actions.before(group);else form.append(group);
  form.querySelector('#fBillingMode').value=c?.billingMode==='per_lesson'?'per_lesson':'subscription';
  const preferred=Number(c?.preferredDuration)||60;
- const presets=[30,45,60,90,120],selected=presets.includes(preferred)?String(preferred):'custom';
- form.querySelector('#fLessonDuration').value=selected;
- form.querySelector('#fCustomDuration').value=selected==='custom'?String(preferred):'';
- window.tpToggleCustomLessonDuration();
+ form.querySelector('#fLessonDuration').value=String(Number.isInteger(preferred)&&preferred>=15&&preferred<=240?preferred:60);
 }
-window.tpToggleCustomLessonDuration=()=>{
- const select=document.querySelector('#fLessonDuration'),wrap=document.querySelector('#fCustomDurationWrap');
- if(!select||!wrap)return;
- wrap.hidden=select.value!=='custom';
- const input=document.querySelector('#fCustomDuration');
- // Custom minutes are intentionally blank until the teacher enters a value.
-};
 const baseOpenClient=openClient;
 openClient=function(id,tab){
  baseOpenClient(id,tab);
@@ -58,8 +47,8 @@ function readPolicy(){
  const element=document.querySelector('#fBillingMode');
  if(!element)return null;
  const rate=Number(document.querySelector('#fLessonRate').value);
- const duration=Number(document.querySelector('#fLessonDuration').value==='custom'?
-   document.querySelector('#fCustomDuration')?.value:document.querySelector('#fLessonDuration').value);
+ const durationRaw=document.querySelector('#fLessonDuration').value.trim();
+ const duration=durationRaw===''?NaN:Number(durationRaw);
  if(!Number.isFinite(rate)||rate<0||rate>100000000||Math.abs(rate*100-Math.round(rate*100))>1e-6){
    alert('Укажи корректную стоимость часа.');return false;
  }
