@@ -108,7 +108,11 @@
    if(!id||!cloudClient)return;
    const {data,error}=await cloudClient.rpc('tp_telegram_approve_link',{p_link:id});
    if(error||!data){setFeedback('Не удалось подтвердить подключение.');return;}
-   await settingsPanel();
+   const student=document.querySelector('#modalBody .tp-telegram-student');
+   if(student){
+     const match=state.links.find(x=>x.id===id);
+     if(match)openClient(match.student_id,'overview');
+   }else await settingsPanel();
  };
  window.tpTgRevoke=async(button)=>{
    const id=button?.dataset?.tgId;
