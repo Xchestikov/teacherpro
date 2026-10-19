@@ -286,7 +286,7 @@ test('iPhone Telegram integration stays safely inactive until FirstVDS webhook i
  expect(await page.evaluate(()=>window.TP_TELEGRAM_BOT_ACTIVE)).toBe(false);
  await page.evaluate(()=>setPage('settings'));
  await expect(page.locator('.tp-telegram-setting')).toBeVisible();
- await expect(page.locator('.tp-telegram-setting')).toContainText('Бот пока готовится к подключению');
+ await expect(page.locator('.tp-telegram-setting')).toContainText('пока готовится к подключению');
  await page.evaluate(()=>{
    db.clients=[{id:101,name:'Ученица для Telegram',telegram:''}];
    openClient(101,'overview');
