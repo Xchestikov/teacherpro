@@ -67,6 +67,7 @@ alter table public.tp_telegram_lesson_state enable row level security;
 alter table public.tp_telegram_processed_updates enable row level security;
 revoke all on public.tp_telegram_invites, public.tp_telegram_links, public.tp_telegram_prefs, public.tp_telegram_delivery, public.tp_telegram_lesson_state, public.tp_telegram_processed_updates from anon,authenticated;
 grant select on public.tp_telegram_links, public.tp_telegram_prefs to authenticated;
+grant all on public.tp_telegram_invites,public.tp_telegram_links,public.tp_telegram_prefs,public.tp_telegram_delivery,public.tp_telegram_lesson_state,public.tp_telegram_processed_updates to service_role;
 create policy tp_telegram_links_read on public.tp_telegram_links for select to authenticated using ((select auth.uid())=owner_id);
 create policy tp_telegram_prefs_read on public.tp_telegram_prefs for select to authenticated using ((select auth.uid())=owner_id);
 create or replace function public.tp_telegram_issue_invite(p_role text,p_student_id text default null)
