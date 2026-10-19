@@ -269,3 +269,30 @@ test('iPhone student pricing offers fixed and hourly rates without changing the 
  await expect(page.locator('#lessonRatePreview')).toContainText('1 333,33');
  expect(errors).toEqual([]);
 });
+
+
+test('iPhone Telegram integration stays safely inactive until FirstVDS webhook is configured',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
+ await page.route('https://fonts.googleapis.com/**',r=>r.abort());
+ await page.route('https://fonts.gstatic.com/**',r=>r.abort());
+ await page.addInitScript({content:mock});
+ await page.goto('/');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
+ await page.locator('#authPassword').fill('DemoPass123');
+ await page.locator('#authSubmit').click();
+ await expect(page.locator('#authGate')).toBeHidden();
+ expect(await page.evaluate(()=>window.TP_TELEGRAM_BOT_USERNAME)).toBe('Assistant_Teacher_Pro_bot');
+ expect(await page.evaluate(()=>window.TP_TELEGRAM_BOT_ACTIVE)).toBe(false);
+ await page.evaluate(()=>setPage('settings'));
+ await expect(page.locator('.tp-telegram-setting')).toBeVisible();
+ await expect(page.locator('.tp-telegram-setting')).toContainText('пока готовится к подключению');
+ await page.evaluate(()=>{
+   db.clients=[{id:101,name:'Ученица для Telegram',telegram:''}];
+   openClient(101,'overview');
+ });
+ await expect(page.locator('#modalBody .tp-telegram-student')).toBeVisible();
+ await page.locator('#tpTgInviteStudent').tap();
+ await expect(page.locator('#tpTelegramStudent')).toContainText('Бот пока не активирован');
+ expect(errors).toEqual([]);
+});

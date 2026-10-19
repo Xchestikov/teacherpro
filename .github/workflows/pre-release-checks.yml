@@ -37,9 +37,17 @@ jobs:
           node --check mobile-ui-v2.js
           node --check calendar-colors.js
           node --check sw.js
+          node --check telegram-config.js
+          node --check telegram-ui.js
+          node --check bot/logic.mjs
+          node --check bot/store.mjs
+          node --check bot/engine.mjs
+          node --check bot/server.mjs
           node --check tests/browser.spec.js
           node --check tests/mobile-webkit.spec.js
           node --check tests/check-release-assets.js
+      - name: Telegram bot server and isolation tests
+        run: node --test bot/bot.test.mjs
       - name: Cross-session synchronization invariants
         run: node tests/cloud-multisession.test.cjs
       - name: Every referenced file must be in release

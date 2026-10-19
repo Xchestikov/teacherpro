@@ -1,0 +1,24 @@
+[Unit]
+Description=TeacherPro Telegram bot and notifications
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=teacherpro-bot
+Group=teacherpro-bot
+WorkingDirectory=/opt/teacherpro-bot/current
+EnvironmentFile=/etc/teacherpro-bot.env
+ExecStart=/usr/bin/node /opt/teacherpro-bot/current/server.mjs
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/tmp
+UMask=0077
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target
