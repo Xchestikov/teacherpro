@@ -14,6 +14,14 @@ payments=function(){
    const remove=actions.querySelectorAll('button')[2];
    if(remove)remove.textContent='Отменить запись';
    if(p.financeV3Lesson)row.children[3].textContent='Оплата занятий';
+   const owner=client(p.clientId);
+   if(p.status==='paid'&&p.type==='single'&&!p.subscriptionId&&
+      p.financeV3Lesson!==true&&owner?.billingMode==='per_lesson'){
+     const btn=document.createElement('button');btn.type='button';btn.className='link-btn';
+     btn.textContent='Зачесть за занятия';
+     btn.onclick=()=>window.tpCreditLegacyPayment(p.id);
+     actions.append(btn);
+   }
    if(p.subscriptionId){
      const sub=db.subscriptions.find(x=>String(x.id)===String(p.subscriptionId));
      if(sub){
@@ -41,8 +49,7 @@ payments=function(){
    const b=tpLessonBalance(c.id);credit+=b.credit;
    if(!b.due)continue;
    accounts++;debt+=b.due;
-   const overdue=Boolean(b.oldest&&b.oldest<todayISO());
-   if(overdue){late+=b.due;overdueCount++;}
+   const overdue=false; // No explicit due date: lesson accrual is not overdue.
    const row=document.createElement('tr');
    row.dataset.status=overdue?'overdue':'pending';
    row.dataset.search=(c.name+' занятия задолженность').toLowerCase();
@@ -50,7 +57,7 @@ payments=function(){
    row.innerHTML='<td class="person">'+htmlSafe(c.name)+'</td>'+
      '<td>'+dateFmt(b.oldest||todayISO())+'<div class="muted">Начисления уроков</div></td>'+
      '<td>'+fmt(b.due/100)+'</td>'+
-     '<td>'+b.count+' уроков · оплата по факту</td>'+
+     '<td>'+b.unpaidCount+' неоплаченных занятий · оплата по факту</td>'+
      '<td><span class="status warn">'+(overdue?'Просрочено':'Ожидает оплаты')+'</span></td>'+
      '<td class="finance-actions"><button class="link-btn">Получить оплату</button></td>';
    row.querySelector('button').onclick=()=>openPayment(c.id);tbody.prepend(row);
@@ -76,9 +83,18 @@ payments=function(){
    document.querySelector('.finance-filters')?.before(info);
  }
 };
+window.tpCreditLegacyPayment=id=>{
+ const p=db.payments.find(x=>String(x.id)===String(id));
+ if(!p||p.financeV3Lesson===true||p.status!=='paid'||p.type!=='single'||
+   p.subscriptionId||client(p.clientId)?.billingMode!=='per_lesson')return false;
+ const before=JSON.parse(JSON.stringify(p));
+ p.financeV3Lesson=true;
+ tpPaymentAudit('allocate',before,p);
+ save();render();return true;
+};
 window.tpShowPaymentChanges=()=>{
  const events=(tpPaymentHistory()||[]).slice().reverse();
- const rows=events.map(e=>'<div class="tp-history-row"><strong>'+htmlSafe(e.kind==='void'?'Отмена записи':'Исправление')+
+ const rows=events.map(e=>'<div class="tp-history-row"><strong>'+htmlSafe(e.kind==='void'?'Отмена записи':e.kind==='allocate'?'Зачтено за занятия':e.kind==='lesson_price'?'Стоимость урока':'Исправление')+
  '</strong><span>'+htmlSafe(client(e.clientId)?.name||'Ученик')+'</span><small>'+
  htmlSafe(new Date(e.at).toLocaleString('ru-RU'))+'</small><span>'+
  (e.before?fmt(e.before.amount):'—')+' → '+(e.after?fmt(e.after.amount):'отменено')+'</span></div>').join('');

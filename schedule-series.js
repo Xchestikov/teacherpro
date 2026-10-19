@@ -210,9 +210,10 @@ saveLesson=function(id){
  if(id||!['weekly','biweekly'].includes(recurrence))return baseSaveLesson(id);
  const person=client($q('#lClient')?.value),date=$q('#lDate')?.value,time=$q('#lTime')?.value;
  const status=$q('#lStatus')?.value,rate=Number($q('#lHourlyRate')?.value),duration=Number($q('#lDuration')?.value);
+ const priceUnit=$q('#lPriceUnit')?.value||window.tpLessonPriceUnit(person);
  const dates=readSeriesPlan(),kind=$q('#lType')?.value;
  if(!person||!iso(date)||!validTime(time)||!dates?.length||
-   !Number.isInteger(duration)||duration<15||duration>240||dates.some(x=>lessonMinutes(x.time)+duration>1440)||
+   !Number.isInteger(duration)||duration<15||duration>240||!['hour','lesson'].includes(priceUnit)||dates.some(x=>lessonMinutes(x.time)+duration>1440)||
    !Number.isFinite(rate)||rate<0||rate>100000000||Math.abs(rate*100-Math.round(rate*100))>1e-6)
    return notify('Проверь выбранные дни, время занятий и длительность.');
  if(status!=='planned')return notify('Серию можно создавать только с запланированным статусом. После проведения отметь нужные уроки отдельно.');
@@ -220,7 +221,7 @@ saveLesson=function(id){
  const events=[],skipped=[];
  for(const occurrence of dates){
   if(blocked(occurrence.date)){skipped.push(occurrence.date);continue;}
-  events.push({id:crypto.randomUUID(),seriesId,clientId:person.id,date:occurrence.date,time:occurrence.time,type:kind,duration,hourlyRate:rate,status:'planned',
+  events.push({id:crypto.randomUUID(),seriesId,clientId:person.id,date:occurrence.date,time:occurrence.time,type:kind,duration,hourlyRate:rate,priceUnit,status:'planned',
    recurrence,billingMode:person.billingMode==='per_lesson'?'per_lesson':'subscription'});
  }
  if(!events.length)return notify('Все даты серии попадают на отпуск или каникулы.');

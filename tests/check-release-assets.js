@@ -14,7 +14,12 @@ const tags=[
 const shellSection=sw.match(/const SHELL=\[([\s\S]*?)\]\.map\(/);
 assert.ok(shellSection,'Service Worker shell manifest was not found');
 const cacheFiles=[...shellSection[1].matchAll(/'([^']*)'/g)].map(match=>match[1].split(/[?#]/,1)[0]).filter(Boolean);
-const versionedFinance='finance-v3-core.js?v=20261019-46445603';
+const versionedFinance='finance-v3-core.js?v=20261019-pricing-v1';
+for(const file of ['finance-v2.js','finance-v3-lessons.js','finance-v3-payments-view.js','schedule-series.js']){
+ const versioned=file+'?v=20261019-pricing-v1';
+ assert.ok(html.includes('./'+versioned),'HTML must version '+file);
+ assert.ok(sw.includes("'"+versioned+"'"),'Offline shell must version '+file);
+}
 assert.ok(html.includes('./'+versionedFinance),'HTML must load revisioned finance script');
 assert.ok(sw.includes("'"+versionedFinance+"'"),'Versioned finance script must be in offline shell');
 assert.ok(sw.includes('SHELL_PATHS.has(url.pathname+url.search)'),'Service worker must handle revisioned shell URLs');
