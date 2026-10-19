@@ -157,6 +157,13 @@ openLesson=function(id,date,time){
  unit.value=previous?window.tpLessonPriceUnit(previous):student?window.tpLessonPriceUnit(student):'lesson';
  unit.dataset.currentClient=String(student?.id||'');label.append(unit);
  field.closest('label')?.before(label);
+ if(previous){
+   const duration=document.querySelector('#lDuration'),minutes=Number(previous.duration)||60;
+   if(duration&&![...duration.options].some(o=>Number(o.value)===minutes)){
+     const o=document.createElement('option');o.value=String(minutes);o.textContent=minutes+' минут';duration.append(o);
+   }
+   if(duration)duration.value=String(minutes);
+ }
  if(!id&&student){
    const duration=document.querySelector('#lDuration'),minutes=Number(student.preferredDuration)||60;
    if(duration&&![...duration.options].some(o=>Number(o.value)===minutes)){
