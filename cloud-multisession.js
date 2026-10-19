@@ -2,7 +2,7 @@
    Realtime is a fast path, not a dependency: the visible-tab poll also works if
    app_data is not in Supabase's Realtime publication.
    Never overwrite unsaved local work with a remote snapshot. */
-const TP_CLOUD_POLL_MS = 15000;
+const TP_CLOUD_POLL_MS = 5000;
 let tpCloudPollTimer = null;
 let tpCloudChannel = null;
 let tpCloudReadInFlight = false;
