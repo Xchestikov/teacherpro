@@ -112,6 +112,15 @@ async function run() {
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(t.ctx.db.clients[0].name, 'realtime', 'realtime callback should fetch cloud snapshot');
 
+  t.setBackend({error:{message:'temporary network failure'}});
+  await t.call('refreshCloudSnapshot()');
+  await t.call('refreshCloudSnapshot()');
+  await t.call('refreshCloudSnapshot()');
+  assert.equal(t.counts().lastStatus.state, 'error', 'warn after repeated polling failures');
+  t.setBackend({payload:{clients:[{id:1,name:'realtime'}]}, updated_at:'r4'});
+  await t.call('refreshCloudSnapshot()');
+  assert.equal(t.counts().lastStatus.state, 'ok', 'recovered connection clears warning');
+
   t.call('stopCloudObserver()');
   assert.equal(t.counts().removed, 1, 'channel is removed when account changes');
 
