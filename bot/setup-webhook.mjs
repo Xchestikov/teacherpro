@@ -6,5 +6,8 @@ if(!/^https:\/\/[a-zA-Z0-9.-]+\/telegram\/webhook$/.test(url||''))
 if(!/^[A-Za-z0-9_-]{16,256}$/.test(secret||''))
  throw new Error('TELEGRAM_WEBHOOK_SECRET missing or invalid');
 const api=new TelegramAPI(process.env.TELEGRAM_BOT_TOKEN);
+const bot=await api.call('getMe',{});
+if(!bot?.is_bot||bot.username!=='Assistant_Teacher_Pro_bot')
+  throw new Error('BotFather token does not match @Assistant_Teacher_Pro_bot');
 await api.webhook(url,secret);
 console.log('TeacherPro Telegram webhook installed successfully');
