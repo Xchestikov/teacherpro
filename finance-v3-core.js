@@ -42,12 +42,15 @@ function policyForm(c){
  group.innerHTML='<h3>Условия занятий</h3>'+
  '<label>Способ оплаты<select id="fBillingMode"><option value="subscription">По абонементу</option>'+
  '<option value="per_lesson">По факту занятия</option></select></label>'+
- '<label>Стоимость часа, ₽<input id="fLessonRate" type="number" min="0" step="0.01" value="'+(Number(c?.hourlyRate)>0?Number(c.hourlyRate):'')+'" placeholder="Укажи цену часа"></label>'+
+ '<label>Как считать стоимость<select id="fPriceUnit" onchange="tpUpdateStudentPriceUnit()"><option value="lesson">За занятие</option><option value="hour">За час</option></select></label>'+
+ '<label>Стоимость занятия, ₽<input id="fLessonRate" type="number" min="0" step="0.01" value="'+(Number(c?.hourlyRate)>0?Number(c.hourlyRate):'')+'" placeholder="Укажи цену часа"></label>'+
  '<label>Обычная длительность, минут<input id="fLessonDuration" type="number" min="15" max="240" step="1" inputmode="numeric" required placeholder="Например, 50" aria-label="Обычная длительность занятия в минутах"></label>'+ 
  '<p class="muted">Ставка переносится в новый урок. Старые проведённые занятия и оплаты не меняются.</p>';
  const actions=form.querySelector('.form-actions');
  if(actions)actions.before(group);else form.append(group);
  form.querySelector('#fBillingMode').value=c?.billingMode==='per_lesson'?'per_lesson':'subscription';
+ form.querySelector('#fPriceUnit').value=c?window.tpLessonPriceUnit(c):'lesson';
+ window.tpUpdateStudentPriceUnit();
  const preferred=Number(c?.preferredDuration)||60;
  form.querySelector('#fLessonDuration').value=String(Number.isInteger(preferred)&&preferred>=15&&preferred<=240?preferred:60);
 }
@@ -56,20 +59,27 @@ openClient=function(id,tab){
  baseOpenClient(id,tab);
  if(!id||!tab||tab==='overview')policyForm(id?client(id):null);
 };
+window.tpUpdateStudentPriceUnit=()=>{
+ const unit=document.querySelector('#fPriceUnit')?.value;
+ const label=document.querySelector('#fLessonRate')?.closest('label');
+ if(label)label.firstChild.textContent=unit==='hour'?'Стоимость часа, ₽':'Стоимость занятия, ₽';
+};
 function readPolicy(){
  const element=document.querySelector('#fBillingMode');
  if(!element)return null;
  const rate=Number(document.querySelector('#fLessonRate').value);
+ const priceUnit=document.querySelector('#fPriceUnit')?.value;
+ if(!['hour','lesson'].includes(priceUnit))return false;
  const durationRaw=document.querySelector('#fLessonDuration').value.trim();
  const duration=durationRaw===''?NaN:Number(durationRaw);
  if(!Number.isFinite(rate)||rate<0||rate>100000000||Math.abs(rate*100-Math.round(rate*100))>1e-6){
-   alert('Укажи корректную стоимость часа.');return false;
+   alert('Укажи корректную стоимость.');return false;
  }
- if(element.value==='per_lesson'&&rate<=0){alert('Укажи стоимость часа.');return false}
+ if(element.value==='per_lesson'&&rate<=0){alert('Укажи стоимость занятия или часа.');return false}
  if(!Number.isInteger(duration)||duration<15||duration>240){
    alert('Длительность занятия должна быть целым числом от 15 до 240 минут.');return false;
  }
- return {billingMode:element.value,hourlyRate:rate,preferredDuration:duration};
+ return {billingMode:element.value,hourlyRate:rate,preferredDuration:duration,priceUnit};
 }
 function applyPolicy(c,p){
  const old=c.billingMode||'subscription';
@@ -79,7 +89,7 @@ function applyPolicy(c,p){
   if(String(l.clientId)!==String(c.id)||l.status!=='planned'||l.date<todayISO()||
       l.consumedSubscriptionId||l.consumedClientFallback)continue;
   l.billingMode=p.billingMode;
-  if(p.billingMode==='per_lesson')l.hourlyRate=p.hourlyRate;
+  if(p.billingMode==='per_lesson'){l.hourlyRate=p.hourlyRate;l.priceUnit=p.priceUnit||'hour';}
  }
 }
 window.tpApplyBillingPolicy=applyPolicy;
