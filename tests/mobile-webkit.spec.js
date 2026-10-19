@@ -212,3 +212,31 @@ test('iPhone touch drag snaps each quarter hour and moves the lesson preview wit
  }
  expect(errors).toEqual([]);
 });
+
+test('iPhone can type a custom lesson duration directly when adding and editing a student',async({page})=>{
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
+ await page.route('https://fonts.googleapis.com/**',r=>r.abort());
+ await page.route('https://fonts.gstatic.com/**',r=>r.abort());
+ await page.addInitScript({content:mock});
+ await page.goto('/');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
+ await page.locator('#authPassword').fill('DemoPass123');
+ await page.locator('#authSubmit').click();
+ await expect(page.locator('#authGate')).toBeHidden();
+ await page.locator('#addBtn').tap();
+ await page.locator('#fName').fill('Мобильная длительность');
+ const duration=page.locator('#fLessonDuration');
+ await expect(duration).toHaveValue('60');
+ await expect(duration).toHaveAttribute('inputmode','numeric');
+ await expect(page.locator('#fCustomDurationWrap')).toHaveCount(0);
+ await duration.fill('55');
+ await page.locator('#modalBody').getByRole('button',{name:'Добавить ученика'}).tap();
+ expect(await page.evaluate(()=>db.clients[0].preferredDuration)).toBe(55);
+ await page.evaluate(()=>openClient(db.clients[0].id,'overview'));
+ await expect(duration).toHaveValue('55');
+ await duration.fill('70');
+ await page.getByRole('button',{name:'Сохранить профиль'}).tap();
+ expect(await page.evaluate(()=>db.clients[0].preferredDuration)).toBe(70);
+ expect(errors).toEqual([]);
+});
