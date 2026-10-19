@@ -115,32 +115,56 @@ saveClientProfile=function(id){
  const c=client(id);
  if(c&&policy){applyPolicy(c,policy);save();render();openClient(id,'overview');}
 };
+updateLessonRatePreview=function(){
+ const rateField=document.querySelector('#lHourlyRate'),preview=document.querySelector('#lessonRatePreview');
+ const unit=document.querySelector('#lPriceUnit')?.value||'hour';
+ const label=rateField?.closest('label');
+ if(label)label.firstChild.textContent=unit==='hour'?'Стоимость часа, ₽':'Стоимость занятия, ₽';
+ if(!preview)return;
+ const raw=rateField?.value||'',rate=Number(raw),duration=Number(document.querySelector('#lDuration')?.value)||60;
+ preview.textContent=raw!==''&&Number.isFinite(rate)&&rate>=0?
+   'Стоимость занятия: '+fmt(window.tpLessonPriceCents({hourlyRate:rate,duration,priceUnit:unit})/100):
+   'Укажи стоимость';
+};
+window.tpUpdateLessonPriceUnit=()=>updateLessonRatePreview();
 const baseUpdateLessonRateForStudent=updateLessonRateForStudent;
 updateLessonRateForStudent=function(){
  baseUpdateLessonRateForStudent();
- const selected=client(document.querySelector('#lClient')?.value),field=document.querySelector('#lDuration');
- if(!selected||!field)return;
- const duration=Number(selected.preferredDuration)||60;
- if(![...field.options].some(option=>Number(option.value)===duration)){
-   const option=document.createElement('option');option.value=String(duration);option.textContent=duration+' минут';
-   field.append(option);
+ const c=client(document.querySelector('#lClient')?.value),duration=document.querySelector('#lDuration');
+ if(!c||!duration)return;
+ const minutes=Number(c.preferredDuration)||60;
+ if(![...duration.options].some(x=>Number(x.value)===minutes)){
+   const o=document.createElement('option');o.value=String(minutes);o.textContent=minutes+' минут';duration.append(o);
  }
- field.value=String(duration);
+ duration.value=String(minutes);
+ const unit=document.querySelector('#lPriceUnit');
+ if(unit&&unit.dataset.currentClient!==String(c.id)){
+   unit.value=window.tpLessonPriceUnit(c);unit.dataset.currentClient=String(c.id);
+ }
  updateLessonRatePreview();
 };
 const baseOpenLesson=openLesson;
 openLesson=function(id,date,time){
  baseOpenLesson(id,date,time);
- if(id)return;
- const select=document.querySelector('#lDuration');
+ const field=document.querySelector('#lHourlyRate');
+ if(!field)return;
+ const previous=id?db.lessons.find(l=>String(l.id)===String(id)):null;
  const student=client(document.querySelector('#lClient')?.value);
- if(!select||!student)return;
- const n=Number(student.preferredDuration)||60;
- if(!Array.from(select.options).some(o=>Number(o.value)===n)){
-   const option=document.createElement('option');option.value=n;option.textContent=n+' минут';select.append(option);
+ const label=document.createElement('label');label.textContent='Как считать стоимость';
+ const unit=document.createElement('select');unit.id='lPriceUnit';
+ unit.innerHTML='<option value="lesson">За занятие</option><option value="hour">За час</option>';
+ unit.setAttribute('onchange','tpUpdateLessonPriceUnit()');
+ unit.value=previous?window.tpLessonPriceUnit(previous):student?window.tpLessonPriceUnit(student):'lesson';
+ unit.dataset.currentClient=String(student?.id||'');label.append(unit);
+ field.closest('label')?.before(label);
+ if(!id&&student){
+   const duration=document.querySelector('#lDuration'),minutes=Number(student.preferredDuration)||60;
+   if(duration&&![...duration.options].some(o=>Number(o.value)===minutes)){
+     const o=document.createElement('option');o.value=String(minutes);o.textContent=minutes+' минут';duration.append(o);
+   }
+   if(duration)duration.value=String(minutes);
+   field.value=String(suggestedLessonRate(student.id,date||todayISO())||'');
  }
- select.value=String(n);
- document.querySelector('#lHourlyRate').value=String(suggestedLessonRate(student.id,date||todayISO())||'');
  updateLessonRatePreview();
 };
 })();
