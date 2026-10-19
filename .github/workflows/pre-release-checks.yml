@@ -98,3 +98,37 @@ jobs:
           exit 1
       - name: iPhone-sized WebKit UI smoke test
         run: npx playwright test tests/mobile-webkit.spec.js --browser=webkit --reporter=list --workers=1
+
+
+  served_assets_probe:
+    name: Read-only production asset diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare publicly served and committed duration UI, no writes
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "EXPECTED COMMITTED FORM:"
+          grep -n "Обычная длительность" finance-v3-core.js || true
+          sha256sum finance-v3-core.js sw.js index.html
+          for suffix in "finance-v3-core.js" "finance-v3-core.js?probe=duration-20261019-$(date +%s)" "sw.js" "index.html"; do
+            filename="/tmp/teacherpro-probe-$(echo "$suffix" | cut -d'?' -f1 | tr '/' '-')"
+            echo "==== HTTPS: $suffix ===="
+            curl --silent --show-error --location --connect-timeout 12 --max-time 25 --retry 1 -D /tmp/tp-headers -o "$filename" "https://teacherpro-app.ru/$suffix" || true
+            grep -iE '^(HTTP/|date:|server:|last-modified:|etag:|cache-control:|age:|cf-cache-status:|location:)' /tmp/tp-headers || true
+            if [ -s "$filename" ]; then
+              sha256sum "$filename"
+              if [[ "$suffix" == finance-v3-core.js* ]]; then
+                grep -n -E 'Обычная длительность|fCustomDuration|tpToggleCustomLessonDuration' "$filename" | head -10 || true
+                if grep -q 'Обычная длительность, минут<input' "$filename"; then echo "RESULT=NUMERIC_INPUT_PRESENT"; else echo "RESULT=OLD_OR_OTHER_FORM"; fi
+              elif [[ "$suffix" == "sw.js" ]]; then
+                grep -o 'teacherpro-shell-v[0-9]*' "$filename" | head -1 || true
+              else
+                grep -o 'finance-v3-core.js[^"]*' "$filename" | head -1 || true
+              fi
+            else
+              echo "RESULT=EMPTY_OR_UNREACHABLE"
+            fi
+          done
