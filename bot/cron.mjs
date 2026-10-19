@@ -52,7 +52,11 @@ if(process.argv[1]&&realpathSync(process.argv[1])===fileURLToPath(import.meta.ur
   try{await runCron({store,telegram,engine});}
   catch(err){
     // Never include secret contents in logs.
-    console.error('TEACHERPRO_CRON_ERROR',String(err?.message||err).replace(/\d+:[A-Za-z0-9_-]+/g,'[redacted]'));
+    // Errors may contain API URLs with secrets. Report only generic message and
+    // machine-readable network cause codes (never raw nested error objects).
+    const causes=[err?.cause?.code,...(Array.isArray(err?.cause?.errors)?err.cause.errors.map(x=>x?.code):[])];
+    console.error('TEACHERPRO_CRON_ERROR',String(err?.message||'error').replace(/\d+:[A-Za-z0-9_-]+/g,'[redacted]'),
+      'NETWORK_CODES='+causes.filter(x=>/^[A-Z][A-Z0-9_]{1,30}$/.test(String(x||''))).join(','));
     process.exitCode=1;
   }
 }
