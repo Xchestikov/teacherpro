@@ -2,7 +2,7 @@
 (function(){
  'use strict';
  const safe=s=>htmlSafe(String(s??''));
- const configured=()=>/^[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(window.TP_TELEGRAM_BOT_USERNAME||'');
+ const configured=()=>window.TP_TELEGRAM_BOT_ACTIVE===true&&/^[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(window.TP_TELEGRAM_BOT_USERNAME||'');
  const name=()=>String(window.TP_TELEGRAM_BOT_USERNAME||'');
  const button=(label,action,id)=>'<button class="secondary" type="button" '+action+
    (id?' data-tg-id="'+safe(id)+'"':'')+'>'+safe(label)+'</button>';
