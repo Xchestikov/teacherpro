@@ -1,6 +1,8 @@
 // Cron-managed Telegram long polling fallback: no Nginx edits or root access.
 // One short run per minute under flock; all credentials supplied by a 0600 env file.
 import {Store,TelegramAPI} from './store.mjs';
+import {realpathSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
 import {BotEngine} from './engine.mjs';
 
 export async function processUpdates(store,telegram,engine,{maxBatches=3,log=console}={}){
@@ -42,7 +44,7 @@ export async function runCron({store,telegram,engine,log=console}={}){
   log.log('TEACHERPRO_CRON_OK');
 }
 
-if(process.argv[1]&&import.meta.url===new URL('file://'+process.argv[1]).href){
+if(process.argv[1]&&realpathSync(process.argv[1])===fileURLToPath(import.meta.url)){
   const env=process.env;
   const store=new Store(env.SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY);
   const telegram=new TelegramAPI(env.TELEGRAM_BOT_TOKEN);
