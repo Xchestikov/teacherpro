@@ -16,6 +16,7 @@ function stopCloudObserver() {
   tpCloudPollTimer = null;
   tpCloudRefreshTimer = null;
   tpCloudReadQueued = false;
+  tpCloudReadFailures = 0;
   if (tpCloudChannel && cloudClient?.removeChannel) {
     try { const done = cloudClient.removeChannel(tpCloudChannel); if (done?.catch) done.catch(() => {}); }
     catch (_) { /* Polling remains available. */ }
@@ -77,8 +78,13 @@ async function refreshCloudSnapshot() {
       }
       return false;
     }
+    const hadReadWarning = tpCloudReadFailures >= 3;
     tpCloudReadFailures = 0;
-    if (!data?.updated_at || data.updated_at === cloudRevision) return false;
+    if (!data?.updated_at || data.updated_at === cloudRevision) {
+      if (hadReadWarning && !cloudDirty && !cloudConflict && cloudLastSyncOk)
+        setCloudStatus('Облако синхронизировано · ' + (cloudUser.email || ''), 'ok');
+      return false;
+    }
     if (cloudDirty || cloudConflict) {
       // Preserve local changes for an export and a conscious conflict decision.
       markConflict();
