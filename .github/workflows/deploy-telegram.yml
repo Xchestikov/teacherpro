@@ -16,49 +16,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  stage_backend:
+  deploy_bot:
     runs-on: ubuntu-latest
     environment: production-vps
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validate bot and its security tests
+      - name: Validate bot tests
         run: |
           set -euo pipefail
-          for f in bot/logic.mjs bot/store.mjs bot/engine.mjs bot/server.mjs bot/setup-webhook.mjs; do node --check "$f"; done
-          node --test bot/bot.test.mjs
-      - name: Verify Telegram credentials are available without exposing them
+          node --check bot/cron.mjs
+          node --test bot/bot.test.mjs bot/cron.test.mjs
+      - name: Verify both secrets against Telegram and Supabase without revealing contents
         shell: bash
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-            node --input-type=module <<'VERIFY'
-          import {TelegramAPI} from './bot/store.mjs';
-          try {
-            const bot=await new TelegramAPI(process.env.TELEGRAM_BOT_TOKEN).call('getMe',{});
-            if (!bot?.is_bot || bot.username?.toLowerCase()!=='assistant_teacher_pro_bot') {
-              console.error('TELEGRAM_BOT_TOKEN is for another bot'); process.exit(1);
-            }
-            console.log('TELEGRAM_TOKEN_VERIFIED: @Assistant_Teacher_Pro_bot');
-          } catch {
-            console.error('TELEGRAM_TOKEN_INVALID_OR_UNREACHABLE'); process.exit(1);
-          }
+          test -n "$TELEGRAM_BOT_TOKEN" || { echo MISSING_TELEGRAM_SECRET; exit 1; }
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo MISSING_SUPABASE_SERVER_KEY; exit 1; }
+          node --input-type=module <<'VERIFY'
+          import {Store,TelegramAPI} from './bot/store.mjs';
+          const {TELEGRAM_BOT_TOKEN,SUPABASE_SERVICE_ROLE_KEY}=process.env;
+          try{
+            const api=new TelegramAPI(TELEGRAM_BOT_TOKEN);
+            const bot=await api.call('getMe',{});
+            if(!bot?.is_bot||bot.username?.toLowerCase()!=='assistant_teacher_pro_bot')throw Error('Wrong bot');
+            const hook=await api.call('getWebhookInfo',{});
+            if(hook?.url)throw Error('Webhook configured');
+            console.log('TELEGRAM_BOT_AND_POLLING_VERIFIED');
+          }catch{console.error('TELEGRAM_BOT_VERIFICATION_FAILED');process.exit(1);}
+          try{
+            const store=new Store('https://egopcojrzklvytcuhpov.supabase.co',SUPABASE_SERVICE_ROLE_KEY);
+            const rows=await store.rows('tp_telegram_links',{select:'id',limit:1});
+            if(!Array.isArray(rows))throw Error('Invalid response');
+            console.log('SUPABASE_SERVICE_KEY_VERIFIED');
+          }catch{console.error('SUPABASE_SERVICE_KEY_VERIFICATION_FAILED');process.exit(1);}
           VERIFY
-          else
-            echo 'TELEGRAM_BOT_TOKEN_MISSING: bot remains disabled'
-          fi
-          if [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo 'SUPABASE_SERVER_KEY_CONFIGURED'
-          else
-            echo 'SUPABASE_SERVER_KEY_MISSING: bot cannot activate yet'
-          fi
-      - name: Configure existing VPS SSH deployment credentials
+      - name: Configure existing FirstVDS SSH
         shell: bash
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -74,7 +73,28 @@ jobs:
           chmod 600 "$HOME/.ssh/id_ed25519"
           printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
-      - name: Stage private backend release without sudo
+      - name: Prepare private environment on runner
+        shell: bash
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'ENVFILE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          const pairs={
+            TELEGRAM_BOT_TOKEN:process.env.TELEGRAM_BOT_TOKEN,
+            SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY,
+            SUPABASE_URL:'https://egopcojrzklvytcuhpov.supabase.co'
+          };
+          if(!Object.values(pairs).every(v=>typeof v==='string'&&v.length>0&&!/[\r\n]/.test(v)))
+            throw Error('Invalid secret format');
+          fs.writeFileSync(path.join(process.env.RUNNER_TEMP,'teacherpro-bot.env'),
+            Object.entries(pairs).map(([k,v])=>k+'='+v).join('\n')+'\n',{mode:0o600});
+          console.log('PRIVATE_CONFIG_READY');
+          ENVFILE
+      - name: Install private Node.js and activate cron on FirstVDS without sudo
         shell: bash
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -83,21 +103,32 @@ jobs:
         run: |
           set -euo pipefail
           SSH_OPTS="-i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
-          ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p teacherpro-bot/releases/$RELEASE"
+          ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p teacherpro-bot/releases/$RELEASE teacherpro-bot/bin"
           rsync -az --chmod=F600,D700 -e "ssh $SSH_OPTS" bot/ "$VPS_USER@$VPS_HOST:teacherpro-bot/releases/$RELEASE/"
+          rsync -az --copy-links --chmod=F700 -e "ssh $SSH_OPTS" "$(command -v node)" "$VPS_USER@$VPS_HOST:teacherpro-bot/bin/node"
+          rsync -az --chmod=F600 -e "ssh $SSH_OPTS" "$RUNNER_TEMP/teacherpro-bot.env" "$VPS_USER@$VPS_HOST:teacherpro-bot/bot.env"
+          rm -f "$RUNNER_TEMP/teacherpro-bot.env"
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "bash -s -- '$RELEASE'" <<'REMOTE'
           set -euo pipefail
           release="$1"
           root="$HOME/teacherpro-bot"
-          for file in logic.mjs store.mjs engine.mjs server.mjs setup-webhook.mjs; do
-            test -s "$root/releases/$release/$file"
-          done
+          chmod 700 "$root" "$root/bin" "$root/releases"
+          chmod 600 "$root/bot.env"
+          test -s "$root/releases/$release/cron.mjs"
+          test -s "$root/releases/$release/engine.mjs"
+          "$root/bin/node" --version
           ln -sfn "$root/releases/$release" "$root/current-next"
           mv -Tf "$root/current-next" "$root/current"
-          echo "BOT_SOURCE_STAGED_IN_PRIVATE_HOME"
-          echo "BOT_NODE_BINARY=$(command -v node || echo absent)"
-          echo "BOT_USER_SYSTEMD=$(systemctl --user is-system-running 2>/dev/null || echo unavailable)"
-          echo "BOT_USER_CRON=$(command -v crontab || echo unavailable)"
-          echo "BOT_LINGER=$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null || echo unknown)"
-          echo "BOT_PENDING_ACTIVATION: needs Supabase server key, process supervision and Telegram endpoint"
+          command -v flock >/dev/null
+          command -v crontab >/dev/null
+          if ! pgrep -x cron >/dev/null && ! pgrep -x crond >/dev/null; then
+            echo "CRON_DAEMON_NOT_RUNNING"; exit 1
+          fi
+          "$root/bin/node" --env-file="$root/bot.env" "$root/current/cron.mjs"
+          managed='# teacherpro-bot-worker'
+          command="* * * * * /usr/bin/flock -n \$HOME/teacherpro-bot/cron.lock \$HOME/teacherpro-bot/bin/node --env-file=\$HOME/teacherpro-bot/bot.env \$HOME/teacherpro-bot/current/cron.mjs >>\$HOME/teacherpro-bot/cron.log 2>&1 $managed"
+          (crontab -l 2>/dev/null | grep -v -F "$managed" || true; printf '%s\n' "$command") | crontab -
+          crontab -l | grep -F -q "$managed"
+          echo "TEACHERPRO_BOT_CRON_INSTALLED"
+          echo "TEACHERPRO_BOT_INITIAL_POLL_SUCCEEDED"
           REMOTE
