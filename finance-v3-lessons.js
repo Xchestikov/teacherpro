@@ -9,6 +9,9 @@ saveLesson=function(id){
  const mode=previous?.billingMode||(selected?.billingMode==='per_lesson'?'per_lesson':'subscription');
  if(mode!=='per_lesson')return baseSave(id);
  const amount=Number(document.querySelector('#lHourlyRate')?.value);
+ const priceUnit=document.querySelector('#lPriceUnit')?.value||
+   (previous?window.tpLessonPriceUnit(previous):window.tpLessonPriceUnit(selected));
+ if(!['hour','lesson'].includes(priceUnit))return alert('Выбери способ расчёта стоимости.');
  const duration=Number(document.querySelector('#lDuration')?.value);
  const date=document.querySelector('#lDate')?.value,time=document.querySelector('#lTime')?.value;
  if(!selected||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^(?:0[5-9]|1\d|2[0-3]):[0-5]\d$/.test(time)||lessonMinutes(time)+duration>1440)return alert('Проверь дату и время занятия. Диапазон: с 05:00 до 00:00.');
@@ -16,7 +19,7 @@ saveLesson=function(id){
     Math.abs(amount*100-Math.round(amount*100))>1e-6)return alert('Укажи корректную ставку.');
  if(!Number.isInteger(duration)||duration<15||duration>240)return alert('Проверь длительность занятия.');
  const l={id:id||crypto.randomUUID(),clientId:Number(selected.id),date,time,
-   type:document.querySelector('#lType').value,duration,hourlyRate:amount,
+   type:document.querySelector('#lType').value,duration,hourlyRate:amount,priceUnit,
    status:document.querySelector('#lStatus').value,billingMode:'per_lesson'};
  const recurrence=previous?'none':(document.querySelector('#lRecurrence')?.value||'none');
  const weeks=previous?1:(recurrence==='biweekly'?26:52);
