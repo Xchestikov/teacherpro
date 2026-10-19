@@ -10,6 +10,8 @@ const code = fs.readFileSync(path.join(root, 'cloud-multisession.js'), 'utf8');
 function setup() {
   let backend = {payload: {clients: [{id: 1, name: 'remote'}]}, updated_at: 'r2'};
   const events = {};
+  const queries = [];
+  let beforeFullRead = null;
   let interval, scheduled, renderCount = 0, writes = 0, conflicts = 0, removed = 0;
   let subscribed = false, liveCallback, lastStatus;
   const doc = {
@@ -21,10 +23,26 @@ function setup() {
   const cloudClient = {
     from(table) {
       assert.equal(table, 'app_data');
+      let projection;
       return {
-        select(columns) { assert.equal(columns, 'payload,updated_at'); return this; },
+        select(columns) {
+          assert.ok(['updated_at','payload,updated_at'].includes(columns));
+          projection = columns;
+          queries.push(columns);
+          return this;
+        },
         eq(column, id) { assert.equal(column, 'user_id'); assert.equal(id, ctx.cloudUser.id); return this; },
-        async maybeSingle() { return backend.error ? {data:null, error:backend.error} : {data: structuredClone(backend), error: null}; }
+        async maybeSingle() {
+          if (backend.error) return {data:null, error:backend.error};
+          if (projection === 'payload,updated_at') {
+            if (beforeFullRead) await beforeFullRead();
+            if (backend.fullError) return {data:null, error:backend.fullError};
+          }
+          const data = projection === 'updated_at'
+            ? {updated_at:backend.updated_at}
+            : {payload:backend.payload,updated_at:backend.updated_at};
+          return {data:structuredClone(data), error:null};
+        }
       };
     },
     channel(name) {
@@ -72,7 +90,7 @@ function setup() {
   vm.createContext(ctx);
   vm.runInContext(code, ctx);
   const call = expression => vm.runInContext(expression, ctx);
-  return {ctx,call,events,setBackend(next){backend=next;},counts(){return {renderCount,writes,conflicts,removed,subscribed,lastStatus}},tick:()=>interval?.(),notify:()=>liveCallback?.(),flush:()=>scheduled?.()};
+  return {ctx,call,events,queries,clearQueries(){queries.length=0;},setBeforeFullRead(fn){beforeFullRead=fn;},setBackend(next){backend=next;},counts(){return {renderCount,writes,conflicts,removed,subscribed,lastStatus}},tick:()=>interval?.(),notify:()=>liveCallback?.(),flush:()=>scheduled?.()};
 }
 
 async function run() {
@@ -84,8 +102,12 @@ async function run() {
   assert.equal(t.ctx.db.clients[0].name, 'remote');
   assert.equal(t.ctx.cloudRevision, 'r2');
   assert.equal(t.counts().writes, 1);
+  assert.deepEqual(t.queries, ['updated_at','payload,updated_at'],
+    'new revision triggers one metadata read and one full payload read');
 
+  t.clearQueries();
   assert.equal(await t.call('refreshCloudSnapshot()'), false, 'same revision is a no-op');
+  assert.deepEqual(t.queries, ['updated_at'], 'unchanged revision never downloads the JSON payload');
   assert.equal(t.counts().renderCount, 1);
 
   t.ctx.db.clients[0].name = 'unsaved local';
@@ -94,6 +116,8 @@ async function run() {
   assert.equal(await t.call('refreshCloudSnapshot()'), false);
   assert.equal(t.ctx.db.clients[0].name, 'unsaved local', 'never overwrite local changes');
   assert.equal(t.counts().conflicts, 1, 'conflict should be shown');
+  assert.deepEqual(t.queries, ['updated_at','updated_at'],
+    'dirty local data detects conflict using only the revision');
 
   t.ctx.cloudDirty = false;
   t.ctx.cloudConflict = false;
@@ -101,7 +125,9 @@ async function run() {
   assert.equal(await t.call('refreshCloudSnapshot()'), false, 'do not refresh during a save');
   t.ctx.cloudSyncInFlight = false;
   t.ctx.modalOpen = true;
+  t.clearQueries();
   assert.equal(await t.call('refreshCloudSnapshot()'), false, 'do not erase form drafts');
+  assert.deepEqual(t.queries,['updated_at'], 'open form delays full profile download');
   t.ctx.modalOpen = false;
   assert.equal(await t.call('refreshCloudSnapshot()'), true, 'refresh after editing');
   assert.equal(t.ctx.db.clients[0].name, 'new remote');
@@ -112,12 +138,40 @@ async function run() {
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(t.ctx.db.clients[0].name, 'realtime', 'realtime callback should fetch cloud snapshot');
 
+  // If the user starts editing while the full fetch is in flight, preserve it.
+  t.setBackend({payload:{clients:[{id:1,name:'another remote'}]},updated_at:'r5'});
+  t.setBeforeFullRead(async () => {
+    t.ctx.db.clients[0].name = 'local edit during request';
+    t.ctx.cloudDirty = true;
+  });
+  t.clearQueries();
+  assert.equal(await t.call('refreshCloudSnapshot()'), false);
+  assert.deepEqual(t.queries,['updated_at','payload,updated_at']);
+  assert.equal(t.ctx.db.clients[0].name, 'local edit during request');
+  assert.equal(t.counts().conflicts, 2, 'late local edit triggers conflict rather than lost data');
+  t.setBeforeFullRead(null);
+  t.ctx.cloudDirty = false;
+  t.ctx.cloudConflict = false;
+  t.setBackend({payload:{clients:[{id:1,name:'realtime'}]},updated_at:'r4'});
+
+  // Failure during a payload download must accumulate errors across metadata checks.
+  t.setBackend({payload:{clients:[{id:1,name:'new remote'}]},updated_at:'r5',
+    fullError:{message:'temporary payload failure'}});
+  await t.call('refreshCloudSnapshot()');
+  await t.call('refreshCloudSnapshot()');
+  await t.call('refreshCloudSnapshot()');
+  assert.equal(t.counts().lastStatus.state, 'error', 'warn after repeated payload download failures');
+  t.setBackend({payload:{clients:[{id:1,name:'new remote'}]},updated_at:'r5'});
+  assert.equal(await t.call('refreshCloudSnapshot()'), true, 'successful payload download restores sync');
+  assert.equal(t.ctx.db.clients[0].name, 'new remote');
+  assert.equal(t.counts().lastStatus.state, 'ok');
+
   t.setBackend({error:{message:'temporary network failure'}});
   await t.call('refreshCloudSnapshot()');
   await t.call('refreshCloudSnapshot()');
   await t.call('refreshCloudSnapshot()');
   assert.equal(t.counts().lastStatus.state, 'error', 'warn after repeated polling failures');
-  t.setBackend({payload:{clients:[{id:1,name:'realtime'}]}, updated_at:'r4'});
+  t.setBackend({payload:{clients:[{id:1,name:'new remote'}]}, updated_at:'r5'});
   await t.call('refreshCloudSnapshot()');
   assert.equal(t.counts().lastStatus.state, 'ok', 'recovered connection clears warning');
 
@@ -131,7 +185,7 @@ async function run() {
   assert.ok(app.includes('stopCloudObserver()'), 'observer should stop after logout');
   assert.ok(!html.includes('cloudStatusGlobal'), 'global green status banner must be absent');
   assert.ok(html.includes('./cloud-multisession.js'), 'observer must load after app');
-  console.log('OK: cross-session cloud refresh, draft safety, conflict protection, independent logout, clean header');
+  console.log('OK: 5-second metadata polling, conditional payload fetching, draft safety, conflict protection, independent logout, clean header');
 }
 
 run().catch(error=>{console.error(error);process.exitCode=1;});
