@@ -12,11 +12,12 @@
    if(!cloudUser||!cloudClient)return;
    const [links,prefs]=await Promise.all([
      cloudClient.from('tp_telegram_links').select('id,role,student_id,status,updated_at')
-       .eq('owner_id',cloudUser.id).neq('status','revoked'),
+       .eq('owner_id',cloudUser.id),
      cloudClient.from('tp_telegram_prefs').select('*').eq('owner_id',cloudUser.id).maybeSingle()
    ]);
    if(links.error||prefs.error)throw new Error('Не удалось получить настройки Telegram.');
-   state.links=links.data||[];state.prefs=prefs.data||null;state.loaded=true;
+   state.links=Array.isArray(links.data)?links.data.filter(x=>x.status!=='revoked'):[];
+   state.prefs=prefs.data&&prefs.data.owner_id?prefs.data:null;state.loaded=true;
  };
  const status=(role,student)=>state.links.find(l=>l.role===role&&
    (role==='teacher'||String(l.student_id)===String(student)));
