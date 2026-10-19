@@ -23,7 +23,7 @@ export class Store {
  async connections(params={}){return this.rows('tp_telegram_links',{select:'*',...params,limit:1000});}
  async prefs(owner){const x=await this.rows('tp_telegram_prefs',{owner_id:'eq.'+owner,select:'*',limit:1});
    return x?.[0]||{owner_id:owner,timezone:'UTC',reminder_24h:true,reminder_2h:false,teacher_digest:false,digest_time:'08:00',changes_enabled:true};}
- async claim(link,key){return this.rpc('tp_telegram_claim_delivery',{p_link:link,p_key:key})===true;}
+ async claim(link,key){return (await this.rpc('tp_telegram_claim_delivery',{p_link:link,p_key:key}))===true;}
  async deliveryStatus(link,key,status,error=''){
    return this.request('PATCH','tp_telegram_delivery',{params:{link_id:'eq.'+link,dedupe_key:'eq.'+key},body:{
      status,last_error:error.slice(0,160)||null,...(status==='sent'?{sent_at:new Date().toISOString()}: {})
