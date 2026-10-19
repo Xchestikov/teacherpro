@@ -108,10 +108,9 @@ async function run() {
 
   t.setBackend({payload:{clients:[{id:1,name:'realtime'}]},updated_at:'r4'});
   t.notify();
-  assert.equal(typeof t.flush(), 'object', 'realtime event should schedule a refresh');
-  await t.call('new Promise(resolve => setTimeout(resolve, 0))').catch(()=>{}); // mock timers do not advance; direct read below
-  assert.equal(await t.call('refreshCloudSnapshot()'), true);
-  assert.equal(t.ctx.db.clients[0].name, 'realtime');
+  t.flush();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(t.ctx.db.clients[0].name, 'realtime', 'realtime callback should fetch cloud snapshot');
 
   t.call('stopCloudObserver()');
   assert.equal(t.counts().removed, 1, 'channel is removed when account changes');
