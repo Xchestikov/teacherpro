@@ -269,12 +269,12 @@ window.tpCloseSubscription=(id,switchToFact=false)=>{
  clearInvoices(s.id);
  if(switchToFact){
    if(typeof window.tpApplyBillingPolicy==='function')
-     window.tpApplyBillingPolicy(c,{billingMode:'per_lesson',hourlyRate:rate,preferredDuration:Number(c.preferredDuration)||60});
-   else{c.billingMode='per_lesson';c.hourlyRate=rate;}
+     window.tpApplyBillingPolicy(c,{billingMode:'per_lesson',hourlyRate:rate,preferredDuration:Number(c.preferredDuration)||60,priceUnit:'hour'});
+   else{c.billingMode='per_lesson';c.hourlyRate=rate;c.priceUnit='hour';}
    for(const l of db.lessons){
      if(String(l.clientId)===String(c.id)&&l.status==='planned'&&l.date>=todayISO()&&
         !l.consumedSubscriptionId&&!l.consumedClientFallback){
-       l.billingMode='per_lesson';l.hourlyRate=rate;
+       l.billingMode='per_lesson';l.hourlyRate=rate;l.priceUnit='hour';
      }
    }
  }
