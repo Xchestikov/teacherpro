@@ -41,8 +41,7 @@ payments=function(){
    const b=tpLessonBalance(c.id);credit+=b.credit;
    if(!b.due)continue;
    accounts++;debt+=b.due;
-   const overdue=Boolean(b.oldest&&b.oldest<todayISO());
-   if(overdue){late+=b.due;overdueCount++;}
+   const overdue=false; // No explicit due date: lesson accrual is not overdue.
    const row=document.createElement('tr');
    row.dataset.status=overdue?'overdue':'pending';
    row.dataset.search=(c.name+' занятия задолженность').toLowerCase();
@@ -50,7 +49,7 @@ payments=function(){
    row.innerHTML='<td class="person">'+htmlSafe(c.name)+'</td>'+
      '<td>'+dateFmt(b.oldest||todayISO())+'<div class="muted">Начисления уроков</div></td>'+
      '<td>'+fmt(b.due/100)+'</td>'+
-     '<td>'+b.count+' уроков · оплата по факту</td>'+
+     '<td>'+b.unpaidCount+' неоплаченных занятий · оплата по факту</td>'+
      '<td><span class="status warn">'+(overdue?'Просрочено':'Ожидает оплаты')+'</span></td>'+
      '<td class="finance-actions"><button class="link-btn">Получить оплату</button></td>';
    row.querySelector('button').onclick=()=>openPayment(c.id);tbody.prepend(row);
