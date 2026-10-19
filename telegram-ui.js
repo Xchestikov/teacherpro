@@ -84,7 +84,7 @@
  window.tpTgInvite=async(role,studentId)=>{
    if(!cloudClient||!cloudUser)return;
    if(!configured()){
-     const target=document.querySelector('#tpTelegramFeedback')||document.querySelector('#tpTelegramStudent');
+     const target=document.querySelector(role==='student'?'#tpTelegramStudent':'#tpTelegramFeedback');
      if(target)target.textContent='Бот пока не активирован. Подключение станет доступно после запуска.';
      return;
    }
