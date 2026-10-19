@@ -734,3 +734,8 @@ body.teacherpro-loading .top-actions .avatar{visibility:hidden}
 .calendar-grid .calendar-cell:has(> .calendar-event):hover{z-index:7}
 .calendar-grid .calendar-event{position:absolute;z-index:6}
 .calendar-grid .calendar-cell.drop-target{z-index:8}
+
+/* Keep successful cloud sync out of the header; warn only when saving is unsafe. */
+.cloud-issue{display:inline-flex;align-items:center;max-width:210px;white-space:normal;text-align:left;padding:8px 11px;border:1px solid #e5aeb3;border-radius:10px;color:#a03b48;background:#fff0f0;font-size:12px;line-height:1.35}
+.cloud-issue:hover{background:#ffe6e6}
+.cloud-issue[hidden]{display:none!important}

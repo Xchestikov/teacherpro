@@ -18,6 +18,7 @@ jobs:
       - name: JavaScript syntax
         run: |
           node --check app.js
+          node --check cloud-multisession.js
           node --check calendar-stage1.js
           node --check soft-editorial.js
           node --check teacherpro-polish.js
@@ -39,6 +40,8 @@ jobs:
           node --check tests/browser.spec.js
           node --check tests/mobile-webkit.spec.js
           node --check tests/check-release-assets.js
+      - name: Cross-session synchronization invariants
+        run: node tests/cloud-multisession.test.cjs
       - name: Every referenced file must be in release
         run: node tests/check-release-assets.js
 
