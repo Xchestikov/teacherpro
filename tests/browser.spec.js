@@ -1198,3 +1198,68 @@ test('New pending subscription invoice has unambiguous money-balance description
  await expect(page.locator('#paymentRows')).toContainText('Осталось 8 из 10 занятий');
  expect(errors).toEqual([]);
 });
+
+
+test('Custom student lesson duration saves arbitrary minutes and populates new lessons',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await page.locator('#addBtn').click();
+ await page.locator('#fName').fill('Своя длительность');
+ await page.locator('#fBirthday').fill('12.10');
+ await expect(page.locator('#fLessonDuration')).toHaveValue('60');
+ await expect(page.locator('#fCustomDurationWrap')).toBeHidden();
+ await page.locator('#fLessonDuration').selectOption('custom');
+ await expect(page.locator('#fCustomDurationWrap')).toBeVisible();
+ await expect(page.locator('#fCustomDuration')).toHaveValue('');
+ await page.locator('#fCustomDuration').fill('50');
+ await page.getByRole('button',{name:'Добавить ученика'}).click();
+ expect(await page.evaluate(()=>db.clients[0].preferredDuration)).toBe(50);
+ await page.evaluate(()=>openClient(db.clients[0].id,'overview'));
+ await expect(page.locator('#fLessonDuration')).toHaveValue('custom');
+ await expect(page.locator('#fCustomDuration')).toHaveValue('50');
+ await page.locator('#fCustomDuration').fill('75');
+ await page.getByRole('button',{name:'Сохранить профиль'}).click();
+ expect(await page.evaluate(()=>db.clients[0].preferredDuration)).toBe(75);
+ await page.evaluate(()=>openLesson());
+ await expect(page.locator('#lDuration')).toHaveValue('75');
+ await expect(page.locator('#lDuration option[value="75"]')).toHaveCount(1);
+ await page.locator('#modalClose').click();
+ await page.evaluate(()=>syncCloud());await page.reload();
+ await page.evaluate(()=>openClient(db.clients[0].id,'overview'));
+ await expect(page.locator('#fCustomDuration')).toHaveValue('75');
+ expect(errors).toEqual([]);
+});
+
+test('Custom student lesson duration validates bounds without saving invalid values',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await page.locator('#addBtn').click();
+ await page.locator('#fName').fill('Валидация длительности');
+ await page.locator('#fBirthday').fill('12.10');
+ await page.locator('#fLessonDuration').selectOption('custom');
+ const dialogs=[];
+ page.on('dialog',d=>{dialogs.push(d.message());d.dismiss();});
+ for(const invalid of ['14','241','70.5']){
+   await page.locator('#fCustomDuration').fill(invalid);
+   await page.getByRole('button',{name:'Добавить ученика'}).click();
+   expect(await page.evaluate(()=>db.clients.length)).toBe(0);
+ }
+ await page.locator('#fCustomDuration').fill('65');
+ await page.getByRole('button',{name:'Добавить ученика'}).click();
+ expect(await page.evaluate(()=>db.clients[0].preferredDuration)).toBe(65);
+ expect(dialogs).toHaveLength(3);
+ expect(errors).toEqual([]);
+});
+
+test('Changing lesson student updates preferred custom duration',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await addStudent(page,'Стандартная длительность','04.05');
+ await addStudent(page,'Персональная длительность','05.05');
+ await page.evaluate(()=>{
+   db.clients[1].preferredDuration=55;
+   openLesson(null,todayISO(),'10:00');
+ });
+ await expect(page.locator('#lDuration')).toHaveValue('60');
+ await page.locator('#lClient').selectOption(String(await page.evaluate(()=>db.clients[1].id)));
+ await expect(page.locator('#lDuration')).toHaveValue('55');
+ await expect(page.locator('#lDuration option[value="55"]')).toHaveCount(1);
+ expect(errors).toEqual([]);
+});
