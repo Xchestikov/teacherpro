@@ -14,6 +14,14 @@ payments=function(){
    const remove=actions.querySelectorAll('button')[2];
    if(remove)remove.textContent='Отменить запись';
    if(p.financeV3Lesson)row.children[3].textContent='Оплата занятий';
+   const owner=client(p.clientId);
+   if(p.status==='paid'&&p.type==='single'&&!p.subscriptionId&&
+      p.financeV3Lesson!==true&&owner?.billingMode==='per_lesson'){
+     const btn=document.createElement('button');btn.type='button';btn.className='link-btn';
+     btn.textContent='Зачесть за занятия';
+     btn.onclick=()=>window.tpCreditLegacyPayment(p.id);
+     actions.append(btn);
+   }
    if(p.subscriptionId){
      const sub=db.subscriptions.find(x=>String(x.id)===String(p.subscriptionId));
      if(sub){
