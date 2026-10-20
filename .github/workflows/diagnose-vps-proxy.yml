@@ -129,3 +129,30 @@ jobs:
             fi
           done
           REMOTE
+
+      - name: Diagnose local HTTPS routing without altering Nginx
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_DOMAIN: ${{ secrets.VPS_DOMAIN }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_DOMAIN"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" "$VPS_USER@$VPS_HOST" "bash -s -- '$VPS_DOMAIN'" <<'REMOTE'
+          set -euo pipefail
+          domain="$1"
+          for p in HTTPS_PROXY HTTP_PROXY ALL_PROXY https_proxy http_proxy all_proxy NO_PROXY no_proxy; do
+            if test -n "${!p:-}"; then echo "ENV_${p}=set"; else echo "ENV_${p}=unset"; fi
+          done
+          for endpoint in / /supabase/auth/v1/health /vendor/supabase-sdk.js; do
+            headers="$(mktemp)"
+            code="$(curl --noproxy '*' -4 -sS --max-time 9 --connect-timeout 5 -o /dev/null -D "$headers" -w '%{http_code}' --resolve "$domain:443:127.0.0.1" "https://$domain$endpoint" || true)"
+            printf 'LOCAL_ROUTE:%s status=%s\n' "$endpoint" "$code"
+            grep -iE '^(HTTP/|location:|x-teacherpro-proxy:|content-type:|server:)' "$headers" | tr -d '\r' | sed -E 's#https?://[^ /]+#https://<redacted-host>#Ig' | head -n 10 || true
+            rm -f "$headers"
+          done
+          echo 'NGINX_DECLARATIONS_START'
+          grep -E '^[[:space:]]*(server[[:space:]]*\{|listen[[:space:]]|server_name[[:space:]]|location[[:space:]]|root[[:space:]]|include[[:space:]]|return[[:space:]]|proxy_pass[[:space:]])' /etc/nginx/conf.d/teacherpro.conf | sed -E 's/(server_name)[[:space:]].*/\1 <redacted>;/; s#https?://[^ ;]+#https://<redacted-host>#Ig' || true
+          echo 'NGINX_DECLARATIONS_END'
+          REMOTE
