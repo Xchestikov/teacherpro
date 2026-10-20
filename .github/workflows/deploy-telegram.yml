@@ -30,7 +30,8 @@ jobs:
           set -euo pipefail
           node --check bot/cron.mjs
           node --check bot/telegram-proxy.mjs
-          node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs
+          node --check bot/quattro-vless.mjs
+          node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs bot/quattro-vless.test.mjs
       - name: Verify both secrets against Telegram and Supabase without revealing contents
         shell: bash
         env:
@@ -80,6 +81,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_PROXY_URL: ${{ secrets.TELEGRAM_PROXY_URL }}
+          QUATTRO_VLESS_URI: ${{ secrets.QUATTRO_VLESS_URI }}
         run: |
           set -euo pipefail
           node --input-type=module <<'ENVFILE'
@@ -90,7 +92,9 @@ jobs:
             SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY,
             SUPABASE_URL:'https://egopcojrzklvytcuhpov.supabase.co'
           };
-          if(process.env.TELEGRAM_PROXY_URL){
+          if(process.env.QUATTRO_VLESS_URI){
+            pairs.TELEGRAM_PROXY_URL='socks5h://127.0.0.1:10808';
+          } else if(process.env.TELEGRAM_PROXY_URL){
             pairs.TELEGRAM_PROXY_URL=process.env.TELEGRAM_PROXY_URL;
           }
           if(!Object.values(pairs).every(v=>typeof v==='string'&&v.length>0&&!/[\r\n]/.test(v)))
@@ -99,6 +103,27 @@ jobs:
             Object.entries(pairs).map(([k,v])=>k+'='+v).join('\n')+'\n',{mode:0o600});
           console.log('PRIVATE_CONFIG_READY');
           ENVFILE
+          if [ -n "$QUATTRO_VLESS_URI" ]; then
+            XRAY_PRIVATE_CONFIG_FILE="$RUNNER_TEMP/teacherpro-xray.json" node bot/quattro-vless.mjs
+          else
+            echo 'QUATTRO_VLESS_URI_NOT_CONFIGURED'
+          fi
+      - name: Fetch hash-verified official Xray binary for QuattroVPN
+        shell: bash
+        env:
+          QUATTRO_VLESS_URI: ${{ secrets.QUATTRO_VLESS_URI }}
+        run: |
+          set -euo pipefail
+          if [ -z "$QUATTRO_VLESS_URI" ]; then exit 0; fi
+          # Official upstream Xray release, SHA-256 verified before extraction.
+          url="https://github.com/XTLS/Xray-core/releases/download/v26.3.27/Xray-linux-64.zip"
+          curl -fL --retry 3 --connect-timeout 10 --max-time 90 "$url" -o "$RUNNER_TEMP/teacherpro-xray.zip"
+          echo "23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae  $RUNNER_TEMP/teacherpro-xray.zip" | sha256sum -c -
+          install -d -m 700 "$RUNNER_TEMP/teacherpro-xray-bin"
+          unzip -jo "$RUNNER_TEMP/teacherpro-xray.zip" xray -d "$RUNNER_TEMP/teacherpro-xray-bin" >/dev/null
+          chmod 700 "$RUNNER_TEMP/teacherpro-xray-bin/xray"
+          rm -f "$RUNNER_TEMP/teacherpro-xray.zip"
+          echo 'OFFICIAL_XRAY_HASH_VERIFIED'
       - name: Install private Node.js and activate cron on FirstVDS without sudo
         shell: bash
         env:
@@ -113,12 +138,24 @@ jobs:
           rsync -az --copy-links --chmod=F700 -e "ssh $SSH_OPTS" "$(command -v node)" "$VPS_USER@$VPS_HOST:teacherpro-bot/bin/node"
           rsync -az --chmod=F600 -e "ssh $SSH_OPTS" "$RUNNER_TEMP/teacherpro-bot.env" "$VPS_USER@$VPS_HOST:teacherpro-bot/bot.env"
           rm -f "$RUNNER_TEMP/teacherpro-bot.env"
+          if [ -s "$RUNNER_TEMP/teacherpro-xray.json" ]; then
+            rsync -az --chmod=F700 -e "ssh $SSH_OPTS" "$RUNNER_TEMP/teacherpro-xray-bin/xray" "$VPS_USER@$VPS_HOST:teacherpro-bot/bin/xray"
+            rsync -az --chmod=F600 -e "ssh $SSH_OPTS" "$RUNNER_TEMP/teacherpro-xray.json" "$VPS_USER@$VPS_HOST:teacherpro-bot/xray.json"
+            rm -f "$RUNNER_TEMP/teacherpro-xray.json"
+          else
+            ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" 'rm -f "$HOME/teacherpro-bot/xray.json"'
+          fi
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "bash -s -- '$RELEASE'" <<'REMOTE'
           set -euo pipefail
           release="$1"
           root="$HOME/teacherpro-bot"
           chmod 700 "$root" "$root/bin" "$root/releases"
           chmod 600 "$root/bot.env"
+          if test -f "$root/xray.json"; then
+            chmod 600 "$root/xray.json"
+            "$root/bin/xray" run -test -c "$root/xray.json" >/dev/null
+            echo "XRAY_LOOPBACK_CONFIG_VALID"
+          fi
           test -s "$root/releases/$release/cron.mjs"
           test -s "$root/releases/$release/engine.mjs"
           "$root/bin/node" --version
@@ -129,9 +166,9 @@ jobs:
           if ! pgrep -x cron >/dev/null && ! pgrep -x crond >/dev/null; then
             echo "CRON_DAEMON_NOT_RUNNING"; exit 1
           fi
-          "$root/bin/node" --env-file="$root/bot.env" "$root/current/cron.mjs"
+          bash "$root/current/run-worker.sh"
           managed='# teacherpro-bot-worker'
-          command="* * * * * /usr/bin/flock -n \$HOME/teacherpro-bot/cron.lock \$HOME/teacherpro-bot/bin/node --env-file=\$HOME/teacherpro-bot/bot.env \$HOME/teacherpro-bot/current/cron.mjs >>\$HOME/teacherpro-bot/cron.log 2>&1 $managed"
+          command="* * * * * /usr/bin/flock -n \$HOME/teacherpro-bot/cron.lock /bin/bash \$HOME/teacherpro-bot/current/run-worker.sh >>\$HOME/teacherpro-bot/cron.log 2>&1 $managed"
           (crontab -l 2>/dev/null | grep -v -F "$managed" || true; printf '%s\n' "$command") | crontab -
           crontab -l | grep -F -q "$managed"
           echo "TEACHERPRO_BOT_CRON_INSTALLED"
