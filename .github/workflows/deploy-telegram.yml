@@ -29,7 +29,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check bot/cron.mjs
-          node --test bot/bot.test.mjs bot/cron.test.mjs
+          node --check bot/telegram-proxy.mjs
+          node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs
       - name: Verify both secrets against Telegram and Supabase without revealing contents
         shell: bash
         env:
@@ -78,6 +79,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_PROXY_URL: ${{ secrets.TELEGRAM_PROXY_URL }}
         run: |
           set -euo pipefail
           node --input-type=module <<'ENVFILE'
@@ -88,6 +90,9 @@ jobs:
             SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY,
             SUPABASE_URL:'https://egopcojrzklvytcuhpov.supabase.co'
           };
+          if(process.env.TELEGRAM_PROXY_URL){
+            pairs.TELEGRAM_PROXY_URL=process.env.TELEGRAM_PROXY_URL;
+          }
           if(!Object.values(pairs).every(v=>typeof v==='string'&&v.length>0&&!/[\r\n]/.test(v)))
             throw Error('Invalid secret format');
           fs.writeFileSync(path.join(process.env.RUNNER_TEMP,'teacherpro-bot.env'),
