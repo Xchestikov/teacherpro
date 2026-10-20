@@ -83,3 +83,26 @@ jobs:
           result=$(curl -fsS --max-time 9 --resolve "$domain:443:127.0.0.1" "https://$domain/teacherpro-php-probe-20261020.php" || true)
           if test "$result" = 'TEACHERPRO_PHP_EXECUTES'; then echo 'PHP_PROBE=EXECUTED'; else echo 'PHP_PROBE=NOT_EXECUTED'; fi
           REMOTE
+
+      - name: Check domain configuration write access and existing routes
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          for p in /etc/nginx/conf.d /etc/nginx/conf.d/teacherpro.conf /etc/nginx/nginx.conf; do
+            base=$(basename "$p")
+            if test -r "$p"; then echo "CONFIG_${base}_READ=yes"; else echo "CONFIG_${base}_READ=no"; fi
+            if test -w "$p"; then echo "CONFIG_${base}_WRITE=yes"; else echo "CONFIG_${base}_WRITE=no"; fi
+          done
+          p=/etc/nginx/conf.d/teacherpro.conf
+          if test -r "$p"; then
+            if grep -q 'location = /telegram/webhook' "$p"; then echo 'WEBHOOK_ROUTE_IN_NGINX=yes'; else echo 'WEBHOOK_ROUTE_IN_NGINX=no'; fi
+            if grep -q 'fastcgi_pass' "$p"; then echo 'PHP_FPM_IN_SITE=yes'; else echo 'PHP_FPM_IN_SITE=no'; fi
+            if grep -q 'include ' "$p"; then echo 'INCLUDES_IN_SITE=yes'; else echo 'INCLUDES_IN_SITE=no'; fi
+          fi
+          REMOTE
+          if ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=7 -o IdentitiesOnly=yes -i "$HOME/.ssh/id_ed25519" "root@$VPS_HOST" 'test "$(id -u)" = 0' >/dev/null 2>&1; then echo 'ROOT_AUTH_WITH_EXISTING_KEY=yes'; else echo 'ROOT_AUTH_WITH_EXISTING_KEY=no'; fi
