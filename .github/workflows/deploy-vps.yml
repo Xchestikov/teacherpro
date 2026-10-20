@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'vendor/supabase-sdk.js'
       - 'app.js'
       - 'cloud-multisession.js'
       - 'telegram-config.js'
@@ -67,7 +68,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html app.js cloud-multisession.js telegram-config.js telegram-ui.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css finance-v2.js finance-v2.css finance-v3-core.js finance-v3-lessons.js finance-v3-ledger.js finance-v3-edit.js finance-v3-void.js finance-v3-new-payment.js finance-v3-edit-form.js finance-v3-payments-view.js finance-v3.css schedule-series.js schedule-series.css student-v2.js student-v2.css mobile-ui-v2.js mobile-ui-v2.css calendar-colors.js calendar-colors.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do
+          for f in index.html app.js cloud-multisession.js telegram-config.js telegram-ui.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css finance-v2.js finance-v2.css finance-v3-core.js finance-v3-lessons.js finance-v3-ledger.js finance-v3-edit.js finance-v3-void.js finance-v3-new-payment.js finance-v3-edit-form.js finance-v3-payments-view.js finance-v3.css schedule-series.js schedule-series.css student-v2.js student-v2.css mobile-ui-v2.js mobile-ui-v2.css calendar-colors.js calendar-colors.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js vendor/supabase-sdk.js manifest.webmanifest icon.svg; do
             test -s "$f" || { echo "Missing file: $f"; exit 1; }
           done
           node --check app.js
@@ -91,6 +92,7 @@ jobs:
           node --check student-v2.js
           node --check mobile-ui-v2.js
           node --check calendar-colors.js
+          node --check vendor/supabase-sdk.js
           node --check sw.js
 
       - name: Set up SSH from GitHub encrypted secrets
@@ -121,10 +123,10 @@ jobs:
           SSH_OPTS="-i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "mkdir -p /srv/teacherpro/releases/$RELEASE"
           rsync -az --relative --chmod=F644,D755 -e "ssh $SSH_OPTS" \
-            index.html app.js cloud-multisession.js telegram-config.js telegram-ui.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css finance-v2.js finance-v2.css finance-v3-core.js finance-v3-lessons.js finance-v3-ledger.js finance-v3-edit.js finance-v3-void.js finance-v3-new-payment.js finance-v3-edit-form.js finance-v3-payments-view.js finance-v3.css schedule-series.js schedule-series.css student-v2.js student-v2.css mobile-ui-v2.js mobile-ui-v2.css calendar-colors.js calendar-colors.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg \
+            index.html app.js cloud-multisession.js telegram-config.js telegram-ui.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css finance-v2.js finance-v2.css finance-v3-core.js finance-v3-lessons.js finance-v3-ledger.js finance-v3-edit.js finance-v3-void.js finance-v3-new-payment.js finance-v3-edit-form.js finance-v3-payments-view.js finance-v3.css schedule-series.js schedule-series.css student-v2.js student-v2.css mobile-ui-v2.js mobile-ui-v2.css calendar-colors.js calendar-colors.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js vendor/supabase-sdk.js manifest.webmanifest icon.svg \
             "$VPS_USER@$VPS_HOST:/srv/teacherpro/releases/$RELEASE/"
           ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "set -e; for file in index.html app.js cloud-multisession.js telegram-config.js telegram-ui.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css finance-v2.js finance-v2.css finance-v3-core.js finance-v3-lessons.js finance-v3-ledger.js finance-v3-edit.js finance-v3-void.js finance-v3-new-payment.js finance-v3-edit-form.js finance-v3-payments-view.js finance-v3.css schedule-series.js schedule-series.css student-v2.js student-v2.css mobile-ui-v2.js mobile-ui-v2.css calendar-colors.js calendar-colors.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js manifest.webmanifest icon.svg; do \
+            "set -e; for file in index.html app.js cloud-multisession.js telegram-config.js telegram-ui.js calendar-stage1.js soft-editorial.js teacherpro-polish.js style.css soft-editorial.css teacherpro-polish.css calendar-v2.js calendar-v2.css finance-v2.js finance-v2.css finance-v3-core.js finance-v3-lessons.js finance-v3-ledger.js finance-v3-edit.js finance-v3-void.js finance-v3-new-payment.js finance-v3-edit-form.js finance-v3-payments-view.js finance-v3.css schedule-series.js schedule-series.css student-v2.js student-v2.css mobile-ui-v2.js mobile-ui-v2.css calendar-colors.js calendar-colors.css assets/studio-botanical.svg assets/studio-mark.svg sw.js cloud-config.js vendor/supabase-sdk.js manifest.webmanifest icon.svg; do \
                test -s /srv/teacherpro/releases/$RELEASE/\$file || exit 1; \
              done; \
              ln -sfn /srv/teacherpro/releases/$RELEASE /srv/teacherpro/current-next && \
@@ -144,7 +146,7 @@ jobs:
             "$VPS_USER@$VPS_HOST" "bash -s -- '$VPS_DOMAIN'" <<'REMOTE'
           set -euo pipefail
           domain="$1"
-          for path in "" style.css soft-editorial.css teacherpro-polish.css calendar-v2.css finance-v2.css finance-v3.css schedule-series.css student-v2.css mobile-ui-v2.css calendar-colors.css app.js cloud-multisession.js telegram-config.js telegram-ui.js calendar-stage1.js soft-editorial.js teacherpro-polish.js calendar-v2.js telegram-config.js telegram-ui.js finance-v2.js finance-v3-core.js finance-v3-lessons.js finance-v3-ledger.js finance-v3-edit.js finance-v3-void.js finance-v3-new-payment.js finance-v3-edit-form.js finance-v3-payments-view.js schedule-series.js student-v2.js mobile-ui-v2.js calendar-colors.js sw.js assets/studio-botanical.svg assets/studio-mark.svg; do
+          for path in "" style.css soft-editorial.css teacherpro-polish.css calendar-v2.css finance-v2.css finance-v3.css schedule-series.css student-v2.css mobile-ui-v2.css calendar-colors.css app.js cloud-multisession.js telegram-config.js telegram-ui.js calendar-stage1.js soft-editorial.js teacherpro-polish.js calendar-v2.js telegram-config.js telegram-ui.js finance-v2.js finance-v3-core.js finance-v3-lessons.js finance-v3-ledger.js finance-v3-edit.js finance-v3-void.js finance-v3-new-payment.js finance-v3-edit-form.js finance-v3-payments-view.js schedule-series.js student-v2.js mobile-ui-v2.js calendar-colors.js sw.js vendor/supabase-sdk.js assets/studio-botanical.svg assets/studio-mark.svg; do
             curl --fail --silent --show-error --location --max-time 15 \
               --resolve "$domain:443:127.0.0.1" "https://$domain/$path" -o /dev/null
           done
