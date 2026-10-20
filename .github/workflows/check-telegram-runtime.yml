@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/check-telegram-runtime.yml'
+  workflow_run:
+    workflows: ['Deploy TeacherPro Telegram backend to FirstVDS']
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -12,6 +15,7 @@ permissions:
 
 jobs:
   check_bot:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: production-vps
     timeout-minutes: 5
@@ -31,7 +35,7 @@ jobs:
           printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/id_ed25519"
           printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
-      - name: Confirm cron actually ran after installation (no secret output)
+      - name: Confirm persistent worker, reminders and private secrets
         shell: bash
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -43,26 +47,34 @@ jobs:
           root="$HOME/teacherpro-bot"
           test -x "$root/bin/xray"
           test -x "$root/bin/node"
-          test -s "$root/current/run-worker.sh"
+          test -s "$root/current/supervisor.sh"
+          test -s "$root/current/daemon.mjs"
+          test -s "$root/current/reminders.mjs"
           test -s "$root/bot.env"
           test -s "$root/xray.json"
           for file in "$root/bot.env" "$root/xray.json"; do
-            mode=$(stat -c '%a' "$file")
-            test "$mode" = 600 || { echo "PRIVATE_FILE_MODE_INVALID"; exit 1; }
+            test "$(stat -c '%a' "$file")" = 600 || {
+              echo "PRIVATE_FILE_MODE_INVALID"; exit 1;
+            }
           done
-          crontab -l | grep -F -q '# teacherpro-bot-worker' || {
-            echo "TELEGRAM_CRON_NOT_INSTALLED"; exit 1;
+          crontab -l | grep -F -q '# teacherpro-fast-watchdog' || {
+            echo "FAST_WATCHDOG_MISSING"; exit 1;
           }
-          log="$root/cron.log"
-          if ! test -s "$log"; then echo "TELEGRAM_CRON_NEVER_EXECUTED"; exit 1; fi
-          age=$(( $(date +%s) - $(stat -c '%Y' "$log") ))
-          if (( age < 0 || age > 200 )); then
-            echo "TELEGRAM_CRON_LOG_STALE"; exit 1
+          crontab -l | grep -F -q '# teacherpro-reminder-worker' || {
+            echo "REMINDER_CRON_MISSING"; exit 1;
+          }
+          if crontab -l | grep -F -q '# teacherpro-bot-worker'; then
+            echo "LEGACY_DUPLICATE_CRON_PRESENT"; exit 1
           fi
-          last=$(grep -E 'TEACHERPRO_CRON_(OK|ERROR)|TELEGRAM_XRAY_' "$log" | tail -1 || true)
-          if [[ "$last" != *TEACHERPRO_CRON_OK* ]]; then
-            echo "TELEGRAM_CRON_LATEST_RUN_FAILED"; exit 1
+          /bin/bash "$root/current/supervisor.sh" status
+          prev="$(stat -c '%Y' "$root/fast.heartbeat")"
+          sleep 15
+          /bin/bash "$root/current/supervisor.sh" status
+          next="$(stat -c '%Y' "$root/fast.heartbeat")"
+          if (( next <= prev )); then
+            echo "FAST_POLL_HEARTBEAT_NOT_ADVANCING"; exit 1
           fi
-          echo "TELEGRAM_CRON_PERSISTENT_AND_HEALTHY"
+          echo "TELEGRAM_FAST_WORKER_PERSISTENT"
+          echo "TELEGRAM_REMINDERS_SCHEDULED"
           echo "TELEGRAM_SECRETS_PERMISSIONS_OK"
           REMOTE
