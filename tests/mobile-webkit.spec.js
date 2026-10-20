@@ -314,3 +314,32 @@ test('iPhone Telegram card is responsive and both Telegram Web and manual /start
  await expect(page.locator('#tpTelegramStudent a[href^="https://web.telegram.org/k/"]')).toBeVisible();
  expect(errors).toEqual([]);
 });
+
+test('Parent onboarding from student card uses separately scoped invitation and approval',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
+ await page.route('https://fonts.googleapis.com/**',r=>r.abort());
+ await page.route('https://fonts.gstatic.com/**',r=>r.abort());
+ await page.addInitScript({content:mock});
+ await page.goto('/');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
+ await page.locator('#authPassword').fill('DemoPass123');
+ await page.locator('#authSubmit').click();
+ await expect(page.locator('#authGate')).toBeHidden();
+ await page.evaluate(()=>{
+   cloudClient.rpc=async(name,args)=>({
+     data:name==='tp_telegram_issue_invite'&&args.p_role==='parent'&&args.p_student_id==='7'?
+       'c'.repeat(64):null,error:null
+   });
+   db.clients=[{id:7,name:'Ребёнок тестового родителя'}];
+   openClient(7,'overview');
+ });
+ const card=page.locator('#modalBody .tp-telegram-student');
+ await expect(card).toBeVisible();
+ await expect(card.locator('#tpTgInviteParent')).toBeVisible();
+ await card.locator('#tpTgInviteParent').tap();
+ await expect(card.locator('#tpTelegramParent .tp-tg-code-input')).toHaveValue('/start '+'c'.repeat(64));
+ await expect(card.locator('#tpTelegramParent a[href^="https://web.telegram.org/"]')).toBeVisible();
+ await expect(card.locator('#tpTelegramStudent .tp-tg-invite')).toHaveCount(0);
+ expect(errors).toEqual([]);
+});
