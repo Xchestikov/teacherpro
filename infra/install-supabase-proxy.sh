@@ -20,8 +20,11 @@ cp -a "$SITE" "$backup/site.conf"
 if test -e "$SNIPPET"; then cp -a "$SNIPPET" "$backup/snippet.conf"; fi
 if test -e "$UPGRADE_MAP"; then cp -a "$UPGRADE_MAP" "$backup/map.conf"; fi
 installed=0
+headers=''
 rollback() {
   local code=$?
+  trap - EXIT
+  if test -n "$headers"; then rm -f "$headers"; fi
   if (( installed == 0 )); then
     echo "Proxy activation failed; restoring original Nginx configuration" >&2
     cp -a "$backup/site.conf" "$SITE"
@@ -63,18 +66,41 @@ PY
 nginx -t
 systemctl reload nginx
 
+# systemctl reload is asynchronous: old workers can still serve an initial 404.
+# Probe the local HTTPS virtual host repeatedly. Never use an external proxy.
 headers="$(mktemp)"
-trap 'rm -f "$headers"; rollback' EXIT
-code="$(curl -4 -sS -o /dev/null -D "$headers" -w '%{http_code}' --max-time 12 \
-  --resolve "${DOMAIN}:443:127.0.0.1" \
-  "https://${DOMAIN}/supabase/auth/v1/health")"
-if ! grep -Eiq '^x-teacherpro-proxy:[[:space:]]*v1[[:space:]]*$' "$headers"; then
-  echo "Upstream proxy marker was not returned" >&2; exit 1
+ready=0
+status=000
+marker=no
+for attempt in $(seq 1 20); do
+  : > "$headers"
+  if ! status="$(curl --noproxy '*' -4 -sS -o /dev/null -D "$headers" \
+    -w '%{http_code}' --connect-timeout 3 --max-time 6 \
+    --resolve "${DOMAIN}:443:127.0.0.1" \
+    "https://${DOMAIN}/supabase/auth/v1/health")"; then
+    status=000
+  fi
+
+  marker=no
+  if grep -Eiq '^x-teacherpro-proxy:[[:space:]]*v1[[:space:]]*$' "$headers"; then
+    marker=yes
+  fi
+
+  # For this Supabase Auth endpoint: 200 is healthy and 401 means
+  # authentication is required but the upstream was reached successfully.
+  if test "$marker" = yes && [[ "$status" =~ ^(200|401)$ ]]; then
+    ready=1
+    break
+  fi
+  printf 'Waiting for Nginx reload (%s/20): HTTP %s, marker %s\n' "$attempt" "$status" "$marker"
+  sleep 1
+done
+if (( ready != 1 )); then
+  echo "Proxy health check failed after retries: HTTP $status, marker $marker" >&2
+  echo 'Review nginx/error.log and upstream connectivity; rolling back.' >&2
+  exit 1
 fi
-if ! [[ "$code" =~ ^[234][0-9][0-9]$ ]]; then
-  echo "Upstream health request returned HTTP $code" >&2; exit 1
-fi
-rm -f "$headers"
+
 installed=1
-echo "TeacherPro Supabase proxy installed and verified: HTTP $code (upstream)."
+echo "TeacherPro Supabase proxy installed and verified: HTTP $status (upstream)."
 echo "Backup kept at $backup"
