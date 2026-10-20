@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {renewalCandidates,remainingBalance} from './finance.mjs';
 import {dateParts,lessonStart,lessonList,planned,cancelled,reminderDue,lessonState,changeText,
   scheduleText,digestDue,dayLabel} from './logic.mjs';
 import {homeButtons,backButtons,dashboardText,studentsText,subscriptionsText,paymentsText,hashLessonId,lessonRequestKeyboard} from './presentation.mjs';
@@ -178,6 +179,19 @@ export class BotEngine {
        const key='digest:'+dateParts(new Date(now),tz).date;
        const text=scheduleText(payload,t,tz,'today',now);
        await this.withDelivery(t,key,'Утренняя сводка TeacherPro\n\n'+text);
+     }
+     // Opt-in renewal alerts, one message per subscription balance change.
+     if(prefs.teacher_digest){
+       const clients=Array.isArray(payload.clients)?payload.clients:[];
+       for(const sub of renewalCandidates(payload).slice(0,20)){
+         const bal=remainingBalance(sub);
+         const c=clients.find(x=>String(x.id)===String(sub.clientId));
+         const label=String(c?.name||'Ученик').replace(/[\r\n]/g,' ').slice(0,80);
+         await this.withDelivery(t,'renewal:'+String(sub.id)+':'+bal.remaining,
+           '🎟 TeacherPro · Абонемент заканчивается\n'+label+
+           '\nОсталось '+bal.remaining+' из '+bal.total+' занятий.\n'+
+           'Продление и запись оплаты выполняются в TeacherPro.');
+       }
      }
    }
    const students=links.filter(l=>l.role==='student'||l.role==='parent');
