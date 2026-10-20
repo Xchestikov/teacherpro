@@ -1,0 +1,68 @@
+name: Check TeacherPro Telegram worker on FirstVDS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/check-telegram-runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check_bot:
+    runs-on: ubuntu-latest
+    environment: production-vps
+    timeout-minutes: 5
+    steps:
+      - name: Configure trusted SSH for existing FirstVDS
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST" && test -n "$VPS_USER"
+          test -n "$VPS_SSH_KEY" && test -n "$VPS_KNOWN_HOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+      - name: Confirm cron actually ran after installation (no secret output)
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes -i "$HOME/.ssh/id_ed25519" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          root="$HOME/teacherpro-bot"
+          test -x "$root/bin/xray"
+          test -x "$root/bin/node"
+          test -s "$root/current/run-worker.sh"
+          test -s "$root/bot.env"
+          test -s "$root/xray.json"
+          for file in "$root/bot.env" "$root/xray.json"; do
+            mode=$(stat -c '%a' "$file")
+            test "$mode" = 600 || { echo "PRIVATE_FILE_MODE_INVALID"; exit 1; }
+          done
+          crontab -l | grep -F -q '# teacherpro-bot-worker' || {
+            echo "TELEGRAM_CRON_NOT_INSTALLED"; exit 1;
+          }
+          log="$root/cron.log"
+          if ! test -s "$log"; then echo "TELEGRAM_CRON_NEVER_EXECUTED"; exit 1; fi
+          age=$(( $(date +%s) - $(stat -c '%Y' "$log") ))
+          if (( age < 0 || age > 200 )); then
+            echo "TELEGRAM_CRON_LOG_STALE"; exit 1
+          fi
+          last=$(grep -E 'TEACHERPRO_CRON_(OK|ERROR)|TELEGRAM_XRAY_' "$log" | tail -1 || true)
+          if [[ "$last" != *TEACHERPRO_CRON_OK* ]]; then
+            echo "TELEGRAM_CRON_LATEST_RUN_FAILED"; exit 1
+          fi
+          echo "TELEGRAM_CRON_PERSISTENT_AND_HEALTHY"
+          echo "TELEGRAM_SECRETS_PERMISSIONS_OK"
+          REMOTE
