@@ -45,6 +45,7 @@ jobs:
           node --check bot/presentation.mjs
           node --check bot/finance.mjs
           node --check bot/finance.test.mjs
+          node --check bot/personal-alerts.test.mjs
           node --check bot/presentation.test.mjs
           node --check bot/lesson-requests.test.mjs
           node --check bot/parents.test.mjs
@@ -61,7 +62,7 @@ jobs:
           node --check tests/mobile-webkit.spec.js
           node --check tests/check-release-assets.js
       - name: Telegram bot server and isolation tests
-        run: node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs bot/quattro-vless.test.mjs bot/daemon.test.mjs bot/presentation.test.mjs bot/lesson-requests.test.mjs bot/parents.test.mjs bot/finance.test.mjs
+        run: node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs bot/quattro-vless.test.mjs bot/daemon.test.mjs bot/presentation.test.mjs bot/lesson-requests.test.mjs bot/parents.test.mjs bot/finance.test.mjs bot/personal-alerts.test.mjs
       - name: Cross-session synchronization invariants
         run: node tests/cloud-multisession.test.cjs
       - name: Every referenced file must be in release

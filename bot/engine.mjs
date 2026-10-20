@@ -2,7 +2,8 @@ import {createHash} from 'node:crypto';
 import {renewalCandidates,remainingBalance} from './finance.mjs';
 import {dateParts,lessonStart,lessonList,planned,cancelled,reminderDue,lessonState,changeText,
   scheduleText,digestDue,dayLabel} from './logic.mjs';
-import {homeButtons,backButtons,dashboardText,studentsText,subscriptionsText,paymentsText,hashLessonId,lessonRequestKeyboard} from './presentation.mjs';
+import {homeButtons,backButtons,dashboardText,studentsText,subscriptionsText,paymentsText,hashLessonId,lessonRequestKeyboard,
+  resolvedAlerts,alertOptionsText,alertOptionsKeyboard} from './presentation.mjs';
 
 export function chooseButtons(links){
  return links.slice(0,20).map(link=>[{text:link.role==='teacher'?'👩‍🏫 Мой кабинет преподавателя':link.role==='parent'?'👨‍👩‍👧 Кабинет родителя':'📚 Мой кабинет ученика',
@@ -35,6 +36,8 @@ export class BotEngine {
    const timezone=prefs.timezone||'UTC';
    if(range==='home'){
      await this.telegram.message(userId,dashboardText(payload,link,timezone,this.now()),menu(link));
+   } else if(range==='alerts'&&link.role!=='teacher'){
+     await this.telegram.message(userId,alertOptionsText(link,prefs),alertOptionsKeyboard(link,prefs));
    } else if(range==='students'&&link.role==='teacher'){
      await this.telegram.message(userId,studentsText(payload),backButtons(link));
    } else if(range==='subs'){
@@ -138,7 +141,7 @@ export class BotEngine {
      return;
    }
    if(callback?.data?.startsWith('v:')){
-     const match=/^v:([a-f0-9-]{36}):(home|today|tomorrow|week|next|students|subs|payments|requests|off|on)$/.exec(callback.data);
+     const match=/^v:([a-f0-9-]{36}):(home|today|tomorrow|week|next|students|subs|payments|requests|alerts|r24|r2|chg|off|on)$/.exec(callback.data);
      if(!match)return;
      const link=links.find(x=>x.id===match[1]);
      if(!link)return; // Never trust callback payload without ownership check.
@@ -146,6 +149,15 @@ export class BotEngine {
        const enabled=match[2]==='on';
        await this.store.update('tp_telegram_links',link.id,{notifications_enabled:enabled});
        await this.telegram.message(id,enabled?'Уведомления включены.':'Уведомления выключены.',menu({...link,notifications_enabled:enabled}));
+     } else if(['r24','r2','chg'].includes(match[2])){
+       if(link.role==='teacher')return;
+       const prefs=await this.store.prefs(link.owner_id);
+       const effective=resolvedAlerts(link,prefs);
+       const field={r24:'reminder_24h_override',r2:'reminder_2h_override',
+         chg:'changes_override'}[match[2]];
+       const updated={...link,[field]:!effective[match[2]]};
+       await this.store.update('tp_telegram_links',link.id,{[field]:updated[field]});
+       await this.telegram.message(id,alertOptionsText(updated,prefs),alertOptionsKeyboard(updated,prefs));
      } else await this.views(id,link,match[2]);
      return;
    }
@@ -204,12 +216,13 @@ export class BotEngine {
    for(const l of future){
      const state=lessonState(l),before=previous.get(String(l.id));
      const recipients=students.filter(link=>String(link.student_id)===String(l.clientId));
-     if(before&&prefs.changes_enabled){
+     if(before){
        const msg=changeText(before,state);
        if(msg){
          const signature=hash(JSON.stringify(state));
          for(const link of recipients){
-           await this.withDelivery(link,'change:'+l.id+':'+signature,msg);
+           if(resolvedAlerts(link,prefs).chg)
+             await this.withDelivery(link,'change:'+l.id+':'+signature,msg);
          }
        }
      }
@@ -219,7 +232,8 @@ export class BotEngine {
    for(const link of students){
      const events=lessonList(payload,link.student_id,now,tz,2);
      for(const {lesson:l,start} of events){
-       for(const [hours,enabled] of [[24,prefs.reminder_24h],[2,prefs.reminder_2h]]){
+       const opts=resolvedAlerts(link,prefs);
+       for(const [hours,enabled] of [[24,opts.r24],[2,opts.r2]]){
          if(enabled&&reminderDue(start,now,hours)){
            const text='Напоминание TeacherPro: занятие '+dayLabel(l.date)+' в '+l.time+
              ', продолжительность '+(Number(l.duration)||60)+' мин.';
