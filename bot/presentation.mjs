@@ -1,5 +1,7 @@
 // Pure Telegram presentation: no private credentials, writes or mutable app state.
 import {dateParts,lessonList,dayLabel} from './logic.mjs';
+import {createHash} from 'node:crypto';
+export const hashLessonId=id=>createHash('sha256').update(String(id)).digest('hex').slice(0,12);
 
 const safeText=value=>String(value??'').replace(/[\r\n\t]+/g,' ').trim();
 const labelLesson=(lesson,role,clients)=>{
@@ -13,11 +15,13 @@ export function homeButtons(link){
     [button(link,'today','📅 Сегодня'),button(link,'week','🗓 Неделя')],
     [button(link,'next','⏰ Ближайшее'),button(link,'students','👥 Ученики')],
     [button(link,'payments','💳 Оплаты'),button(link,'subs','🎟 Абонементы')],
+    [button(link,'requests','📨 Запросы учеников')],
     [button(link,link.notifications_enabled?'off':'on',link.notifications_enabled?'🔕 Выключить уведомления':'🔔 Включить уведомления')]
   ];
   return [
     [button(link,'next','⏰ Следующий урок'),button(link,'week','🗓 Расписание')],
     [button(link,'subs','🎟 Абонемент'),button(link,'today','📅 Сегодня')],
+    [button(link,'requests','✉️ Запрос переноса')],
     [button(link,link.notifications_enabled?'off':'on',link.notifications_enabled?'🔕 Выключить уведомления':'🔔 Включить уведомления')]
   ];
 }
@@ -82,4 +86,19 @@ export function paymentsText(payload,link){
     'Ожидают оплаты: '+pending.length+'.\n'+
     'Абонементов с остатком не более 2 занятий: '+finishing.length+'.\n\n'+
     'Суммы, задолженности и действия с оплатами доступны на сайте TeacherPro.';
+}
+
+
+export function lessonRequestKeyboard(link,lessons){
+  return lessons.slice(0,5).flatMap(({lesson:l})=>{
+    // 12 hex chars = 48-bit truncated SHA-256 fingerprint, no lesson IDs in callbacks.
+    const hash=hashLessonId(l.id);
+    return [
+      [button(link,'home','← Главное меню')],
+      [{text:dayLabel(l.date)+' · '+l.time+' · '+(Number(l.duration)||60)+' мин',
+        callback_data:'v:'+link.id+':next'}],
+      [{text:'Не смогу прийти',callback_data:'r:'+link.id+':'+hash+':c'},
+       {text:'Запросить перенос',callback_data:'r:'+link.id+':'+hash+':m'}]
+    ];
+  });
 }
