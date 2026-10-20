@@ -121,3 +121,49 @@ scheme will be compatible without adapter changes.
 
 The Telegram UI remains disabled until a successful FirstVDS trial and a
 subsequent persistent cron check. No billing or data location changes occur.
+
+## Persistent fast polling (2026-10-20)
+
+The user-approved low-latency runtime on the **same FirstVDS VPS** replaces
+minute-by-minute command polling with a persistent Node.js process, backed by
+one persistent local Xray client. New commands arrive via Telegram's
+`getUpdates` long poll (8-second timeout), which returns immediately when a
+message arrives. There is no 60-second cron scheduling delay for commands.
+
+All processes run privately as the current SSH deployment user with no sudo.
+`~/teacherpro-bot/current/supervisor.sh serve` starts loopback-only Xray and
+a command-only Node daemon; `fast.lock` prevents duplicate workers.
+`supervisor.sh status` verifies both the live process and a fresh Supabase-
+independent Telegram poll heartbeat. `fast.heartbeat` is updated after each
+successful poll; prolonged network failure or a process crash is detected by
+the single-minute cron watchdog. All secret files remain 0600.
+
+**Reminders and student schedule changes** run independently once per minute:
+`supervisor.sh remind` performs only the reminder engine's `poll()`, never
+calls Telegram `getUpdates`. It retains the same idempotency ledger,
+four-minute reminder grace and notification rules as before.
+
+Cron installs two independently locked tasks identified by the exact markers
+`# teacherpro-fast-watchdog` and `# teacherpro-reminder-worker`. The old
+`# teacherpro-bot-worker` entry is removed BEFORE the new daemon starts, and
+a currently executing old worker must release its `cron.lock` first. During
+release, the daemon must complete a real Telegram round trip, and reminders
+must complete one real run before the new crontab is saved. On failure, the
+deployment restores the previous release symlink and previous crontab.
+
+A separate read-only health workflow checks that the heartbeat keeps advancing
+after deployment, that the two cron entries exist, and that the old polling
+cron entry is gone.
+
+Useful non-sensitive checks after deployment:
+- `bash ~/teacherpro-bot/current/supervisor.sh status`
+- `crontab -l | grep 'teacherpro-'`
+- `stat ~/teacherpro-bot/fast.heartbeat`
+
+All runtime logs live under `~/teacherpro-bot`, inaccessible to web clients.
+Do not print the `bot.env` or `xray.json` files or inspect process
+environments in shared consoles.
+
+Expected processing delay is commonly a few seconds, dependent on QuattroVPN,
+Telegram and Supabase. This is **not** an SLA. The integration does not
+change the TeacherPro website, stored lessons, billing, Supabase or VPN subscription.
