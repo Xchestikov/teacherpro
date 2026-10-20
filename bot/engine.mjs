@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 import {dateParts,lessonStart,lessonList,planned,cancelled,reminderDue,lessonState,changeText,
   scheduleText,digestDue,dayLabel} from './logic.mjs';
-import {homeButtons,backButtons,dashboardText,studentsText,subscriptionsText,paymentsText,hashLessonId,lessonRequestKeyboard} from './presentation.mjs';
+import {homeButtons,backButtons,dashboardText,studentsText,subscriptionsText,paymentsText,hashLessonId,lessonRequestKeyboard,lowSubscriptions} from './presentation.mjs';
 
 export function chooseButtons(links){
  return links.slice(0,20).map(link=>[{text:link.role==='teacher'?'👩‍🏫 Мой кабинет преподавателя':link.role==='parent'?'👨‍👩‍👧 Кабинет родителя':'📚 Мой кабинет ученика',
@@ -177,7 +177,14 @@ export class BotEngine {
      if(prefs.teacher_digest&&digestDue(now,tz,prefs.digest_time)){
        const key='digest:'+dateParts(new Date(now),tz).date;
        const text=scheduleText(payload,t,tz,'today',now);
-       await this.withDelivery(t,key,'Утренняя сводка TeacherPro\n\n'+text);
+       const low=lowSubscriptions(payload);
+       const clients=Array.isArray(payload.clients)?payload.clients:[];
+       const upcoming=low.length?'\n\nСкоро заканчиваются абонементы:\n'+
+         low.slice(0,8).map(sub=>{
+           const student=clients.find(c=>String(c.id)===String(sub.clientId));
+           return '• '+(student?.name||'Ученик')+': осталось '+Number(sub.remaining);
+         }).join('\n'):'';
+       await this.withDelivery(t,key,'Утренняя сводка TeacherPro\n\n'+text+upcoming);
      }
    }
    const students=links.filter(l=>l.role==='student'||l.role==='parent');
