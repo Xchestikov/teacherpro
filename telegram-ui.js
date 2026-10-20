@@ -4,7 +4,7 @@
  const safe=s=>htmlSafe(String(s??''));
  const configured=()=>window.TP_TELEGRAM_BOT_ACTIVE===true&&/^[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(window.TP_TELEGRAM_BOT_USERNAME||'');
  const name=()=>String(window.TP_TELEGRAM_BOT_USERNAME||'');
- const button=(label,action,id)=>'<button class="secondary" type="button" '+action+
+ const button=(label,action,id)=>'<button class="tp-tg-btn tp-tg-btn--secondary" type="button" '+action+
    (id?' data-tg-id="'+safe(id)+'"':'')+'>'+safe(label)+'</button>';
  const badge=(x)=>x==='active'?'Подключён':x==='pending'?'Ожидает подтверждения':'Отключён';
  const state={links:[],prefs:null,loaded:false};
@@ -22,33 +22,74 @@
  const status=(role,student)=>state.links.find(l=>l.role===role&&
    (role==='teacher'||String(l.student_id)===String(student)));
  function widget(){
-   const student=state.links.filter(l=>l.role==='student');
+   const students=state.links.filter(l=>l.role==='student');
    const pref=state.prefs||{};
    const tz=pref.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
-   const h='<section class="setting tp-telegram-setting"><h3>Telegram · TeacherPro</h3>'+
-     '<p class="muted">Один бот для преподавателей и учеников. Для отправки сообщений человек сначала запускает бота.</p>'+
-     (!configured()?'<p class="muted">Бот @'+safe(name())+' пока готовится к подключению. Приглашения будут доступны после настройки сервера.</p>':'')+
-     '<div class="tp-telegram-row"><span>Мой аккаунт: '+safe(badge(status('teacher')?.status))+'</span>'+
-     (status('teacher')?button('Отключить','onclick="tpTgRevoke(this)"',status('teacher').id):
-       button('Подключить','onclick="tpTgInvite(\'teacher\')"') )+'</div>'+
-     '<label>Часовой пояс<input id="tpTgTimezone" maxlength="64" value="'+safe(tz)+'" placeholder="Europe/Moscow"></label>'+
-     '<label><input type="checkbox" id="tpTg24" '+(pref.reminder_24h!==false?'checked':'')+'> За 24 часа до урока</label>'+
-     '<label><input type="checkbox" id="tpTg2" '+(pref.reminder_2h===true?'checked':'')+'> За 2 часа до урока</label>'+
-     '<label><input type="checkbox" id="tpTgDaily" '+(pref.teacher_digest===true?'checked':'')+'> Моя утренняя сводка</label>'+
-     '<label>Время сводки<input id="tpTgDailyTime" type="time" value="'+safe(pref.digest_time||'08:00')+'"></label>'+
-     '<label><input type="checkbox" id="tpTgChanges" '+(pref.changes_enabled!==false?'checked':'')+'> Сообщать ученикам о переносах и отменах</label>'+
-     button('Сохранить настройки','onclick="tpTgSavePrefs()"')+
-     '<p class="muted">Ученики подключаются через персональную ссылку из карточки. Преподаватель подтверждает привязку.</p>'+
-     (student.length?'<div class="tp-telegram-status">'+student.map(l=>{
-       const c=db.clients.find(c=>String(c.id)===String(l.student_id));
-       return '<div class="tp-telegram-row"><span>'+safe(c?.name||'Ученик')+
-         ' · '+safe(badge(l.status))+'</span><span>'+
-         (l.status==='pending'?button('Подтвердить','onclick="tpTgApprove(this)"',l.id):'')+
-         button('Отключить','onclick="tpTgRevoke(this)"',l.id)+'</span></div>';
-     }).join('')+'</div>':'')+
-     '<div id="tpTelegramFeedback" role="status" aria-live="polite"></div>'+
-     '</section>';
-   return h;
+   const teacher=status('teacher');
+   const stateClass=x=>x==='active'?'active':x==='pending'?'pending':'off';
+   const chip=x=>'<span class="tp-tg-chip tp-tg-chip--'+stateClass(x)+'">'+safe(badge(x))+'</span>';
+   return '<section class="setting tp-telegram-setting" aria-label="Настройки Telegram">'+
+     '<header class="tp-tg-header">'+
+       '<div class="tp-tg-mark" aria-hidden="true">✈</div>'+
+       '<div class="tp-tg-header-copy">'+
+         '<span class="tp-tg-eyebrow">ИНТЕГРАЦИИ</span>'+
+         '<h3>Telegram · TeacherPro</h3>'+
+         '<p class="tp-tg-lede">Расписание, напоминания и изменения занятий — прямо в Telegram.</p>'+
+       '</div>'+
+     '</header>'+
+     '<div class="tp-tg-block">'+
+       '<div class="tp-tg-block-head"><h4>Мой аккаунт</h4>'+chip(teacher?.status)+'</div>'+
+       '<div class="tp-tg-account-main">'+
+         '<p class="tp-tg-muted">'+(teacher?.status==='active'?
+           'Аккаунт привязан. Бот поможет быстро узнать о ближайших занятиях.':
+           'Подключите свой Telegram, чтобы получать расписание и уведомления.')+'</p>'+
+         (teacher?button('Отключить Telegram','onclick="tpTgRevoke(this)"',teacher.id):
+           '<button class="tp-tg-btn tp-tg-btn--primary" type="button" onclick="tpTgInvite(\'teacher\')">Подключить Telegram ↗</button>')+
+       '</div>'+
+       (!configured()?'<p class="tp-tg-muted">Бот @'+safe(name())+' пока готовится к подключению.</p>':'')+
+       '<div class="tp-tg-invite-slot" id="tpTelegramInviteTeacher" aria-live="polite"></div>'+
+       '<div id="tpTelegramFeedback" class="tp-tg-feedback" role="status" aria-live="polite"></div>'+
+     '</div>'+
+     '<div class="tp-tg-block">'+
+       '<div class="tp-tg-block-head"><h4>Настройки уведомлений</h4></div>'+
+       '<div class="tp-tg-field-grid">'+
+         '<label class="tp-tg-field" for="tpTgTimezone">Часовой пояс'+
+           '<input id="tpTgTimezone" type="text" maxlength="64" autocomplete="off" value="'+safe(tz)+'" placeholder="Europe/Moscow"></label>'+
+         '<label class="tp-tg-field" for="tpTgDailyTime">Время утренней сводки'+
+           '<input id="tpTgDailyTime" type="time" value="'+safe(pref.digest_time||'08:00')+'"></label>'+
+       '</div>'+
+       '<div class="tp-tg-option-grid">'+
+         '<label class="tp-tg-choice" for="tpTg24">'+
+           '<input type="checkbox" id="tpTg24" '+(pref.reminder_24h!==false?'checked':'')+'>'+
+           '<span><strong>За 24 часа до занятия</strong><small>Напоминание ученику за день.</small></span></label>'+
+         '<label class="tp-tg-choice" for="tpTg2">'+
+           '<input type="checkbox" id="tpTg2" '+(pref.reminder_2h===true?'checked':'')+'>'+
+           '<span><strong>За 2 часа до занятия</strong><small>Дополнительное напоминание.</small></span></label>'+
+         '<label class="tp-tg-choice" for="tpTgDaily">'+
+           '<input type="checkbox" id="tpTgDaily" '+(pref.teacher_digest===true?'checked':'')+'>'+
+           '<span><strong>Утренняя сводка</strong><small>План занятий на день.</small></span></label>'+
+         '<label class="tp-tg-choice" for="tpTgChanges">'+
+           '<input type="checkbox" id="tpTgChanges" '+(pref.changes_enabled!==false?'checked':'')+'>'+
+           '<span><strong>Переносы и отмены</strong><small>Сообщать ученикам об изменениях.</small></span></label>'+
+       '</div>'+
+       '<div class="tp-tg-footer"><p class="tp-tg-muted">Изменения действуют после сохранения.</p>'+
+         '<button class="tp-tg-btn tp-tg-btn--primary" type="button" onclick="tpTgSavePrefs()">Сохранить настройки</button>'+
+       '</div>'+
+     '</div>'+
+     '<div class="tp-tg-block">'+
+       '<div class="tp-tg-block-head"><h4>Подключённые ученики</h4>'+
+         '<span class="tp-tg-chip">'+students.length+' '+(students.length===1?'подключение': 'подключений')+'</span></div>'+
+       '<p class="tp-tg-muted">Приглашайте ученика из его карточки. Подключение подтверждает преподаватель.</p>'+
+       (students.length?'<div class="tp-tg-status-list">'+students.map(l=>{
+         const c=db.clients.find(c=>String(c.id)===String(l.student_id));
+         return '<div class="tp-tg-student-line">'+
+           '<span class="tp-tg-person-name">'+safe(c?.name||'Ученик')+' · '+safe(badge(l.status))+'</span>'+
+           '<div class="tp-tg-student-actions">'+
+             (l.status==='pending'?button('Подтвердить','onclick="tpTgApprove(this)"',l.id):'')+
+             button('Отключить','onclick="tpTgRevoke(this)"',l.id)+'</div></div>';
+       }).join('')+'</div>':'')+
+     '</div>'+
+   '</section>';
  }
  async function settingsPanel(){
    const grid=document.querySelector('.settings-grid');
