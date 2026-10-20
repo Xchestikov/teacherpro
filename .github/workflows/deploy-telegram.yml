@@ -30,11 +30,13 @@ jobs:
           set -euo pipefail
           node --check bot/cron.mjs
           node --check bot/daemon.mjs
+          node --check bot/presentation.mjs
+          node --check bot/presentation.test.mjs
           node --check bot/reminders.mjs
           bash -n bot/supervisor.sh
           node --check bot/telegram-proxy.mjs
           node --check bot/quattro-vless.mjs
-          node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs bot/quattro-vless.test.mjs bot/daemon.test.mjs
+          node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs bot/quattro-vless.test.mjs bot/daemon.test.mjs bot/presentation.test.mjs
       - name: Verify both secrets against Telegram and Supabase without revealing contents
         shell: bash
         env:
