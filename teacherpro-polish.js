@@ -75,23 +75,19 @@
   function compactWeeklySummary(){
     const card=[...document.querySelectorAll('.se-bottom .se-card')].find(node=>node.querySelector('h3')?.textContent==='На этой неделе');
     if(!card)return;
-    card.classList.add('tp-week-summary');
-    const now=new Date(todayISO()+'T12:00:00'),weekday=(now.getDay()+6)%7;
-    const monday=new Date(now);monday.setDate(now.getDate()-weekday);
-    const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
-    const from=localDateISO(monday),to=localDateISO(sunday);
-    const weekly=db.lessons.filter(l=>l.date>=from&&l.date<=to&&!lessonIsCancelled(l.status));
-    const done=weekly.filter(l=>l.status==='done').length;
-    const pending=db.payments.filter(p=>p.status!=='paid');
-    const pendingSum=pending.reduce((n,p)=>n+(Number(p.amount)||0),0);
+    const {total,completed,upcoming}=tpWeekOverview();
     const list=card.querySelector('.se-stats');if(!list)return;
-    const data=[
-      ['▣',weekly.length,'занятий','Запланировано'],
-      ['✓',done,'проведено','Уже состоялись'],
-      ['◷',pending.length,'ожидают оплаты',pendingSum?'На сумму '+fmt(pendingSum):'Нет неоплаченных сумм']
-    ];
+    card.classList.add('tp-week-summary');
     list.classList.add('tp-week-list');
-    list.innerHTML=data.map(([icon,count,label,caption],i)=>'<div class="tp-week-row"><span class="tp-week-icon tp-week-'+i+'">'+icon+'</span><div><strong>'+count+' '+label+'</strong><small>'+htmlSafe(caption)+'</small></div></div>').join('');
+    const metrics=[
+      ['total','calendar',total,'Всего занятий'],
+      ['completed','check-circle',completed,'Проведено'],
+      ['upcoming','clock',upcoming,'Предстоит']
+    ];
+    list.innerHTML=metrics.map(([key,icon,count,label])=>
+      '<div class="tp-week-row" data-week-metric="'+key+'">'+
+      '<span class="tp-week-icon tp-week-'+key+'" aria-hidden="true">'+tpUiIcon(icon)+'</span>'+
+      '<strong>'+count+'</strong><small>'+label+'</small></div>').join('');
   }
   function decorateEvents(){
     document.querySelectorAll('.calendar-event').forEach(el=>{
