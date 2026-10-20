@@ -122,6 +122,74 @@
    if(error){setFeedback('Ошибка сохранения. Проверь часовой пояс.');return;}
    setFeedback('Настройки сохранены.');
  };
+ async function copyPrivateText(value,feedback,label){
+   let ok=false;
+   try{
+     if(navigator.clipboard?.writeText){
+       await navigator.clipboard.writeText(value);
+       ok=true;
+     }
+   }catch(_){}
+   if(!ok){
+     const tmp=document.createElement('textarea');
+     tmp.value=value;tmp.readOnly=true;
+     tmp.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
+     document.body.append(tmp);tmp.focus();tmp.select();
+     try{ok=document.execCommand('copy');}catch(_){}
+     tmp.remove();
+   }
+   if(feedback)feedback.textContent=ok?label:'Не удалось скопировать автоматически. Выделите и скопируйте команду вручную.';
+   return ok;
+ }
+ function inviteCard(token,role){
+   const url='https://t.me/'+name()+'?start='+token;
+   // Web K opens the browser client explicitly. It does not reliably pass ?start=,
+   // so the exact /start command is available for manual submission as well.
+   const webUrl='https://web.telegram.org/k/#@'+name();
+   const command='/start '+token;
+   const wrapper=document.createElement('div');wrapper.className='tp-tg-invite';
+   const head=document.createElement('div');head.className='tp-tg-invite-head';
+   const heading=document.createElement('strong');heading.className='tp-tg-invite-title';
+   heading.textContent=role==='teacher'?'Персональная ссылка для вашего аккаунта':'Персональное приглашение ученика';
+   const intro=document.createElement('p');
+   intro.textContent='Ссылка одноразовая. Не передавайте её посторонним.';
+   head.append(heading,intro);
+   const actions=document.createElement('div');actions.className='tp-tg-invite-actions';
+   const actionLink=(text,href,primary=false)=>{
+     const a=document.createElement('a');
+     a.className='tp-tg-btn '+(primary?'tp-tg-btn--primary':'tp-tg-btn--secondary');
+     a.href=href;a.target='_blank';a.rel='noopener noreferrer';a.textContent=text;
+     return a;
+   };
+   const copyStatus=document.createElement('div');copyStatus.className='tp-tg-copy-status';
+   copyStatus.setAttribute('role','status');copyStatus.setAttribute('aria-live','polite');
+   const copyLink=document.createElement('button');copyLink.type='button';
+   copyLink.className='tp-tg-btn tp-tg-btn--secondary';copyLink.textContent='Скопировать ссылку';
+   copyLink.onclick=()=>copyPrivateText(url,copyStatus,'Ссылка скопирована');
+   actions.append(actionLink('Открыть в Telegram ↗',url,true),
+     actionLink('Открыть Telegram Web ↗',webUrl),copyLink);
+   const fallback=document.createElement('div');fallback.className='tp-tg-fallback';
+   const manual=document.createElement('div');manual.className='tp-tg-invite-note';
+   const manualTitle=document.createElement('strong');manualTitle.className='tp-tg-invite-title';
+   manualTitle.textContent='Если вы используете Telegram Web';
+   const manualTip=document.createElement('p');manualTip.textContent=
+     'Если веб-версия откроет только список чатов, найдите @'+name()+
+     ' и отправьте ему команду ниже. Обычная кнопка Start без кода не привяжет аккаунт.';
+   manual.append(manualTitle,manualTip);
+   const codeRow=document.createElement('div');codeRow.className='tp-tg-code-row';
+   const code=document.createElement('input');code.type='text';code.readOnly=true;
+   code.className='tp-tg-code-input';code.value=command;
+   code.setAttribute('aria-label','Команда для подключения в Telegram Web');
+   code.addEventListener('focus',()=>code.select());
+   const copyCmd=document.createElement('button');copyCmd.type='button';
+   copyCmd.className='tp-tg-btn tp-tg-btn--secondary';
+   copyCmd.textContent='Скопировать команду';
+   copyCmd.onclick=()=>copyPrivateText(command,copyStatus,'Команда скопирована');
+   codeRow.append(code,copyCmd);
+   fallback.append(manual,codeRow);
+   wrapper.append(head,actions,fallback,copyStatus);
+   return wrapper;
+ }
  window.tpTgInvite=async(role,studentId)=>{
    if(!cloudClient||!cloudUser)return;
    if(!configured()){
@@ -129,20 +197,17 @@
      if(target)target.textContent='Бот пока не активирован. Подключение станет доступно после запуска.';
      return;
    }
-   const {data,error}=await cloudClient.rpc('tp_telegram_issue_invite',{p_role:role,p_student_id:studentId===undefined?null:String(studentId)});
+   const {data,error}=await cloudClient.rpc('tp_telegram_issue_invite',{
+     p_role:role,p_student_id:studentId===undefined?null:String(studentId)
+   });
    if(error||!/^[a-f0-9]{64}$/.test(String(data||''))){
-     alert('Не удалось создать приглашение. Попробуй позже.');return;
+     const target=document.querySelector(role==='teacher'?'#tpTelegramFeedback':'#tpTelegramStudent');
+     if(target)target.textContent='Не удалось создать приглашение. Попробуйте ещё раз.';
+     return;
    }
-   const url='https://t.me/'+name()+'?start='+data;
-   const target=document.querySelector(role==='teacher'?'#tpTelegramFeedback':'#tpTelegramStudent');
+   const target=document.querySelector(role==='teacher'?'#tpTelegramInviteTeacher':'#tpTelegramStudent');
    if(!target)return;
-   target.replaceChildren();
-   const title=document.createElement('p');title.textContent='Персональная ссылка (не передавай посторонним):';
-   const input=document.createElement('input');input.type='text';input.readOnly=true;input.value=url;
-   const copy=document.createElement('button');copy.type='button';copy.className='secondary';copy.textContent='Скопировать ссылку';
-   copy.onclick=()=>{input.select();navigator.clipboard?.writeText(url).catch(()=>{});};
-   const open=document.createElement('a');open.href=url;open.target='_blank';open.rel='noopener noreferrer';open.textContent='Открыть в Telegram ↗';
-   target.append(title,input,copy,open);
+   target.replaceChildren(inviteCard(data,role));
  };
  window.tpTgApprove=async(button)=>{
    const id=button?.dataset?.tgId;
