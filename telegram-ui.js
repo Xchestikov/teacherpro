@@ -236,10 +236,13 @@
    const container=document.querySelector('#modalBody .student-overview-grid');
    if(!container)return;
    const sec=document.createElement('section');sec.className='student-section tp-telegram-student';
-   sec.innerHTML='<h3>Telegram</h3><p class="muted">Подключи ученика для расписания и напоминаний.</p>'+
-     '<p id="tpTgStudentStatus">Проверяем подключение…</p>'+
-     '<button class="secondary" id="tpTgInviteStudent" type="button">Создать ссылку-приглашение</button>'+
-     '<div id="tpTelegramStudent" aria-live="polite"></div>';
+   sec.innerHTML='<div class="tp-tg-header">'+
+     '<div class="tp-tg-mark" aria-hidden="true">✈</div>'+
+     '<div class="tp-tg-header-copy"><h3>Telegram</h3>'+
+     '<p class="tp-tg-muted">Расписание и напоминания ученика в Telegram.</p></div></div>'+
+     '<div class="tp-tg-block-head"><strong id="tpTgStudentStatus" class="tp-tg-person-name">Проверяем подключение…</strong></div>'+
+     '<button class="tp-tg-btn tp-tg-btn--secondary" id="tpTgInviteStudent" type="button">Создать ссылку-приглашение</button>'+
+     '<div id="tpTelegramStudent" class="tp-tg-invite-slot" aria-live="polite"></div>';
    container.append(sec);
    sec.querySelector('#tpTgInviteStudent').onclick=()=>window.tpTgInvite('student',id);
    if(!cloudUser)return;
