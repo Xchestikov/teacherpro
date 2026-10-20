@@ -52,7 +52,7 @@ export function scheduleText(payload,link,zone,range='today',now=Date.now()){
    const d=new Date(base+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+6);
    end=d.toISOString().slice(0,10);
  }else if(range==='next'){end='9999-12-31';}
- const list=lessonList(payload,link.role==='student'?link.student_id:null,now,zone,range==='next'?370:8)
+ const list=lessonList(payload,link.role==='teacher'?null:link.student_id,now,zone,range==='next'?370:8)
    .filter(x=>x.lesson.date>=start&&x.lesson.date<=end);
  const selected=range==='next'?list.slice(0,1):list.slice(0,25);
  const label=range==='today'?'Сегодня':range==='tomorrow'?'Завтра':range==='week'?'На ближайшие 7 дней':'Ближайшее занятие';
