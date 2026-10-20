@@ -184,7 +184,7 @@ body.soft-editorial[data-theme="night"]{
 body.soft-editorial .primary{background:linear-gradient(115deg,color-mix(in srgb,var(--accent) 82%,#fff),var(--accent));box-shadow:0 5px 13px color-mix(in srgb,var(--accent) 23%,transparent)}
 body.soft-editorial .primary:hover{background:var(--accent-deep)}
 body.soft-editorial .brand-mark{font-size:0!important;display:grid;place-items:center;background:transparent!important;box-shadow:none!important}
-body.soft-editorial .brand-mark:after{content:"";display:block;width:30px;height:30px;background:url("./assets/studio-mark.svg") center / contain no-repeat}
+body.soft-editorial .brand-mark:after{content:"";display:block;width:30px;height:30px;background:url("./assets/teacherpro-mark.svg") center / contain no-repeat}
 body.soft-editorial[data-theme="night"] .sidebar{background:#262838!important}
 body.soft-editorial[data-theme="night"] .calendar-shell,body.soft-editorial[data-theme="night"] .calendar-grid .calendar-hour,
 body.soft-editorial[data-theme="night"] .calendar-grid .calendar-cell,
