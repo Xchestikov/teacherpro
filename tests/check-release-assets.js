@@ -7,6 +7,16 @@ const root=path.join(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const html=read('index.html');
 const sw=read('sw.js');
+const editorial=read('soft-editorial.css');
+const mobileBrandSection=editorial.match(/\/\* Compact recognizable TeacherPro branding in the phone toolbar\. \*\/([\s\S]*?)@media\(max-width:355px\)/);
+assert.ok(mobileBrandSection,'Mobile TeacherPro brand styling must exist');
+assert.ok(mobileBrandSection[1].includes('background:url("./assets/teacherpro-mark.svg")'),
+  'Mobile topbar must display the approved TeacherPro logo, not the legacy leaf');
+assert.ok(!mobileBrandSection[1].includes('studio-mark.svg'),
+  'Legacy botanical icon must not appear as the mobile brand');
+assert.ok(html.includes('soft-editorial.css?v=20261020-brand2'), 'HTML must load the current brand CSS revision');
+assert.ok(sw.includes("'soft-editorial.css?v=20261020-brand2'"), 'Service worker must cache the same brand CSS revision');
+
 const workflow=read('.github/workflows/deploy-vps.yml');
 const tags=[
   ...html.matchAll(/<(?:script|link)\b[^>]*?(?:src|href)=["']\.\/([^"']+)["']/g)

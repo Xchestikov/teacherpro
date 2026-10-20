@@ -196,7 +196,7 @@ body.soft-editorial[data-theme="night"] .se-donut-inner{background:#2b2e3c;color
 @media(max-width:700px){
   body.soft-editorial .topbar:before{
     content:"TeacherPro";font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:700;
-    color:var(--studio-ink);background:url("./assets/studio-mark.svg") left center / 25px 25px no-repeat;
+    color:var(--studio-ink);background:url("./assets/teacherpro-mark.svg") left center / 25px 25px no-repeat;
     padding-left:29px;white-space:nowrap;align-self:center;
   }
   body.soft-editorial .topbar #todayLabel{display:none}
