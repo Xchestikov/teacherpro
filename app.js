@@ -64,7 +64,7 @@ finally{if(generation===authGeneration)cloudHydrating=false}}
 async function selectCloudEndpoint(){
   const direct=window.RITM_SUPABASE_URL;
   const local=new URL('./supabase',location.href).href;
-  if(!local.startsWith('https://'))return direct;
+  if(!local.startsWith('https://')&&!(['localhost','127.0.0.1'].includes(location.hostname)&&local.startsWith('http://')))return direct;
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),1800);
   try{
