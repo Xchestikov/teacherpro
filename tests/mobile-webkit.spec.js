@@ -6,7 +6,7 @@ test.use({...devices['iPhone 13'],baseURL:'http://127.0.0.1:4173',serviceWorkers
 test('WebKit iPhone viewport keeps lesson text unselectable and mobile payment menu usable',async({page})=>{
  const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
- await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
+ await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
  await page.route('https://fonts.googleapis.com/**',r=>r.abort());
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
@@ -49,7 +49,7 @@ test('WebKit iPhone viewport keeps lesson text unselectable and mobile payment m
 
 test('WebKit long press disables hour selection and moves a lesson through touch event handlers',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
+ await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
  await page.route('https://fonts.googleapis.com/**',r=>r.abort());
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
@@ -117,7 +117,7 @@ test('WebKit long press disables hour selection and moves a lesson through touch
 
 test('iPhone touch drag snaps each quarter hour and moves the lesson preview with the finger',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
+ await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
  await page.route('https://fonts.googleapis.com/**',r=>r.abort());
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
@@ -215,7 +215,7 @@ test('iPhone touch drag snaps each quarter hour and moves the lesson preview wit
 
 test('iPhone can type a custom lesson duration directly when adding and editing a student',async({page})=>{
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
- await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
+ await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
  await page.route('https://fonts.googleapis.com/**',r=>r.abort());
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
@@ -244,7 +244,7 @@ test('iPhone can type a custom lesson duration directly when adding and editing 
 
 test('iPhone student pricing offers fixed and hourly rates without changing the entered amount',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
+ await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
  await page.route('https://fonts.googleapis.com/**',r=>r.abort());
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
@@ -273,7 +273,7 @@ test('iPhone student pricing offers fixed and hourly rates without changing the 
 
 test('iPhone Telegram integration stays safely inactive until FirstVDS webhook is configured',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
+ await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
  await page.route('https://fonts.googleapis.com/**',r=>r.abort());
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
