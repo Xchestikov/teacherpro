@@ -41,6 +41,19 @@ export class Store {
    return this.insert('tp_telegram_lesson_state',{owner_id:owner,lesson_id:String(lessonId),state,updated_at:new Date().toISOString()},
      'resolution=merge-duplicates,return=minimal');
  }
+ async lessonRequest(linkId,actor,lessonId,kind){
+   return this.rpc('tp_telegram_request_lesson',{p_link:linkId,p_actor:actor,
+     p_lesson:String(lessonId),p_kind:kind});
+ }
+ async decideRequest(id,actor,decision){
+   return this.rpc('tp_telegram_decide_request',{p_request:id,p_actor:actor,p_decision:decision});
+ }
+ async lessonRequests(owner,{status='pending',limit=20}={}){
+   return this.rows('tp_telegram_lesson_requests',{
+     owner_id:'eq.'+owner,status:'eq.'+status,
+     select:'id,owner_id,student_id,lesson_id,kind,status,created_at',order:'created_at.desc',limit
+   });
+ }
  async redeem(token,user,chat){return this.rpc('tp_telegram_redeem',{p_raw:token,p_tg_id:user,p_chat_id:chat});}
 }
 export class TelegramAPI {
