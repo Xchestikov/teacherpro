@@ -43,7 +43,9 @@ jobs:
           node --check bot/store.mjs
           node --check bot/engine.mjs
           node --check bot/presentation.mjs
-          node --check bot/presentation.test.mjs
+          node --check bot/finance.mjs
+          node --check bot/finance.test.mjs
+          node --check bot/presentation.test.mjs bot/finance.test.mjs
           node --check bot/lesson-requests.test.mjs
           node --check bot/server.mjs
           node --check bot/cron.mjs
