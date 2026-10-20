@@ -55,3 +55,39 @@ available for rollback separately.
 The repository still contains an optional webhook server and Nginx configuration.
 They are not installed without system administrator access. Telegram long polling
 and webhook updates are mutually exclusive; do not activate both simultaneously.
+
+## Telegram-only outbound proxy (one FirstVDS VPS)
+
+Network diagnostics on the current Russian FirstVDS VPS found that HTTPS to
+`api.telegram.org` times out and direct TCP connections to five Telegram
+MTProto data centres (ports 443, 80 and 5222) are unavailable. Switching
+the bot to MTProto **alone** cannot restore blocked network reachability.
+
+The worker supports an **optional outbound proxy for Telegram only**.
+TeacherPro's site, bot process, scheduler and all Supabase data remain in
+their original locations. This does not add or require a second TeacherPro VPS.
+
+1. Obtain a trusted reachable HTTPS CONNECT proxy (preferred) or SOCKS5H
+   proxy endpoint. An existing VPN service may provide one. No public or
+   unknown free proxy should be used for a service holding student data.
+2. Add `TELEGRAM_PROXY_URL` to GitHub Actions repository secrets, e.g.
+   `https://USERNAME:PASSWORD@proxy.example:8443` (HTTPS preferred) or
+   `socks5h://USERNAME:PASSWORD@proxy.example:1080`. URL-encode special
+   characters in credentials. **Never put actual values in GitHub files.**
+3. Re-run the **Deploy TeacherPro Telegram backend to FirstVDS** workflow
+   with `workflow_dispatch`. It writes the proxy URL only to the private
+   mode-0600 server-side environment file, with the existing bot secrets.
+4. The release performs a real trial worker run from FirstVDS and installs
+   crontab only if it succeeds. Verify that a private, linked test account
+   can issue commands and receive notifications before setting the public
+   `TP_TELEGRAM_BOT_ACTIVE` flag.
+
+The proxy never handles the application's existing Supabase requests. curl
+receives the Telegram bot URL and optional proxy credentials via **stdin**,
+not command-line arguments. HTTPS remains TLS-verified end-to-end. Failure
+messages exclude token and proxy credentials. Socks5h proxy access credentials
+may not be encrypted on the path to the proxy, so prefer HTTPS CONNECT.
+
+If no such trusted proxy is available, do not activate invitations or claim
+notifications are live. A proxy endpoint is an outbound networking dependency
+but is not a hosting location for the TeacherPro bot.
