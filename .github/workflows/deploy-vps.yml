@@ -7,6 +7,8 @@ on:
     paths:
       - 'index.html'
       - 'vendor/supabase-sdk.js'
+      - 'infra/install-supabase-proxy.sh'
+      - 'infra/supabase-nginx-location.conf'
       - 'app.js'
       - 'cloud-multisession.js'
       - 'telegram-config.js'
@@ -92,6 +94,8 @@ jobs:
           node --check student-v2.js
           node --check mobile-ui-v2.js
           node --check calendar-colors.js
+          test -s infra/supabase-nginx-location.conf
+          bash -n infra/install-supabase-proxy.sh
           node --check vendor/supabase-sdk.js
           node --check sw.js
 
@@ -132,6 +136,19 @@ jobs:
              ln -sfn /srv/teacherpro/releases/$RELEASE /srv/teacherpro/current-next && \
              mv -Tf /srv/teacherpro/current-next /srv/teacherpro/current && \
              ls -l /srv/teacherpro/current"
+
+      - name: Stage optional root-only proxy installer outside public web root
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          SSH_OPTS="-i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
+          ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "install -d -m 755 /srv/teacherpro/infra"
+          rsync -az --chmod=F644 -e "ssh $SSH_OPTS" \
+            infra/install-supabase-proxy.sh infra/supabase-nginx-location.conf \
+            "$VPS_USER@$VPS_HOST:/srv/teacherpro/infra/"
 
       - name: Check locally from VPS after switching the symlink
         shell: bash
