@@ -251,17 +251,27 @@
    if(!cloudUser)return;
    query().then(()=>{
      if(!sec.isConnected)return;
-     const link=status('student',id),node=sec.querySelector('#tpTgStudentStatus');
-     node.textContent='Статус: '+badge(link?.status);
-     if(link){
-       const controls=document.createElement('div');
-       if(link.status==='pending'){
-         const yes=document.createElement('button');yes.className='secondary';yes.textContent='Подтвердить';
-         yes.dataset.tgId=link.id;yes.onclick=()=>window.tpTgApprove(yes);controls.append(yes);
+     const node=sec.querySelector('#tpTgStudentStatus');
+     node.textContent='Подключения ученика и родителя';
+     for(const role of ['student','parent']){
+       const link=status(role,id);
+       const row=document.createElement('div');row.className='tp-tg-student-line';
+       const summary=document.createElement('span');summary.className='tp-tg-person-name';
+       summary.textContent=(role==='parent'?'Родитель':'Ученик')+' · '+badge(link?.status);
+       row.append(summary);
+       if(link){
+         const controls=document.createElement('div');controls.className='tp-tg-student-actions';
+         if(link.status==='pending'){
+           const yes=document.createElement('button');yes.className='tp-tg-btn tp-tg-btn--primary';
+           yes.textContent='Подтвердить';yes.dataset.tgId=link.id;
+           yes.onclick=()=>window.tpTgApprove(yes);controls.append(yes);
+         }
+         const off=document.createElement('button');off.className='tp-tg-btn tp-tg-btn--secondary';
+         off.textContent='Отключить';off.dataset.tgId=link.id;
+         off.onclick=async()=>{await window.tpTgRevoke(off);openClient(id,'overview');};
+         controls.append(off);row.append(controls);
        }
-       const off=document.createElement('button');off.className='secondary';off.textContent='Отключить';
-       off.dataset.tgId=link.id;off.onclick=async()=>{await window.tpTgRevoke(off);openClient(id,'overview');};
-       controls.append(off);sec.append(controls);
+       sec.append(row);
      }
    }).catch(()=>{if(sec.isConnected)sec.querySelector('#tpTgStudentStatus').textContent='Ошибка загрузки';});
  };
