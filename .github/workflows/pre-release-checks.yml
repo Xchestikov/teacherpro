@@ -45,12 +45,13 @@ jobs:
           node --check bot/server.mjs
           node --check bot/cron.mjs
           node --check bot/telegram-proxy.mjs
+          node --check bot/quattro-vless.mjs
           node --check bot/telegram-proxy.test.mjs
           node --check tests/browser.spec.js
           node --check tests/mobile-webkit.spec.js
           node --check tests/check-release-assets.js
       - name: Telegram bot server and isolation tests
-        run: node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs
+        run: node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs bot/quattro-vless.test.mjs
       - name: Cross-session synchronization invariants
         run: node tests/cloud-multisession.test.cjs
       - name: Every referenced file must be in release

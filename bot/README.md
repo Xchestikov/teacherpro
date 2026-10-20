@@ -91,3 +91,33 @@ may not be encrypted on the path to the proxy, so prefer HTTPS CONNECT.
 If no such trusted proxy is available, do not activate invitations or claim
 notifications are live. A proxy endpoint is an outbound networking dependency
 but is not a hosting location for the TeacherPro bot.
+
+## QuattroVPN VLESS integration (single FirstVDS server)
+
+If an existing QuattroVPN subscription provides a `vless://` configuration
+link, save that private URI in the GitHub Actions repository secret
+`QUATTRO_VLESS_URI`. Do not include the VLESS link in issues, screenshots,
+source code, logs or messages. The deploy workflow checks that a
+VLESS/Reality, TLS, TCP, WebSocket, gRPC or XHTTP URI can be parsed; anything
+else fails closed with a generic error.
+
+The release downloads official upstream Xray-core v26.3.27 on the GitHub
+runner, checks the pinned upstream SHA-256 before unpacking it, then installs
+Xray privately at `~/teacherpro-bot/bin/xray` with no sudo. The secret URI is
+converted to `~/teacherpro-bot/xray.json` (0600) and is **never** passed to
+Xray or curl via process argv. Only a loopback SOCKS5 listener
+`127.0.0.1:10808` is opened; every egress target except
+`api.telegram.org` is blocked in Xray routing. The Node worker sends only
+Telegram Bot API calls through `socks5h://127.0.0.1:10808`; all Supabase
+requests bypass the tunnel.
+
+Cron's minute-by-minute runner starts Xray temporarily, verifies that the
+loopback SOCKS listener is ready, runs the polling/reminder worker, then
+terminates Xray. The pre-cron trial verifies network connectivity and prevents
+activation on failure. When testing/restarting, keep the VPN credentials
+confidential and confirm that the Quattro subscription permits server usage.
+Supported transports vary by Quattro configuration; not every `vless://`
+scheme will be compatible without adapter changes.
+
+The Telegram UI remains disabled until a successful FirstVDS trial and a
+subsequent persistent cron check. No billing or data location changes occur.
