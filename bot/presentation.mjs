@@ -22,6 +22,7 @@ export function homeButtons(link){
   return [
     [button(link,'next','⏰ Следующий урок'),button(link,'week','🗓 Расписание')],
     [button(link,'subs','🎟 Абонемент'),button(link,'today','📅 Сегодня')],
+    [button(link,'alerts','⚙️ Напоминания')],
     ...(link.role==='student'?[[button(link,'requests','✉️ Запрос переноса')]]:[]),
     [button(link,link.notifications_enabled?'off':'on',link.notifications_enabled?'🔕 Выключить уведомления':'🔔 Включить уведомления')]
   ];
@@ -87,4 +88,32 @@ export function lessonRequestKeyboard(link,lessons){
     ];
   });
   return [...rows,...backButtons(link)];
+}
+
+export function resolvedAlerts(link,prefs={}){
+  return {
+    r24:link.reminder_24h_override??prefs.reminder_24h??true,
+    r2:link.reminder_2h_override??prefs.reminder_2h??false,
+    chg:link.changes_override??prefs.changes_enabled??true
+  };
+}
+export function alertOptionsText(link,prefs={}){
+  const opts=resolvedAlerts(link,prefs);
+  const state=x=>x?'включено':'выключено';
+  return '🔔 Мои напоминания\n\n'+
+    'За 24 часа до урока: '+state(opts.r24)+'.\n'+
+    'За 2 часа до урока: '+state(opts.r2)+'.\n'+
+    'Переносы и отмены: '+state(opts.chg)+'.\n\n'+
+    (!link.notifications_enabled?'⚠️ Все уведомления сейчас отключены. Включите их из главного меню.\n\n':'')+
+    'Настройки действуют только для вашего Telegram-аккаунта. Они не меняют настройки преподавателя и других участников.';
+}
+export function alertOptionsKeyboard(link,prefs={}){
+  const opts=resolvedAlerts(link,prefs);
+  const label=(name,on)=>(on?'✅ ':'⬜ ')+name;
+  return [
+    [button(link,'r24',label('За 24 часа',opts.r24))],
+    [button(link,'r2',label('За 2 часа',opts.r2))],
+    [button(link,'chg',label('Переносы и отмены',opts.chg))],
+    ...backButtons(link)
+  ];
 }
