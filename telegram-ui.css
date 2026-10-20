@@ -1,0 +1,130 @@
+/* TeacherPro Telegram integration — editorial controls and accessible deep links.
+   All rules are scoped to the Telegram widget and student invitation. */
+.tp-telegram-setting{
+  grid-column:1/-1;
+  display:grid;
+  gap:18px;
+  min-width:0;
+  padding:clamp(18px,3vw,28px)!important;
+  background:var(--studio-surface,var(--surface-raised,#fffdfa));
+}
+.tp-telegram-setting .tp-tg-header{display:flex;align-items:center;gap:15px;min-width:0}
+.tp-tg-mark{flex:0 0 48px;width:48px;height:48px;border-radius:16px;display:grid;place-items:center;
+  background:#f8e5dd;color:#ad604e;font-size:23px;line-height:1}
+.tp-tg-header-copy{min-width:0}
+.tp-telegram-setting .tp-tg-eyebrow{display:block;margin:0 0 2px;font-size:10px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--studio-muted,var(--muted,#85736b));font-weight:800}
+.tp-telegram-setting .tp-tg-header h3{margin:0 0 4px;font-size:clamp(19px,2.4vw,23px);
+  line-height:1.2;letter-spacing:-.03em;color:var(--studio-ink,var(--ink,#49332e))}
+.tp-telegram-setting .tp-tg-lede{margin:0;font-size:13px;line-height:1.6;
+  color:var(--studio-muted,var(--muted,#887970))}
+.tp-tg-block{display:grid;gap:15px;padding:19px 20px;border:1px solid
+  var(--studio-border,var(--line,#eaded4));border-radius:17px;background:var(--studio-surface,var(--surface-raised,#fffdfa));
+  min-width:0}
+.tp-tg-block-head{display:flex;align-items:center;justify-content:space-between;
+  gap:10px 18px;flex-wrap:wrap;min-width:0}
+.tp-tg-block h4{margin:0;color:var(--studio-ink,var(--ink,#49332e));font-size:15px;font-weight:800;
+  line-height:1.45}
+.tp-telegram-setting .tp-tg-muted,.tp-telegram-setting .tp-tg-block p,
+.tp-telegram-student .tp-tg-muted,.tp-telegram-student .tp-tg-invite p{
+  margin:0;font-size:12px;line-height:1.6;color:var(--studio-muted,var(--muted,#887970))}
+.tp-tg-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;
+  background:var(--accent-soft,#f9e7dd);color:var(--studio-ink,#755247);
+  font-size:12px;font-weight:700;white-space:nowrap;line-height:1}
+.tp-tg-chip:before{content:"";width:7px;height:7px;border-radius:50%;background:#bc876f}
+.tp-tg-chip--active{background:#eaf3ec;color:#466e59}
+.tp-tg-chip--active:before{background:#65a981}
+.tp-tg-chip--pending{background:#fff3df;color:#9b6a28}
+.tp-tg-chip--pending:before{background:#d3a24d}
+.tp-tg-account-main{display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:14px;min-width:0}
+.tp-tg-account-main .tp-tg-muted{flex:1 1 250px}
+.tp-telegram-setting .tp-tg-btn,
+.tp-telegram-student .tp-tg-btn{display:inline-flex;align-items:center;justify-content:center;
+  gap:7px;min-height:42px;padding:10px 16px;border:1px solid var(--studio-border,#eaded4);
+  border-radius:12px;font-size:12px;font-weight:750;line-height:1.25;text-align:center;
+  text-decoration:none;cursor:pointer;transition:background .15s,border-color .15s,transform .15s;
+  max-width:100%;white-space:normal}
+.tp-tg-btn--primary{background:var(--studio-terracotta,var(--accent,#c76551))!important;
+  color:#fff!important;border-color:transparent!important;box-shadow:0 5px 13px #a45a4420}
+.tp-tg-btn--primary:hover{background:#ac5142!important;transform:translateY(-1px)}
+.tp-tg-btn--secondary{background:var(--studio-surface,var(--surface-raised,#fffdfa))!important;
+  color:var(--studio-ink,var(--ink,#49332e))!important}
+.tp-tg-btn--secondary:hover{background:var(--accent-soft,#fae9e1)!important}
+.tp-tg-btn--ghost{background:transparent!important;color:var(--studio-muted,var(--muted,#887970))!important}
+.tp-tg-btn:focus-visible,.tp-tg-field input:focus-visible,.tp-tg-choice:focus-within,
+.tp-tg-code-input:focus-visible{outline:2px solid var(--studio-terracotta,#c76551);outline-offset:3px}
+.tp-tg-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.tp-tg-field{display:grid;gap:7px;min-width:0;color:var(--studio-ink,var(--ink,#49332e));
+  font-size:12px;font-weight:700}
+.tp-telegram-setting .tp-tg-field input{display:block;width:100%;min-width:0;max-width:100%;
+  margin:0;padding:11px 12px;min-height:44px;border:1px solid var(--studio-border,var(--line,#eaded4));
+  border-radius:11px;color:var(--studio-ink,var(--ink,#49332e));
+  background:var(--studio-surface,var(--surface-raised,#fffdfa));font-size:13px;font-weight:550}
+.tp-tg-option-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tp-tg-choice{display:flex;align-items:flex-start;gap:11px;min-width:0;margin:0;
+  padding:13px;border:1px solid var(--studio-border,var(--line,#eaded4));
+  border-radius:13px;background:var(--studio-surface,var(--surface-raised,#fffdfa));cursor:pointer}
+.tp-telegram-setting .tp-tg-choice input[type=checkbox]{appearance:auto;flex:0 0 17px;
+  width:17px;height:17px;margin:2px 0 0;accent-color:#b46857;cursor:pointer}
+.tp-tg-choice span{display:grid;gap:3px;min-width:0}
+.tp-tg-choice strong{font-size:12px;color:var(--studio-ink,var(--ink,#49332e));
+  font-weight:750;line-height:1.4}
+.tp-tg-choice small{font-size:11px;color:var(--studio-muted,var(--muted,#887970));line-height:1.5}
+.tp-tg-footer{display:flex;justify-content:space-between;align-items:center;gap:13px;flex-wrap:wrap}
+.tp-tg-footer .tp-tg-muted{flex:1 1 210px}
+.tp-tg-status-list{display:grid;gap:8px}
+.tp-tg-student-line{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:9px 13px;padding:11px 0;border-top:1px solid var(--studio-border,var(--line,#eaded4))}
+.tp-tg-student-line:first-child{border-top:0}
+.tp-tg-person-name{font-size:12px;font-weight:750;min-width:0}
+.tp-tg-student-actions{display:flex;gap:7px;flex-wrap:wrap}
+.tp-telegram-setting .tp-tg-student-actions .tp-tg-btn{min-height:36px;padding:8px 10px}
+.tp-tg-feedback:empty,.tp-tg-invite-slot:empty{display:none}
+.tp-tg-feedback:not(:empty){font-size:12px;line-height:1.6;color:var(--studio-sage,#64816f)}
+.tp-tg-invite{display:grid;gap:13px;min-width:0;margin-top:3px;
+  padding:16px;border:1px solid var(--studio-border,var(--line,#eaded4));
+  border-radius:15px;background:var(--accent-soft,#fff7f1)}
+.tp-tg-invite-head{display:grid;gap:4px}
+.tp-tg-invite-title{font-size:13px;font-weight:800;color:var(--studio-ink,var(--ink,#49332e))}
+.tp-telegram-setting .tp-tg-invite-head p,.tp-telegram-student .tp-tg-invite-head p{font-size:12px}
+.tp-tg-invite-actions{display:flex;gap:9px;flex-wrap:wrap;min-width:0}
+.tp-tg-invite-actions .tp-tg-btn{flex:1 1 155px}
+.tp-tg-fallback{display:grid;gap:10px;padding-top:13px;
+  border-top:1px solid var(--studio-border,var(--line,#eaded4))}
+.tp-tg-code-row{display:flex;align-items:stretch;gap:9px;min-width:0}
+.tp-tg-code-input{flex:1;min-width:0;width:100%;display:block;
+  padding:11px 12px;border:1px solid var(--studio-border,var(--line,#eaded4));
+  border-radius:11px;background:var(--studio-surface,var(--surface-raised,#fffdfa));
+  color:var(--studio-ink,var(--ink,#49332e));font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  font-size:12px;text-overflow:ellipsis}
+.tp-tg-invite-note{display:grid;gap:3px}
+.tp-tg-copy-status{min-height:0;font-size:11px;color:var(--studio-sage,#64816f)}
+.tp-telegram-student{min-width:0;display:grid;gap:10px}
+.tp-telegram-student h3,.tp-telegram-student p{margin:0}
+.tp-telegram-student .tp-tg-invite{background:var(--accent-soft,#fff7f1)}
+@media (max-width:700px){
+ .tp-telegram-setting{padding:17px!important;gap:12px}
+ .tp-tg-block{padding:15px;gap:13px}
+ .tp-tg-option-grid{grid-template-columns:minmax(0,1fr)}
+ .tp-tg-field-grid{grid-template-columns:minmax(0,1fr)}
+ .tp-tg-footer .tp-tg-btn,.tp-tg-account-main .tp-tg-btn{width:100%}
+}
+@media (max-width:430px){
+ .tp-tg-mark{width:42px;height:42px;flex-basis:42px;font-size:20px}
+ .tp-tg-invite{padding:12px}
+ .tp-tg-invite-actions{display:grid;grid-template-columns:minmax(0,1fr)}
+ .tp-tg-code-row{display:grid;grid-template-columns:minmax(0,1fr)}
+ .tp-tg-code-row .tp-tg-btn{width:100%}
+}
+body[data-theme="night"] .tp-telegram-setting,
+body[data-theme="night"] .tp-tg-block,
+body[data-theme="night"] .tp-tg-choice,
+body[data-theme="night"] .tp-tg-invite,
+body[data-theme="night"] .tp-tg-field input,
+body[data-theme="night"] .tp-tg-code-input{
+ background:var(--surface-raised,#303649);
+ border-color:var(--line,#454a5e)}
+body[data-theme="night"] .tp-tg-mark{background:#503b3a;color:#f2c6b8}
+body[data-theme="night"] .tp-tg-chip{background:#453d42;color:#f0d6cf}
+body[data-theme="night"] .tp-tg-chip--active{background:#304939;color:#b8e0be}
