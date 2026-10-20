@@ -66,7 +66,7 @@ export function subscriptionsText(payload,link){
   const clients=Array.isArray(payload.clients)?payload.clients:[];
   const lines=open.slice(0,12).map(s=>{
     const left=Number(s.remaining),total=Number(s.total);
-    const counts=Number.isFinite(left)&&left>=0&&Number.isFinite(total)&&total>=0
+    const counts=s.remaining!=null&&s.total!=null&&Number.isFinite(left)&&left>=0&&Number.isFinite(total)&&total>=0
       ?Math.max(0,left)+' из '+total+' занятий'
       :'остаток уточняется в TeacherPro';
     const c=link.role==='teacher'?safeText(clients.find(x=>String(x.id)===String(s.clientId))?.name||'Ученик')+' · ':'';
@@ -76,18 +76,30 @@ export function subscriptionsText(payload,link){
     (open.length>12?'\n…и ещё '+(open.length-12)+'.':'')+
     '\n\nАктуальные оплаты и историю списаний смотрите в TeacherPro.';
 }
+export function lowSubscriptions(payload,studentId=null){
+  const subs=Array.isArray(payload.subscriptions)?payload.subscriptions:[];
+  return subs.filter(s=>!s.archivedAt&&(studentId===null||String(s.clientId)===String(studentId))&&
+    s.remaining!==null&&s.remaining!==undefined&&s.total!==null&&s.total!==undefined&&
+    Number.isInteger(Number(s.remaining))&&Number.isInteger(Number(s.total))&&
+    Number(s.remaining)>0&&Number(s.remaining)<=2&&Number(s.total)>0);
+}
 export function paymentsText(payload,link){
   if(link.role!=='teacher')return 'Этот раздел доступен только преподавателю.';
   const subs=Array.isArray(payload.subscriptions)?payload.subscriptions:[];
   const payments=Array.isArray(payload.payments)?payload.payments:[];
+  const clients=Array.isArray(payload.clients)?payload.clients:[];
   const pending=payments.filter(p=>p?.status==='pending');
-  const finishing=subs.filter(s=>!s.archivedAt&&Number.isFinite(Number(s.remaining))&&Number(s.remaining)<=2);
+  const finishing=lowSubscriptions(payload);
+  const name=id=>safeText(clients.find(c=>String(c.id)===String(id))?.name||'Ученик');
+  const uniqueOwing=[...new Set(pending.map(p=>String(p.clientId)).filter(Boolean))].slice(0,8);
+  const uniqueFinishing=[...new Set(finishing.map(s=>String(s.clientId)).filter(Boolean))].slice(0,8);
   return '💳 Контроль оплат\n\n'+
-    'Ожидают оплаты: '+pending.length+'.\n'+
-    'Абонементов с остатком не более 2 занятий: '+finishing.length+'.\n\n'+
-    'Суммы, задолженности и действия с оплатами доступны на сайте TeacherPro.';
+    'Ожидают оплаты: '+pending.length+' записей.\n'+
+    (uniqueOwing.length?'Нужно проверить платежи:\n'+uniqueOwing.map(id=>'• '+name(id)).join('\n')+'\n':'')+
+    '\nАбонементов с остатком 1–2 занятия: '+finishing.length+'.\n'+
+    (uniqueFinishing.length?'Скоро продление:\n'+uniqueFinishing.map(id=>'• '+name(id)).join('\n')+'\n':'')+
+    '\nСуммы, списания и подтверждение оплаты — только в кабинете TeacherPro.';
 }
-
 
 export function lessonRequestKeyboard(link,lessons){
   const rows=lessons.slice(0,5).map(({lesson:l})=>{
