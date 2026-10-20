@@ -180,7 +180,7 @@ export class BotEngine {
        await this.withDelivery(t,key,'Утренняя сводка TeacherPro\n\n'+text);
      }
    }
-   const students=links.filter(l=>l.role==='student');
+   const students=links.filter(l=>l.role==='student'||l.role==='parent');
    if(!students.length)return;
    const future=(payload.lessons||[]).filter(l=>l&&l.id!==undefined&&
       (planned(l)||cancelled(l))&&Number.isFinite(lessonStart(l,tz)))
