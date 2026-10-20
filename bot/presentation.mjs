@@ -1,6 +1,7 @@
 // Pure Telegram presentation: no private credentials, writes or mutable app state.
 import {dateParts,lessonList,dayLabel} from './logic.mjs';
 import {createHash} from 'node:crypto';
+import {studentFinances,teacherFinances,activeSubscriptions,remainingBalance} from './finance.mjs';
 export const hashLessonId=id=>createHash('sha256').update(String(id)).digest('hex').slice(0,12);
 
 const safeText=value=>String(value??'').replace(/[\r\n\t]+/g,' ').trim();
@@ -57,37 +58,24 @@ export function studentsText(payload){
     '\n\nПодробности доступны в карточках учеников на сайте TeacherPro.';
 }
 export function subscriptionsText(payload,link){
-  const all=Array.isArray(payload.subscriptions)?payload.subscriptions:[];
-  const visible=link.role==='student'
-    ?all.filter(s=>String(s.clientId)===String(link.student_id))
-    :all;
-  const open=visible.filter(s=>!s.archivedAt);
-  if(!open.length)return '🎟 Абонементы\n\nДействующих абонементов не найдено.';
+  if(link.role==='student')return studentFinances(payload,link.student_id);
+  const all=activeSubscriptions(payload);
+  if(!all.length)return '🎟 Абонементы\n\nДействующих абонементов не найдено.';
   const clients=Array.isArray(payload.clients)?payload.clients:[];
-  const lines=open.slice(0,12).map(s=>{
-    const left=Number(s.remaining),total=Number(s.total);
-    const counts=Number.isFinite(left)&&left>=0&&Number.isFinite(total)&&total>=0
-      ?Math.max(0,left)+' из '+total+' занятий'
-      :'остаток уточняется в TeacherPro';
-    const c=link.role==='teacher'?safeText(clients.find(x=>String(x.id)===String(s.clientId))?.name||'Ученик')+' · ':'';
-    return '• '+c+safeText(s.name||'Абонемент')+': '+counts;
+  const lines=all.slice(0,12).map(s=>{
+    const b=remainingBalance(s);
+    const name=clients.find(c=>String(c.id)===String(s.clientId))?.name||'Ученик';
+    return '• '+safeText(name)+' · '+safeText(s.name||'Абонемент')+': '+
+      (b?b.remaining+' из '+b.total+' занятий':'остаток уточняется в TeacherPro');
   });
   return '🎟 Абонементы\n\n'+lines.join('\n')+
-    (open.length>12?'\n…и ещё '+(open.length-12)+'.':'')+
-    '\n\nАктуальные оплаты и историю списаний смотрите в TeacherPro.';
+    (all.length>12?'\n…и ещё '+(all.length-12)+'.':'')+
+    '\n\nИстория списаний и продление доступны в TeacherPro.';
 }
 export function paymentsText(payload,link){
   if(link.role!=='teacher')return 'Этот раздел доступен только преподавателю.';
-  const subs=Array.isArray(payload.subscriptions)?payload.subscriptions:[];
-  const payments=Array.isArray(payload.payments)?payload.payments:[];
-  const pending=payments.filter(p=>p?.status==='pending');
-  const finishing=subs.filter(s=>!s.archivedAt&&Number.isFinite(Number(s.remaining))&&Number(s.remaining)<=2);
-  return '💳 Контроль оплат\n\n'+
-    'Ожидают оплаты: '+pending.length+'.\n'+
-    'Абонементов с остатком не более 2 занятий: '+finishing.length+'.\n\n'+
-    'Суммы, задолженности и действия с оплатами доступны на сайте TeacherPro.';
+  return teacherFinances(payload);
 }
-
 
 export function lessonRequestKeyboard(link,lessons){
   const rows=lessons.slice(0,5).map(({lesson:l})=>{
