@@ -1,19 +1,13 @@
 import {createHash} from 'node:crypto';
 import {dateParts,lessonStart,lessonList,planned,cancelled,reminderDue,lessonState,changeText,
   scheduleText,digestDue,dayLabel} from './logic.mjs';
+import {homeButtons,backButtons,dashboardText,studentsText,subscriptionsText,paymentsText} from './presentation.mjs';
 
 export function chooseButtons(links){
- return links.slice(0,20).map(link=>[{text:link.role==='teacher'?'Мой кабинет преподавателя':'Моё расписание ученика',
-   callback_data:'v:'+link.id+':today'}]);
+ return links.slice(0,20).map(link=>[{text:link.role==='teacher'?'👩‍🏫 Мой кабинет преподавателя':'📚 Мой кабинет ученика',
+   callback_data:'v:'+link.id+':home'}]);
 }
-export function menu(link){
- return [
-  [{text:'Сегодня',callback_data:'v:'+link.id+':today'},{text:'Завтра',callback_data:'v:'+link.id+':tomorrow'}],
-  [{text:'Неделя',callback_data:'v:'+link.id+':week'},{text:'Ближайшее занятие',callback_data:'v:'+link.id+':next'}],
-  [{text:link.notifications_enabled?'Выключить уведомления':'Включить уведомления',
-    callback_data:'v:'+link.id+':'+(link.notifications_enabled?'off':'on')}]
- ];
-}
+export function menu(link){return homeButtons(link);}
 function uniqueOwners(links){return [...new Set(links.map(x=>x.owner_id))];}
 const hash=message=>createHash('sha256').update(message).digest('hex').slice(0,32);
 export class BotEngine {
@@ -37,7 +31,20 @@ export class BotEngine {
  }
  async views(userId,link,range) {
    const [payload,prefs]=await Promise.all([this.store.app(link.owner_id),this.store.prefs(link.owner_id)]);
-   await this.telegram.message(userId,scheduleText(payload,link,prefs.timezone,range,this.now()),menu(link));
+   const timezone=prefs.timezone||'UTC';
+   if(range==='home'){
+     await this.telegram.message(userId,dashboardText(payload,link,timezone,this.now()),menu(link));
+   } else if(range==='students'&&link.role==='teacher'){
+     await this.telegram.message(userId,studentsText(payload),backButtons(link));
+   } else if(range==='subs'){
+     await this.telegram.message(userId,subscriptionsText(payload,link),backButtons(link));
+   } else if(range==='payments'&&link.role==='teacher'){
+     await this.telegram.message(userId,paymentsText(payload,link),backButtons(link));
+   } else if(['today','tomorrow','week','next'].includes(range)){
+     await this.telegram.message(userId,scheduleText(payload,link,timezone,range,this.now()),[
+       ...backButtons(link),...menu(link).slice(0,2)
+     ]);
+   }
  }
  async handle(update) {
    const message=update.message,callback=update.callback_query;
@@ -53,14 +60,14 @@ export class BotEngine {
        return;
      }
      const result=await this.store.redeem(token,id,id);
-     const msg=result?.status==='active'?'Аккаунт TeacherPro подключён. Выберите расписание командой /menu.':
+     const msg=result?.status==='active'?'Аккаунт TeacherPro подключён! Откройте главное меню командой /menu.':
        result?.status==='pending'?'Запрос отправлен преподавателю. После подтверждения вам станет доступно расписание.':
        'Ссылка истекла или уже использована. Создайте новую ссылку в TeacherPro.';
      await this.telegram.message(id,msg);return;
    }
    const links=await this.store.connections({telegram_user_id:'eq.'+id,status:'eq.active'});
    if(callback?.data?.startsWith('v:')){
-     const match=/^v:([a-f0-9-]{36}):(today|tomorrow|week|next|off|on)$/.exec(callback.data);
+     const match=/^v:([a-f0-9-]{36}):(home|today|tomorrow|week|next|students|subs|payments|off|on)$/.exec(callback.data);
      if(!match)return;
      const link=links.find(x=>x.id===match[1]);
      if(!link)return; // Never trust callback payload without ownership check.
@@ -72,13 +79,19 @@ export class BotEngine {
      return;
    }
    if(text==='/start'||text==='/menu'||text==='/help'||!text||text==='/schedule'){
-     if(!links.length){await this.telegram.message(id,'Привет! Подключите Telegram из TeacherPro или через ссылку преподавателя.');return;}
-     if(links.length===1){await this.telegram.message(id,'Выберите действие:',menu(links[0]));return;}
+     if(!links.length){await this.telegram.message(id,'Добро пожаловать в TeacherPro! Подключите Telegram в настройках TeacherPro или по приглашению преподавателя.');return;}
+     if(links.length===1){await this.views(id,links[0],'home');return;}
      await this.telegram.message(id,'Выберите профиль TeacherPro:',chooseButtons(links));return;
    }
-   const intent={'/today':'today','/tomorrow':'tomorrow','/week':'week','/next':'next'}[text];
+   const intent={'/today':'today','/tomorrow':'tomorrow','/week':'week','/next':'next',
+     '/students':'students','/balance':'subs','/payments':'payments'}[text];
    if(intent){
-     if(links.length===1)await this.views(id,links[0],intent);
+     if(links.length===1){
+       const link=links[0];
+       if((intent==='payments'||intent==='students')&&link.role!=='teacher'){
+         await this.telegram.message(id,'Этот раздел доступен только преподавателю.');
+       }else await this.views(id,link,intent);
+     }
      else if(links.length)await this.telegram.message(id,'Выберите нужный профиль:',chooseButtons(links));
      else await this.telegram.message(id,'Сначала подключите профиль из TeacherPro.');
      return;
