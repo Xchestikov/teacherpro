@@ -45,7 +45,7 @@ test('Teacher overview counts pending payments without mislabelling them overdue
  assert.doesNotMatch(s,/Закрытый/);
 });
 test('Renewal alert requires teacher digest opt-in and is deduplicated for each remaining value',async()=>{
- const calls=[],claimed=new Set(),prefs={timezone:'Europe/Moscow',teacher_digest:false,changes_enabled:false};
+ const calls=[],claimed=new Set(),prefs={timezone:'Europe/Moscow',teacher_digest:false,digest_time:'08:00',changes_enabled:false};
  const store={
   app:async()=>payload,prefs:async()=>prefs,snapshots:async()=>[],
   claim:async(linkId,key)=>{const k=linkId+'|'+key;if(claimed.has(k))return false;claimed.add(k);return true;},
