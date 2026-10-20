@@ -271,7 +271,7 @@ test('iPhone student pricing offers fixed and hourly rates without changing the 
 });
 
 
-test('iPhone Telegram invitations become available after FirstVDS worker health verification',async({page})=>{
+test('iPhone Telegram card is responsive and both Telegram Web and manual /start linking work',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
  await page.route('https://fonts.googleapis.com/**',r=>r.abort());
@@ -282,21 +282,35 @@ test('iPhone Telegram invitations become available after FirstVDS worker health 
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
  await expect(page.locator('#authGate')).toBeHidden();
- expect(await page.evaluate(()=>window.TP_TELEGRAM_BOT_USERNAME)).toBe('Assistant_Teacher_Pro_bot');
- expect(await page.evaluate(()=>window.TP_TELEGRAM_BOT_ACTIVE)).toBe(true);
  await page.evaluate(()=>setPage('settings'));
- await expect(page.locator('.tp-telegram-setting')).toBeVisible();
- await expect(page.locator('.tp-telegram-setting')).not.toContainText('пока готовится к подключению');
+ const panel=page.locator('.tp-telegram-setting');
+ await expect(panel).toBeVisible();
+ await expect(panel.locator('.tp-tg-block')).toHaveCount(3);
+ await expect(panel.locator('.tp-tg-choice')).toHaveCount(4);
+ await expect(panel.locator('.tp-tg-field-grid input')).toHaveCount(2);
+ const width=await panel.evaluate(node=>({client:node.clientWidth,scroll:node.scrollWidth,
+   grid:getComputedStyle(node.querySelector('.tp-tg-option-grid')).gridTemplateColumns}));
+ expect(width.scroll).toBeLessThanOrEqual(width.client+2);
  await page.evaluate(()=>{
    cloudClient.rpc=async name=>({data:name==='tp_telegram_issue_invite'?'a'.repeat(64):null,error:null});
+ });
+ await panel.getByRole('button',{name:/Подключить Telegram/}).tap();
+ const invite=panel.locator('#tpTelegramInviteTeacher');
+ await expect(invite.getByRole('link',{name:/Открыть в Telegram/}).first()).toHaveAttribute('href',
+   'https://t.me/Assistant_Teacher_Pro_bot?start='+'a'.repeat(64));
+ await expect(invite.getByRole('link',{name:/Открыть Telegram Web/})).toHaveAttribute('href',
+   'https://web.telegram.org/k/#@Assistant_Teacher_Pro_bot');
+ await expect(invite.locator('.tp-tg-code-input')).toHaveValue('/start '+'a'.repeat(64));
+ await expect(invite.getByRole('button',{name:'Скопировать ссылку'})).toBeVisible();
+ await expect(invite.getByRole('button',{name:'Скопировать команду'})).toBeVisible();
+ expect(await invite.evaluate(el=>el.scrollWidth<=el.clientWidth+2)).toBe(true);
+ await page.evaluate(()=>{
    db.clients=[{id:101,name:'Ученица для Telegram',telegram:''}];
    openClient(101,'overview');
  });
  await expect(page.locator('#modalBody .tp-telegram-student')).toBeVisible();
  await page.locator('#tpTgInviteStudent').tap();
- await expect(page.locator('#tpTelegramStudent input')).toHaveValue(
-   'https://t.me/Assistant_Teacher_Pro_bot?start='+'a'.repeat(64));
- await expect(page.locator('#tpTelegramStudent a')).toHaveAttribute('href',
-   'https://t.me/Assistant_Teacher_Pro_bot?start='+'a'.repeat(64));
+ await expect(page.locator('#tpTelegramStudent .tp-tg-code-input')).toHaveValue('/start '+'a'.repeat(64));
+ await expect(page.locator('#tpTelegramStudent a[href^="https://web.telegram.org/k/"]')).toBeVisible();
  expect(errors).toEqual([]);
 });

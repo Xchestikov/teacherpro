@@ -1259,3 +1259,30 @@ test('Changing lesson student updates preferred custom duration',async({page})=>
  await expect(page.locator('#lDuration option[value="55"]')).toHaveCount(1);
  expect(errors).toEqual([]);
 });
+
+test('Telegram desktop card uses structured layout and offers a safe Telegram Web fallback',async({page})=>{
+ await page.setViewportSize({width:1320,height:900});
+ const errors=await setup(page);await login(page);
+ await page.evaluate(()=>setPage('settings'));
+ const card=page.locator('.tp-telegram-setting');
+ await expect(card).toBeVisible();
+ await expect(card.locator('.tp-tg-block')).toHaveCount(3);
+ await expect(card.locator('.tp-tg-choice')).toHaveCount(4);
+ const grid=await card.locator('.tp-tg-option-grid').evaluate(el=>({
+   cols:getComputedStyle(el).gridTemplateColumns,
+   width:el.clientWidth,scroll:el.scrollWidth
+ }));
+ expect(grid.cols.trim().split(/\s+/)).toHaveLength(2);
+ expect(grid.scroll).toBeLessThanOrEqual(grid.width+2);
+ await page.evaluate(()=>{cloudClient.rpc=async name=>({
+   data:name==='tp_telegram_issue_invite'?'b'.repeat(64):null,error:null
+ });});
+ await card.getByRole('button',{name:/Подключить Telegram/}).click();
+ const invite=card.locator('#tpTelegramInviteTeacher');
+ await expect(invite.getByRole('link',{name:/Открыть Telegram Web/})).toHaveAttribute('target','_blank');
+ await expect(invite.getByRole('link',{name:/Открыть Telegram Web/})).toHaveAttribute(
+   'href','https://web.telegram.org/k/#@Assistant_Teacher_Pro_bot');
+ await expect(invite.locator('.tp-tg-code-input')).toHaveValue('/start '+'b'.repeat(64));
+ await expect(invite.getByRole('button',{name:'Скопировать команду'})).toBeVisible();
+ expect(errors).toEqual([]);
+});
