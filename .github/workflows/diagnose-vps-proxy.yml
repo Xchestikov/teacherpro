@@ -59,3 +59,27 @@ jobs:
             done
           done
           REMOTE
+
+      - name: Check server routing and PHP execution without changing configuration
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_DOMAIN: ${{ secrets.VPS_DOMAIN }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_DOMAIN"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" "$VPS_USER@$VPS_HOST" "bash -s -- '$VPS_DOMAIN'" <<'REMOTE'
+          set -euo pipefail
+          domain="$1"
+          if grep -Risql --include='*' 'fastcgi_pass' /etc/nginx/sites-enabled 2>/dev/null; then echo 'NGINX_HAS_FASTCGI=yes'; else echo 'NGINX_HAS_FASTCGI=no'; fi
+          if grep -Risql --include='*' 'proxy_pass' /etc/nginx/sites-enabled 2>/dev/null; then echo 'NGINX_HAS_PROXY=yes'; else echo 'NGINX_HAS_PROXY=no'; fi
+          if grep -Risql --include='*' '/srv/teacherpro' /etc/nginx/sites-enabled 2>/dev/null; then echo 'NGINX_REFERENCES_TEACHERPRO=yes'; else echo 'NGINX_REFERENCES_TEACHERPRO=no'; fi
+          if sudo -n -l >/dev/null 2>&1; then echo 'SUDO_ALLOWED_LIST=yes'; else echo 'SUDO_ALLOWED_LIST=no'; fi
+          tmp=/srv/teacherpro/current/teacherpro-php-probe-20261020.php
+          if ! test -w /srv/teacherpro/current; then echo 'PHP_PROBE=NO_WRITE_ACCESS'; exit 0; fi
+          trap 'rm -f "$tmp"' EXIT
+          printf '<?php header("Content-Type: text/plain"); echo "TEACHERPRO_PHP_EXECUTES"; ?>' > "$tmp"
+          result=$(curl -fsS --max-time 9 --resolve "$domain:443:127.0.0.1" "https://$domain/teacherpro-php-probe-20261020.php" || true)
+          if test "$result" = 'TEACHERPRO_PHP_EXECUTES'; then echo 'PHP_PROBE=EXECUTED'; else echo 'PHP_PROBE=NOT_EXECUTED'; fi
+          REMOTE
