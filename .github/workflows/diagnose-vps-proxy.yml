@@ -156,3 +156,40 @@ jobs:
           grep -E '^[[:space:]]*(server[[:space:]]*\{|listen[[:space:]]|server_name[[:space:]]|location[[:space:]]|root[[:space:]]|include[[:space:]]|return[[:space:]]|proxy_pass[[:space:]])' /etc/nginx/conf.d/teacherpro.conf | sed -E 's/(server_name)[[:space:]].*/\1 <redacted>;/; s#https?://[^ ;]+#https://<redacted-host>#Ig' || true
           echo 'NGINX_DECLARATIONS_END'
           REMOTE
+
+
+      - name: Check Telegram MTProto and control TCP ports without credentials
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -u
+          echo "MTProto connectivity from FirstVDS (connection only, no login)"
+          probe() {
+            local label="$1" target="$2" port="$3"
+            if timeout 5 bash -c 'exec 3<>/dev/tcp/"$1"/"$2"' _ "$target" "$port" >/dev/null 2>&1; then
+              echo "$label=reachable"
+            else
+              echo "$label=unreachable"
+            fi
+          }
+          probe TELEGRAM_DC1_443 149.154.175.50 443
+          probe TELEGRAM_DC2_443 149.154.167.51 443
+          probe TELEGRAM_DC3_443 149.154.175.100 443
+          probe TELEGRAM_DC4_443 149.154.167.91 443
+          probe TELEGRAM_DC5_443 149.154.171.5 443
+          probe TELEGRAM_DC2_80 149.154.167.51 80
+          probe TELEGRAM_DC2_5222 149.154.167.51 5222
+          probe HTTPS_GITHUB_CONTROL github.com 443
+          probe HTTPS_SUPABASE egopcojrzklvytcuhpov.supabase.co 443
+          for domain in api.telegram.org egopcojrzklvytcuhpov.supabase.co github.com; do
+            if getent ahostsv4 "$domain" >/dev/null 2>&1; then
+              echo "DNS_$domain=resolved"
+            else
+              echo "DNS_$domain=unresolved"
+            fi
+          done
+          REMOTE
