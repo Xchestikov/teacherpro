@@ -271,7 +271,7 @@ test('iPhone student pricing offers fixed and hourly rates without changing the 
 });
 
 
-test('iPhone Telegram integration stays safely inactive until FirstVDS webhook is configured',async({page})=>{
+test('iPhone Telegram invitations become available after FirstVDS worker health verification',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* mock */'}));
  await page.route('https://fonts.googleapis.com/**',r=>r.abort());
@@ -283,16 +283,20 @@ test('iPhone Telegram integration stays safely inactive until FirstVDS webhook i
  await page.locator('#authSubmit').click();
  await expect(page.locator('#authGate')).toBeHidden();
  expect(await page.evaluate(()=>window.TP_TELEGRAM_BOT_USERNAME)).toBe('Assistant_Teacher_Pro_bot');
- expect(await page.evaluate(()=>window.TP_TELEGRAM_BOT_ACTIVE)).toBe(false);
+ expect(await page.evaluate(()=>window.TP_TELEGRAM_BOT_ACTIVE)).toBe(true);
  await page.evaluate(()=>setPage('settings'));
  await expect(page.locator('.tp-telegram-setting')).toBeVisible();
- await expect(page.locator('.tp-telegram-setting')).toContainText('пока готовится к подключению');
+ await expect(page.locator('.tp-telegram-setting')).not.toContainText('пока готовится к подключению');
  await page.evaluate(()=>{
+   cloudClient.rpc=async name=>({data:name==='tp_telegram_issue_invite'?'a'.repeat(64):null,error:null});
    db.clients=[{id:101,name:'Ученица для Telegram',telegram:''}];
    openClient(101,'overview');
  });
  await expect(page.locator('#modalBody .tp-telegram-student')).toBeVisible();
  await page.locator('#tpTgInviteStudent').tap();
- await expect(page.locator('#tpTelegramStudent')).toContainText('Бот пока не активирован');
+ await expect(page.locator('#tpTelegramStudent input')).toHaveValue(
+   'https://t.me/Assistant_Teacher_Pro_bot?start='+'a'.repeat(64));
+ await expect(page.locator('#tpTelegramStudent a')).toHaveAttribute('href',
+   'https://t.me/Assistant_Teacher_Pro_bot?start='+'a'.repeat(64));
  expect(errors).toEqual([]);
 });
