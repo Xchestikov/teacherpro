@@ -42,7 +42,7 @@ test('Student dashboard and billing never leak another student or payment detail
 test('Teacher dashboard includes next student; finance card never invents money amounts',()=>{
   assert.match(dashboardText(data,t,tz,now),/Анна/);
   assert.match(studentsText(data),/Данные другого ученика/);
-  assert.match(paymentsText(data,t),/Ожидают оплаты: 1/);
+  assert.match(paymentsText(data,t),/Ожидаемых платежей в TeacherPro: 1/);
   assert.doesNotMatch(paymentsText(data,t),/₽/);
 });
 test('Unknown subscription balance is not described as zero',()=>{
