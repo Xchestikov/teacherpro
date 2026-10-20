@@ -21,7 +21,7 @@ export function homeButtons(link){
   return [
     [button(link,'next','⏰ Следующий урок'),button(link,'week','🗓 Расписание')],
     [button(link,'subs','🎟 Абонемент'),button(link,'today','📅 Сегодня')],
-    [button(link,'requests','✉️ Запрос переноса')],
+    ...(link.role==='student'?[[button(link,'requests','✉️ Запрос переноса')]]:[]),
     [button(link,link.notifications_enabled?'off':'on',link.notifications_enabled?'🔕 Выключить уведомления':'🔔 Включить уведомления')]
   ];
 }
@@ -29,7 +29,7 @@ export function backButtons(link){
   return [[button(link,'home','← Главное меню')]];
 }
 export function dashboardText(payload,link,timezone,now=Date.now()){
-  const student=link.role==='student';
+  const student=link.role!=='teacher';
   const clients=Array.isArray(payload.clients)?payload.clients:[];
   const parts=dateParts(new Date(now),timezone);
   const today=parts.date;
@@ -38,7 +38,7 @@ export function dashboardText(payload,link,timezone,now=Date.now()){
   const next=events[0];
   const notification=link.notifications_enabled?'включены':'выключены';
   if(student){
-    return '📚 TeacherPro · Мой кабинет\n\n'+
+    return (link.role==='parent'?'👨‍👩‍👧 TeacherPro · Кабинет родителя\n\n':'📚 TeacherPro · Мой кабинет\n\n')+
       (next?'Следующее занятие:\n'+labelLesson(next.lesson,'student',clients):
        'Ближайших занятий пока нет.')+
       '\n\nНапоминания: '+notification+'.\n\nВыберите нужный раздел 👇';
@@ -58,7 +58,7 @@ export function studentsText(payload){
 }
 export function subscriptionsText(payload,link){
   const all=Array.isArray(payload.subscriptions)?payload.subscriptions:[];
-  const visible=link.role==='student'
+  const visible=link.role!=='teacher'
     ?all.filter(s=>String(s.clientId)===String(link.student_id))
     :all;
   const open=visible.filter(s=>!s.archivedAt);

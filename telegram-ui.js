@@ -22,7 +22,7 @@
  const status=(role,student)=>state.links.find(l=>l.role===role&&
    (role==='teacher'||String(l.student_id)===String(student)));
  function widget(){
-   const students=state.links.filter(l=>l.role==='student');
+   const students=state.links.filter(l=>l.role==='student'||l.role==='parent');
    const pref=state.prefs||{};
    const tz=pref.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
    const teacher=status('teacher');
@@ -77,13 +77,13 @@
        '</div>'+
      '</div>'+
      '<div class="tp-tg-block">'+
-       '<div class="tp-tg-block-head"><h4>Подключённые ученики</h4>'+
+       '<div class="tp-tg-block-head"><h4>Ученики и родители</h4>'+
          '<span class="tp-tg-chip">'+students.length+' '+(students.length===1?'подключение': 'подключений')+'</span></div>'+
        '<p class="tp-tg-muted">Приглашайте ученика из его карточки. Подключение подтверждает преподаватель.</p>'+
        (students.length?'<div class="tp-tg-status-list">'+students.map(l=>{
          const c=db.clients.find(c=>String(c.id)===String(l.student_id));
          return '<div class="tp-tg-student-line">'+
-           '<span class="tp-tg-person-name">'+safe(c?.name||'Ученик')+' · '+safe(badge(l.status))+'</span>'+
+           '<span class="tp-tg-person-name">'+safe(l.role==='parent'?'Родитель · ':'Ученик · ')+safe(c?.name||'Ученик')+' · '+safe(badge(l.status))+'</span>'+
            '<div class="tp-tg-student-actions">'+
              (l.status==='pending'?button('Подтвердить','onclick="tpTgApprove(this)"',l.id):'')+
              button('Отключить','onclick="tpTgRevoke(this)"',l.id)+'</div></div>';
@@ -150,7 +150,7 @@
    const wrapper=document.createElement('div');wrapper.className='tp-tg-invite';
    const head=document.createElement('div');head.className='tp-tg-invite-head';
    const heading=document.createElement('strong');heading.className='tp-tg-invite-title';
-   heading.textContent=role==='teacher'?'Персональная ссылка для вашего аккаунта':'Персональное приглашение ученика';
+   heading.textContent=role==='teacher'?'Персональная ссылка для вашего аккаунта':role==='parent'?'Персональное приглашение родителя':'Персональное приглашение ученика';
    const intro=document.createElement('p');
    intro.textContent='Ссылка одноразовая. Не передавайте её посторонним.';
    head.append(heading,intro);
@@ -193,7 +193,7 @@
  window.tpTgInvite=async(role,studentId)=>{
    if(!cloudClient||!cloudUser)return;
    if(!configured()){
-     const target=document.querySelector(role==='student'?'#tpTelegramStudent':'#tpTelegramFeedback');
+     const target=document.querySelector(role==='teacher'?'#tpTelegramFeedback':role==='parent'?'#tpTelegramParent':'#tpTelegramStudent');
      if(target)target.textContent='Бот пока не активирован. Подключение станет доступно после запуска.';
      return;
    }
@@ -201,11 +201,11 @@
      p_role:role,p_student_id:studentId===undefined?null:String(studentId)
    });
    if(error||!/^[a-f0-9]{64}$/.test(String(data||''))){
-     const target=document.querySelector(role==='teacher'?'#tpTelegramFeedback':'#tpTelegramStudent');
+     const target=document.querySelector(role==='teacher'?'#tpTelegramFeedback':role==='parent'?'#tpTelegramParent':'#tpTelegramStudent');
      if(target)target.textContent='Не удалось создать приглашение. Попробуйте ещё раз.';
      return;
    }
-   const target=document.querySelector(role==='teacher'?'#tpTelegramInviteTeacher':'#tpTelegramStudent');
+   const target=document.querySelector(role==='teacher'?'#tpTelegramInviteTeacher':role==='parent'?'#tpTelegramParent':'#tpTelegramStudent');
    if(!target)return;
    target.replaceChildren(inviteCard(data,role));
  };
@@ -241,24 +241,37 @@
      '<div class="tp-tg-header-copy"><h3>Telegram</h3>'+
      '<p class="tp-tg-muted">Расписание и напоминания ученика в Telegram.</p></div></div>'+
      '<div class="tp-tg-block-head"><strong id="tpTgStudentStatus" class="tp-tg-person-name">Проверяем подключение…</strong></div>'+
-     '<button class="tp-tg-btn tp-tg-btn--secondary" id="tpTgInviteStudent" type="button">Создать ссылку-приглашение</button>'+
-     '<div id="tpTelegramStudent" class="tp-tg-invite-slot" aria-live="polite"></div>';
+     '<button class="tp-tg-btn tp-tg-btn--secondary" id="tpTgInviteStudent" type="button">Пригласить ученика</button>'+
+     '<button class="tp-tg-btn tp-tg-btn--secondary" id="tpTgInviteParent" type="button">Пригласить родителя</button>'+
+     '<div id="tpTelegramStudent" class="tp-tg-invite-slot" aria-live="polite"></div>'+
+     '<div id="tpTelegramParent" class="tp-tg-invite-slot" aria-live="polite"></div>';
    container.append(sec);
    sec.querySelector('#tpTgInviteStudent').onclick=()=>window.tpTgInvite('student',id);
+   sec.querySelector('#tpTgInviteParent').onclick=()=>window.tpTgInvite('parent',id);
    if(!cloudUser)return;
    query().then(()=>{
      if(!sec.isConnected)return;
-     const link=status('student',id),node=sec.querySelector('#tpTgStudentStatus');
-     node.textContent='Статус: '+badge(link?.status);
-     if(link){
-       const controls=document.createElement('div');
-       if(link.status==='pending'){
-         const yes=document.createElement('button');yes.className='secondary';yes.textContent='Подтвердить';
-         yes.dataset.tgId=link.id;yes.onclick=()=>window.tpTgApprove(yes);controls.append(yes);
+     const node=sec.querySelector('#tpTgStudentStatus');
+     node.textContent='Подключения ученика и родителя';
+     for(const role of ['student','parent']){
+       const link=status(role,id);
+       const row=document.createElement('div');row.className='tp-tg-student-line';
+       const summary=document.createElement('span');summary.className='tp-tg-person-name';
+       summary.textContent=(role==='parent'?'Родитель':'Ученик')+' · '+badge(link?.status);
+       row.append(summary);
+       if(link){
+         const controls=document.createElement('div');controls.className='tp-tg-student-actions';
+         if(link.status==='pending'){
+           const yes=document.createElement('button');yes.className='tp-tg-btn tp-tg-btn--primary';
+           yes.textContent='Подтвердить';yes.dataset.tgId=link.id;
+           yes.onclick=()=>window.tpTgApprove(yes);controls.append(yes);
+         }
+         const off=document.createElement('button');off.className='tp-tg-btn tp-tg-btn--secondary';
+         off.textContent='Отключить';off.dataset.tgId=link.id;
+         off.onclick=async()=>{await window.tpTgRevoke(off);openClient(id,'overview');};
+         controls.append(off);row.append(controls);
        }
-       const off=document.createElement('button');off.className='secondary';off.textContent='Отключить';
-       off.dataset.tgId=link.id;off.onclick=async()=>{await window.tpTgRevoke(off);openClient(id,'overview');};
-       controls.append(off);sec.append(controls);
+       sec.append(row);
      }
    }).catch(()=>{if(sec.isConnected)sec.querySelector('#tpTgStudentStatus').textContent='Ошибка загрузки';});
  };

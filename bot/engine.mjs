@@ -4,7 +4,7 @@ import {dateParts,lessonStart,lessonList,planned,cancelled,reminderDue,lessonSta
 import {homeButtons,backButtons,dashboardText,studentsText,subscriptionsText,paymentsText,hashLessonId,lessonRequestKeyboard} from './presentation.mjs';
 
 export function chooseButtons(links){
- return links.slice(0,20).map(link=>[{text:link.role==='teacher'?'👩‍🏫 Мой кабинет преподавателя':'📚 Мой кабинет ученика',
+ return links.slice(0,20).map(link=>[{text:link.role==='teacher'?'👩‍🏫 Мой кабинет преподавателя':link.role==='parent'?'👨‍👩‍👧 Кабинет родителя':'📚 Мой кабинет ученика',
    callback_data:'v:'+link.id+':home'}]);
 }
 export function menu(link){return homeButtons(link);}
@@ -180,7 +180,7 @@ export class BotEngine {
        await this.withDelivery(t,key,'Утренняя сводка TeacherPro\n\n'+text);
      }
    }
-   const students=links.filter(l=>l.role==='student');
+   const students=links.filter(l=>l.role==='student'||l.role==='parent');
    if(!students.length)return;
    const future=(payload.lessons||[]).filter(l=>l&&l.id!==undefined&&
       (planned(l)||cancelled(l))&&Number.isFinite(lessonStart(l,tz)))
