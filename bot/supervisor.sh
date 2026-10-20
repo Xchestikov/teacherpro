@@ -15,17 +15,17 @@ healthy_pid() {
     ps -p "$pid" -o args= 2>/dev/null | grep -F -q "supervisor.sh serve"
 }
 cleanup(){
-  if [[ -n "\${node_pid:-}" ]]; then
+  if [[ -n "${node_pid:-}" ]]; then
     kill "$node_pid" >/dev/null 2>&1 || true
     wait "$node_pid" >/dev/null 2>&1 || true
   fi
-  if [[ -n "\${xray_pid:-}" ]]; then
+  if [[ -n "${xray_pid:-}" ]]; then
     kill "$xray_pid" >/dev/null 2>&1 || true
     wait "$xray_pid" >/dev/null 2>&1 || true
   fi
   [[ $(cat "$pidfile" 2>/dev/null || true) == "$$" ]] && rm -f "$pidfile" || true
 }
-case "\${1:-}" in
+case "${1:-}" in
   serve)
     exec 9>"$root/fast.lock"
     if ! flock -n 9; then exit 0; fi
