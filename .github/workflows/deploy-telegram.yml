@@ -153,7 +153,10 @@ jobs:
           chmod 600 "$root/bot.env"
           if test -f "$root/xray.json"; then
             chmod 600 "$root/xray.json"
-            "$root/bin/xray" run -test -c "$root/xray.json" >/dev/null
+            if ! "$root/bin/xray" run -test -c "$root/xray.json" >/dev/null 2>&1; then
+              echo "XRAY_PRIVATE_CONFIG_VALIDATION_FAILED"
+              exit 1
+            fi
             echo "XRAY_LOOPBACK_CONFIG_VALID"
           fi
           test -s "$root/releases/$release/cron.mjs"
