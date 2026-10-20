@@ -27,7 +27,7 @@ jobs:
           set -euo pipefail
           npm install --no-save --no-package-lock @supabase/supabase-js@2.57.0 esbuild@0.25.9
           mkdir -p vendor
-          printf '%s\n' "import { createClient } from '@supabase/supabase-js';" "window.supabase = { createClient };" > vendor/_sdk-entry.mjs
+          printf '%s\n' "import { createClient } from '@supabase/supabase-js';" "window.supabase ||= { createClient };" > vendor/_sdk-entry.mjs
           ./node_modules/.bin/esbuild vendor/_sdk-entry.mjs --bundle --minify --format=iife --platform=browser --target=es2020 --outfile=vendor/supabase-sdk.js
           rm vendor/_sdk-entry.mjs
           node --check vendor/supabase-sdk.js
