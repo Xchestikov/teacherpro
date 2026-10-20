@@ -252,6 +252,47 @@ test('Soft Editorial uses real workload data and presents actions on mobile',asy
  expect(errors).toEqual([]);
 });
 
+
+test('Dashboard aligned line icons and week metrics exclude cancelled and deleted lessons',async({page})=>{
+ const errors=await setup(page);await login(page);
+ await page.clock.install({time:new Date('2026-10-20T12:00:00')});
+ await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>{
+   db.clients=[{id:1,name:'Ученик для проверки',birthday:'20.10'}];
+   const lesson=(id,date,time,status)=>({id,date,time,duration:60,status,clientId:1});
+   db.lessons=[
+     lesson('done','2026-10-19','09:00','done'),
+     lesson('past-plan','2026-10-20','08:00','planned'),
+     lesson('future-plan','2026-10-21','15:00','planned'),
+     lesson('cancelled','2026-10-22','11:00','cancelled'),
+     lesson('deleted','2026-10-23','10:00','deleted'),
+     lesson('next-week','2026-10-26','10:00','planned')
+   ];
+   setPage('dashboard');
+ });
+ await expect(page.locator('.se-action')).toHaveCount(4);
+ await expect(page.locator('.se-action .tp-ui-icon')).toHaveCount(4);
+ await expect(page.locator('.birthday-heading-icon .tp-ui-icon')).toHaveCount(1);
+ await expect(page.locator('.birthday-heading')).not.toContainText('✳');
+ await expect(page.locator('[data-week-metric="total"] strong')).toHaveText('3');
+ await expect(page.locator('[data-week-metric="completed"] strong')).toHaveText('1');
+ await expect(page.locator('[data-week-metric="upcoming"] strong')).toHaveText('1');
+ const layout=await page.evaluate(()=>{
+  const box=document.querySelector('.birthday-heading-icon').getBoundingClientRect();
+  const svg=document.querySelector('.birthday-heading-icon .tp-ui-icon').getBoundingClientRect();
+  const grid=document.querySelector('.tp-week-list');
+  return {offset:Math.abs((box.top+box.height/2)-(svg.top+svg.height/2)),
+    columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+    overflow:document.documentElement.scrollWidth-innerWidth};
+ });
+ expect(layout.offset).toBeLessThan(2);
+ expect(layout.columns).toBe(3);
+ expect(layout.overflow).toBeLessThanOrEqual(2);
+ await page.locator('.se-action').first().click();
+ await expect(page.locator('#modal')).toHaveClass(/open/);
+ expect(errors).toEqual([]);
+});
+
 test('Soft Editorial calendar quick actions, month grid and day navigation',async({page})=>{
  const errors=await setup(page);await login(page);
  await addStudent(page,'Месячный урок','15.12');

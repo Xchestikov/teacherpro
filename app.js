@@ -299,10 +299,36 @@ const records=db.homework.filter(h=>h.status!=='done').sort((a,b)=>(a.dueDate||'
 const html=records.length?'<div class="student-records">'+records.map(h=>'<div class="student-record"><div class="student-record-head"><strong>'+htmlSafe(h.title||'Домашнее задание')+'</strong><span class="status '+(h.dueDate&&h.dueDate<todayISO()?'warn':'')+'">'+(h.dueDate?dateFmt(h.dueDate):'Без срока')+'</span></div><p>'+htmlSafe(studentFor(h.clientId)?.name||'Ученик')+'</p><div class="student-record-actions"><button class="primary" data-student-id="'+htmlSafe(h.clientId)+'" onclick="openClient(this.dataset.studentId,\'homework\')">Открыть задания ученика</button></div></div>').join('')+'</div>':'<div class="student-empty">Все задания отмечены выполненными или пока не созданы.</div>';
 openModal('Домашние задания · контроль сроков',html)
 }
+
+/* Calendar metrics and unified line icons for TeacherPro dashboard. */
+function tpWeekOverview(now=new Date()){
+ const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12);
+ monday.setDate(monday.getDate()-(monday.getDay()+6)%7);
+ const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+ const from=localDateISO(monday),to=localDateISO(sunday);
+ const lessons=db.lessons.filter(l=>l.date>=from&&l.date<=to&&!lessonIsCancelled(l.status));
+ const nowKey=localDateISO(now)+'T'+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+ return {from,to,lessons,total:lessons.length,completed:lessons.filter(l=>l.status==='done').length,
+  upcoming:lessons.filter(l=>l.status==='planned'&&l.time&&(l.date+'T'+l.time)>=nowKey).length};
+}
+function tpUiIcon(kind){
+ const shapes={
+  'calendar-add':'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M12 13v6M9 16h6"/>',
+  'user-add':'<circle cx="10" cy="8" r="3"/><path d="M4 20v-2a6 6 0 0 1 12 0v2M19 8v6M16 11h6"/>',
+  wallet:'<rect x="3" y="6" width="18" height="15" rx="2"/><path d="M3 10h18M6 6V4h12M15 15h3"/>',
+  book:'<rect x="5" y="3" width="15" height="18" rx="2"/><path d="M9 3v18M12 8h5M12 12h5M3 7v13"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M7 14h3M14 14h3"/>',
+  'check-circle':'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  gift:'<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M3 7h18v4H3zM12 7v14M12 7c-4 0-7-1-7-3s4-2 7 3Zm0 0c4 0 7-1 7-3s-4-2-7 3Z"/>'
+ };
+ return '<svg class="tp-ui-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+(shapes[kind]||shapes.calendar)+'</svg>';
+}
+
 function normalizeBirthday(value){const text=String(value||'').trim();if(!text)return '';const match=/^(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?$/.exec(text);if(!match)return null;const day=+match[1],month=+match[2],year=match[3]?+match[3]:null;if(month<1||month>12||day<1||day>31||year!==null&&(year<1900||year>new Date().getFullYear()))return null;const check=year??(month===2&&day===29?2024:2025),date=new Date(check,month-1,day);if(date.getFullYear()!==check||date.getMonth()!==month-1||date.getDate()!==day)return null;return String(day).padStart(2,'0')+'.'+String(month).padStart(2,'0')+(year?'.'+year:'')}
 function birthdayNext(value,now=new Date()){const clean=normalizeBirthday(value);if(!clean)return null;const [day,month]=clean.split('.').map(Number),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());for(let y=today.getFullYear();y<=today.getFullYear()+8;y++){const date=new Date(y,month-1,day);if(date.getMonth()!==month-1||date.getDate()!==day||date<today)continue;const days=Math.round((Date.UTC(y,month-1,day)-Date.UTC(today.getFullYear(),today.getMonth(),today.getDate()))/86400000);return {date,days}}return null}
 function upcomingBirthdays(limit=6){return db.clients.map(c=>({client:c,birthday:birthdayNext(c.birthday)})).filter(x=>x.birthday).sort((a,b)=>a.birthday.days-b.birthday.days).slice(0,limit)}
-function birthdaysWidget(){const all=upcomingBirthdays(),soon=all.filter(x=>x.birthday.days<=30);return '<section class="birthday-widget"><div class="birthday-heading"><span>✳</span><h3>Дни рождения</h3><button class="link-btn" onclick="setPage(\'clients\')">Ученики →</button></div>'+(soon.length?'<div class="birthday-items">'+soon.slice(0,4).map(x=>'<button type="button" class="birthday-entry" data-student-id="'+htmlSafe(x.client.id)+'" onclick="openClient(this.dataset.studentId)"><span class="birthday-avatar">'+htmlSafe((x.client.name||'У').trim().charAt(0))+'</span><span class="birthday-person"><strong>'+htmlSafe(x.client.name)+'</strong><small>'+x.birthday.date.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+'</small></span><span class="birthday-when">'+(x.birthday.days===0?'Сегодня 🎂':x.birthday.days===1?'Завтра':'Через '+x.birthday.days+' дн.')+'</span></button>').join('')+'</div>':'<p class="birthday-empty">'+(all.length?'Ближайший день рождения через '+all[0].birthday.days+' дн.':'Добавь даты рождения учеников, чтобы видеть их здесь.')+'</p>')+'</section>'}
+function birthdaysWidget(){const all=upcomingBirthdays(),soon=all.filter(x=>x.birthday.days<=30);return '<section class="birthday-widget"><div class="birthday-heading"><span class="birthday-heading-icon" aria-hidden="true">'+tpUiIcon('gift')+'</span><h3>Дни рождения</h3><button class="link-btn" onclick="setPage(\'clients\')">Ученики →</button></div>'+(soon.length?'<div class="birthday-items">'+soon.slice(0,4).map(x=>'<button type="button" class="birthday-entry" data-student-id="'+htmlSafe(x.client.id)+'" onclick="openClient(this.dataset.studentId)"><span class="birthday-avatar">'+htmlSafe((x.client.name||'У').trim().charAt(0))+'</span><span class="birthday-person"><strong>'+htmlSafe(x.client.name)+'</strong><small>'+x.birthday.date.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+'</small></span><span class="birthday-when">'+(x.birthday.days===0?'Сегодня 🎂':x.birthday.days===1?'Завтра':'Через '+x.birthday.days+' дн.')+'</span></button>').join('')+'</div>':'<p class="birthday-empty">'+(all.length?'Ближайший день рождения через '+all[0].birthday.days+' дн.':'Добавь даты рождения учеников, чтобы видеть их здесь.')+'</p>')+'</section>'}
 function studentFor(id){return db.clients.find(c=>String(c.id)===String(id))}
 function studentTasks(id){return db.homework.filter(h=>String(h.clientId)===String(id)).sort((a,b)=>((a.status==='done')-(b.status==='done'))||(a.dueDate||'9999-12-31').localeCompare(b.dueDate||'9999-12-31'))}
 function studentNotesFor(id){return db.studentNotes.filter(n=>String(n.clientId)===String(id)).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))}

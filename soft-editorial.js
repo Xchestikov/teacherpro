@@ -23,17 +23,16 @@
     const upcoming=nextLessons(),next=upcoming[0];
     const monday=mondayOf(date);
     const days=Array.from({length:7},(_,i)=>{const d=copyDate(monday);d.setDate(monday.getDate()+i);return d;});
-    const from=dayKey(days[0]),to=dayKey(days[6]);
-    const lessons=db.lessons.filter(l=>l.date>=from&&l.date<=to&&l.status!=='cancelled');
+    const summary=tpWeekOverview(date);
+    const {from,to,lessons}=summary;
     const dayHours=days.map(d=>lessons.filter(l=>l.date===dayKey(d)).reduce((h,l)=>h+duration(l)/60,0));
     const hours=dayHours.reduce((a,b)=>a+b,0);
     const conducted=lessons.filter(l=>l.status==='done').reduce((h,l)=>h+duration(l)/60,0);
     const completedPct=hours?Math.round(conducted/hours*100):0;
     const maxDay=Math.max(1,...dayHours);
     const lastLessons=upcoming.slice(0,4);
-    const done=lessons.filter(l=>l.status==='done').length;
-    const pending=db.payments.filter(p=>p.status!=='paid');
-    const income=monthlyIncome();
+    const done=summary.completed;
+    const upcomingCount=summary.upcoming;
 
     const nextCard=next?'<div class="se-next-row"><span class="se-avatar" aria-hidden="true">'+safe(studentName(next).charAt(0).toUpperCase())+'</span>'+
       '<div><div class="se-time">'+safe(next.time)+' – '+safe(hhmm(lessonMinutes(next.time)+duration(next)))+'</div><div class="se-person">'+safe(studentName(next))+'</div>'+
@@ -47,8 +46,8 @@
       '<span class="se-lesson-name">'+safe(studentName(l))+'</span><span class="se-lesson-arrow" aria-hidden="true">›</span></button>').join(''):
       '<div class="se-empty">Пока ничего не запланировано. Свободное время — тоже часть хорошей недели.</div>';
 
-    const action=(icon,label,handler)=>'<button class="se-action" type="button" onclick="'+handler+'"><span aria-hidden="true">'+icon+'</span><span>'+label+'</span></button>';
-    const stats=(icon,count,label)=>'<div class="se-stat"><span aria-hidden="true">'+icon+'</span><div><strong>'+safe(count)+'</strong><div class="se-row-sub">'+label+'</div></div></div>';
+    const action=(icon,label,handler)=>'<button class="se-action" type="button" onclick="'+handler+'"><span class="se-action-icon" aria-hidden="true">'+tpUiIcon(icon)+'</span><span class="se-action-label">'+safe(label)+'</span></button>';
+    const stats=(icon,count,label)=>'<div class="se-stat"><span aria-hidden="true">'+tpUiIcon(icon)+'</span><div><strong>'+safe(count)+'</strong><div class="se-row-sub">'+label+'</div></div></div>';
     $('#content').innerHTML='<div class="se-dashboard">'+
       '<header class="se-greeting"><h2>'+({night:'Доброй ночи',morning:'Доброе утро',day:'Добрый день',evening:'Добрый вечер'})[(h=>h>=5&&h<11?'morning':h>=11&&h<17?'day':h>=17&&h<23?'evening':'night')(new Date().getHours())]+', '+safe(greeting)+'! '+((h=>h>=5&&h<11?'🌤️':h>=11&&h<17?'☀️':h>=17&&h<23?'🌇':'🌙')(new Date().getHours()))+'</h2><p class="se-subtitle">Всё важное для занятий — в одном уютном месте.</p></header>'+
       '<div class="se-overview">'+
@@ -64,18 +63,17 @@
       '<div class="se-week-labels">'+weekdays.map(w=>'<span>'+w+'</span>').join('')+'</div></div></div>'+
       '<div class="se-note">Круг: доля уже проведённых часов · Столбцы: занятость по дням</div></section></div>'+
       '<nav class="se-actions" aria-label="Быстрые действия">'+
-      action('▣','Запланировать занятие','openLesson()')+
-      action('♙','Добавить ученика','openClient()')+
-      action('₽','Записать оплату','openPayment()')+
-      action('◒','Оформить абонемент','openSubscription()')+'</nav>'+
+      action('calendar-add','Запланировать занятие','openLesson()')+
+      action('user-add','Добавить ученика','openClient()')+
+      action('wallet','Записать оплату','openPayment()')+
+      action('book','Оформить абонемент','openSubscription()')+'</nav>'+
       '<div class="se-bottom"><section class="se-card"><div class="se-card-head"><h3>Ближайшие занятия</h3><button class="se-link" onclick="setPage(\'schedule\')">Все занятия →</button></div>'+
       '<div class="se-lesson-list">'+upcomingRows+'</div></section>'+
       '<section class="se-card"><div class="se-card-head"><h3>На этой неделе</h3><span class="se-soft-label">'+safe(shortDate(from))+' – '+safe(shortDate(to))+'</span></div>'+
       '<div class="se-stats">'+
-      stats('▣',lessons.length,'Всего занятий')+
-      stats('✓',done,'Проведено')+
-      stats('◷',pending.length,'Ожидают оплаты')+
-      stats('₽',money(income),'Доход за месяц')+
+      stats('calendar',summary.total,'Всего занятий')+
+      stats('check-circle',done,'Проведено')+
+      stats('clock',upcomingCount,'Предстоит')+
       '</div></section></div>'+
       (typeof upcomingBirthdays==='function'&&upcomingBirthdays().some(x=>x.birthday.days<=14)?'<section class="se-birthday">'+birthdaysWidget()+'</section>':'')+
       '</div>';

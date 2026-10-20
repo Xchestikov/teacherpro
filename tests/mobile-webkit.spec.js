@@ -343,3 +343,43 @@ test('Parent onboarding from student card uses separately scoped invitation and 
  await expect(card.locator('#tpTelegramStudent .tp-tg-invite')).toHaveCount(0);
  expect(errors).toEqual([]);
 });
+
+
+test('iPhone dashboard uses a centered birthday gift and readable weekly counts',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
+ await page.route('https://fonts.googleapis.com/**',r=>r.abort());
+ await page.route('https://fonts.gstatic.com/**',r=>r.abort());
+ await page.addInitScript({content:mock});
+ await page.goto('/');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
+ await page.locator('#authPassword').fill('DemoPass123');
+ await page.locator('#authSubmit').click();
+ await expect(page.locator('#authGate')).toBeHidden();
+ await page.clock.install({time:new Date('2026-10-20T12:00:00')});
+ await page.evaluate(()=>{
+   db.clients=[{id:44,name:'Ученик',birthday:'20.10'}];
+   db.lessons=[
+     {id:'ios-done',date:'2026-10-19',time:'10:00',duration:60,status:'done',clientId:44},
+     {id:'ios-upcoming',date:'2026-10-21',time:'10:00',duration:60,status:'planned',clientId:44}
+   ];
+   setPage('dashboard');
+ });
+ await expect(page.locator('.birthday-heading-icon svg')).toBeVisible();
+ await expect(page.locator('.se-action .tp-ui-icon')).toHaveCount(4);
+ await expect(page.locator('[data-week-metric="total"] strong')).toHaveText('2');
+ await expect(page.locator('[data-week-metric="completed"] strong')).toHaveText('1');
+ await expect(page.locator('[data-week-metric="upcoming"] strong')).toHaveText('1');
+ const layout=await page.evaluate(()=>{
+  const grid=document.querySelector('.tp-week-list');
+  const heading=document.querySelector('.birthday-heading-icon').getBoundingClientRect();
+  const icon=document.querySelector('.birthday-heading-icon svg').getBoundingClientRect();
+  return {columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+    centered:Math.abs((heading.top+heading.height/2)-(icon.top+icon.height/2)),
+    overflow:document.documentElement.scrollWidth-innerWidth};
+ });
+ expect(layout.columns).toBe(3);
+ expect(layout.centered).toBeLessThan(2);
+ expect(layout.overflow).toBeLessThanOrEqual(2);
+ expect(errors).toEqual([]);
+});

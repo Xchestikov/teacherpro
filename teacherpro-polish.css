@@ -1,13 +1,31 @@
 /* TeacherPro polish 2026-10 — implementation of approved editorial references */
-body.soft-editorial .tp-week-summary .se-card-head{margin-bottom:8px}
-body.soft-editorial .tp-week-summary .se-card-head .se-soft-label{display:none}
-body.soft-editorial .tp-week-list{display:flex;flex-direction:column;gap:12px;margin:0}
-body.soft-editorial .tp-week-row{display:flex;align-items:center;gap:13px;min-height:47px}
-body.soft-editorial .tp-week-icon{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;background:#e9f2ea;border-radius:50%;font-size:20px;font-weight:800;color:#56816d}
-body.soft-editorial .tp-week-1{background:#e5f1e9;color:#518a6c}
-body.soft-editorial .tp-week-2{background:#fff1e7;color:#d3794f}
-body.soft-editorial .tp-week-row strong{font-size:16px;font-weight:750;color:#49332e;display:block;line-height:1.35}
-body.soft-editorial .tp-week-row small{display:block;color:#97837b;font-size:11px;margin-top:3px}
+/* Cohesive line icons and compact weekly metrics in existing warm palette. */
+body.soft-editorial .tp-ui-icon{display:block;width:23px;height:23px;flex:none}
+body.soft-editorial .se-action{transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+body.soft-editorial .se-action .se-action-icon{line-height:0}
+body.soft-editorial .se-action .se-action-label{min-width:0;line-height:1.36}
+body.soft-editorial .se-action:hover{border-color:#d7b5a7;box-shadow:0 5px 14px #8c564210}
+body.soft-editorial .se-action:active{transform:scale(.985)}
+body.soft-editorial .se-action:focus-visible{outline:2px solid #c76551;outline-offset:3px}
+body.soft-editorial .birthday-heading{align-items:center;gap:12px}
+body.soft-editorial .birthday-heading>.birthday-heading-icon{display:grid;place-items:center;align-self:center;flex:0 0 40px;width:40px;height:40px;padding:0;border-radius:13px;background:#f7e0d7;color:#a55342;line-height:0}
+body.soft-editorial .birthday-heading-icon .tp-ui-icon{width:22px;height:22px}
+body.soft-editorial .birthday-heading h3{line-height:1.25}
+body.soft-editorial .tp-week-summary .se-card-head{margin-bottom:11px}
+body.soft-editorial .tp-week-summary .se-card-head .se-soft-label{display:block;white-space:nowrap;font-size:10px}
+body.soft-editorial .tp-week-summary .tp-week-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0}
+body.soft-editorial .tp-week-summary .tp-week-row{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;min-height:120px;padding:13px 12px;border:1px solid #f0e0d6;border-radius:13px;background:#fff6f0}
+body.soft-editorial .tp-week-summary .tp-week-row[data-week-metric="completed"]{background:#f1f7f0;border-color:#e1ebe0}
+body.soft-editorial .tp-week-summary .tp-week-row[data-week-metric="upcoming"]{background:#f8f3ef;border-color:#eee3dc}
+body.soft-editorial .tp-week-summary .tp-week-icon{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:11px;background:#f7e0d7;color:#b45b45;line-height:0}
+body.soft-editorial .tp-week-summary .tp-week-completed{background:#e0ece0;color:#548262}
+body.soft-editorial .tp-week-summary .tp-week-upcoming{background:#eee4dd;color:#936d5e}
+body.soft-editorial .tp-week-summary .tp-week-icon .tp-ui-icon{width:19px;height:19px}
+body.soft-editorial .tp-week-summary .tp-week-row strong{display:block;font-size:23px;line-height:1.05;font-weight:800;color:var(--studio-ink);font-variant-numeric:tabular-nums}
+body.soft-editorial .tp-week-summary .tp-week-row small{display:block;font-size:11px;line-height:1.3;font-weight:600;color:var(--studio-muted)}
+body.soft-editorial[data-theme="night"] .tp-week-summary .tp-week-row{background:#343544;border-color:#555260}
+body.soft-editorial[data-theme="night"] .tp-week-summary .tp-week-row strong{color:#f4ece8}
+body.soft-editorial[data-theme="night"] .birthday-heading>.birthday-heading-icon{background:#503b3a;color:#f2c6b8}
 body.soft-editorial .se-hero{min-height:210px}
 body.soft-editorial .se-hero .se-next-row{margin:13px 0 11px}
 body.soft-editorial .se-hero .se-avatar{width:52px;height:52px;min-width:52px;border-radius:50%;border:3px solid #fff8f1}
@@ -65,5 +83,13 @@ body.soft-editorial .tp-now-clock{position:absolute;top:-15px;left:-51px;color:#
  body.soft-editorial .tp-now-indicator{left:45px}
  body.soft-editorial .tp-now-clock{left:-45px}
  body.soft-editorial .se-hero .se-cta{margin-left:62px}
- body.soft-editorial .tp-week-list{gap:10px}
+ body.soft-editorial .tp-week-summary .tp-week-list{gap:7px}
+ body.soft-editorial .tp-week-summary .tp-week-row{padding:10px 9px;min-height:103px;gap:5px}
+ body.soft-editorial .tp-week-summary .tp-week-icon{width:30px;height:30px;flex-basis:30px;border-radius:10px}
+ body.soft-editorial .tp-week-summary .tp-week-row strong{font-size:22px}
+ body.soft-editorial .tp-week-summary .tp-week-row small{font-size:10px}
+ body.soft-editorial .se-action .se-action-icon .tp-ui-icon{width:20px;height:20px}
 }
+
+@media(max-width:360px){body.soft-editorial .tp-week-summary .tp-week-row{padding:8px 6px;min-height:100px}body.soft-editorial .tp-week-summary .tp-week-list{gap:5px}}
+@media(prefers-reduced-motion:reduce){body.soft-editorial .se-action{transition:none}}
