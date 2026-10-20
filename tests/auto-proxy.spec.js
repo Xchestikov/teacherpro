@@ -21,7 +21,8 @@ async function bootWithEndpoint(page,proxied){
 
 test('uses FirstVDS proxy when upstream confirmation header is present',async({page})=>{
   const result=await bootWithEndpoint(page,true);
-  expect(result.url).toBe('http://127.0.0.1:4173/supabase'.replace('http:','https:')===result.url?'https://127.0.0.1:4173/supabase':'https://egopcojrzklvytcuhpov.supabase.co');
+  expect(result.url).toBe('http://127.0.0.1:4173/supabase');
+  expect(result.storageKey).toBe('sb-egopcojrzklvytcuhpov-auth-token');
 });
 test('without proxy health marker keeps direct Supabase and existing sessions',async({page})=>{
   const result=await bootWithEndpoint(page,false);
