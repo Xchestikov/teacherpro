@@ -29,9 +29,12 @@ jobs:
         run: |
           set -euo pipefail
           node --check bot/cron.mjs
+          node --check bot/daemon.mjs
+          node --check bot/reminders.mjs
+          bash -n bot/supervisor.sh
           node --check bot/telegram-proxy.mjs
           node --check bot/quattro-vless.mjs
-          node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs bot/quattro-vless.test.mjs
+          node --test bot/bot.test.mjs bot/cron.test.mjs bot/telegram-proxy.test.mjs bot/quattro-vless.test.mjs bot/daemon.test.mjs
       - name: Verify both secrets against Telegram and Supabase without revealing contents
         shell: bash
         env:
@@ -124,7 +127,7 @@ jobs:
           chmod 700 "$RUNNER_TEMP/teacherpro-xray-bin/xray"
           rm -f "$RUNNER_TEMP/teacherpro-xray.zip"
           echo 'OFFICIAL_XRAY_HASH_VERIFIED'
-      - name: Install private Node.js and activate cron on FirstVDS without sudo
+      - name: Start persistent Telegram polling with cron recovery on FirstVDS
         shell: bash
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -157,23 +160,67 @@ jobs:
               echo "XRAY_PRIVATE_CONFIG_VALIDATION_FAILED"
               exit 1
             fi
-            echo "XRAY_LOOPBACK_CONFIG_VALID"
           fi
-          test -s "$root/releases/$release/cron.mjs"
-          test -s "$root/releases/$release/engine.mjs"
-          "$root/bin/node" --version
-          ln -sfn "$root/releases/$release" "$root/current-next"
-          mv -Tf "$root/current-next" "$root/current"
+          for file in cron.mjs engine.mjs daemon.mjs reminders.mjs supervisor.sh; do
+            test -s "$root/releases/$release/$file"
+          done
+          bash -n "$root/releases/$release/supervisor.sh"
+          "$root/bin/node" --check "$root/releases/$release/daemon.mjs"
+          "$root/bin/node" --check "$root/releases/$release/reminders.mjs"
           command -v flock >/dev/null
           command -v crontab >/dev/null
-          if ! pgrep -x cron >/dev/null && ! pgrep -x crond >/dev/null; then
-            echo "CRON_DAEMON_NOT_RUNNING"; exit 1
+          (pgrep -x cron >/dev/null || pgrep -x crond >/dev/null) || {
+            echo "CRON_DAEMON_NOT_RUNNING"; exit 1;
+          }
+          old_release="$(readlink -f "$root/current" || true)"
+          old_crontab="$(crontab -l 2>/dev/null || true)"
+          rollback() {
+            echo "FAST_BOT_ROLLBACK_STARTED"
+            /bin/bash "$root/current/supervisor.sh" stop >/dev/null 2>&1 || true
+            if [[ -n "$old_release" && -d "$old_release" ]]; then
+              ln -sfn "$old_release" "$root/previous-next"
+              mv -Tf "$root/previous-next" "$root/current"
+            fi
+            printf '%s\n' "$old_crontab" | crontab -
+            echo "FAST_BOT_ROLLBACK_COMPLETED"
+          }
+          trap rollback ERR
+          # Stop scheduling old one-shot Telegram polling BEFORE starting the daemon.
+          (printf '%s\n' "$old_crontab" | grep -v -E '# teacherpro-(bot-worker|fast-watchdog|reminder-worker)' || true) | crontab -
+          # An old cron job may still be in flight; wait for it to release its flock.
+          if ! flock -w 55 "$root/cron.lock" true; then
+            echo "OLD_TELEGRAM_CRON_STILL_BUSY"; exit 1
           fi
-          bash "$root/current/run-worker.sh"
-          managed='# teacherpro-bot-worker'
-          command="* * * * * /usr/bin/flock -n \$HOME/teacherpro-bot/cron.lock /bin/bash \$HOME/teacherpro-bot/current/run-worker.sh >>\$HOME/teacherpro-bot/cron.log 2>&1 $managed"
-          (crontab -l 2>/dev/null | grep -v -F "$managed" || true; printf '%s\n' "$command") | crontab -
-          crontab -l | grep -F -q "$managed"
-          echo "TEACHERPRO_BOT_CRON_INSTALLED"
-          echo "TEACHERPRO_BOT_INITIAL_POLL_SUCCEEDED"
+          if [[ -f "$root/current/supervisor.sh" ]]; then
+            /bin/bash "$root/current/supervisor.sh" stop
+          fi
+          ln -sfn "$root/releases/$release" "$root/current-next"
+          mv -Tf "$root/current-next" "$root/current"
+          rm -f "$root/fast.heartbeat"
+          /bin/bash "$root/current/supervisor.sh" ensure
+          ready=0
+          for _ in $(seq 1 45); do
+            if /bin/bash "$root/current/supervisor.sh" status >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [[ "$ready" != 1 ]]; then
+            echo "FAST_BOT_STARTUP_HEALTH_CHECK_FAILED"
+            exit 1
+          fi
+          # Reminder scheduling is intentionally separate: it cannot block commands.
+          /bin/bash "$root/current/supervisor.sh" remind
+          managed_fast="# teacherpro-fast-watchdog"
+          managed_reminder="# teacherpro-reminder-worker"
+          fast="* * * * * /usr/bin/flock -n \$HOME/teacherpro-bot/watchdog.lock /bin/bash \$HOME/teacherpro-bot/current/supervisor.sh ensure >>\$HOME/teacherpro-bot/watchdog.log 2>&1 $managed_fast"
+          reminder="* * * * * /usr/bin/flock -n \$HOME/teacherpro-bot/reminder.lock /bin/bash \$HOME/teacherpro-bot/current/supervisor.sh remind >>\$HOME/teacherpro-bot/reminders.log 2>&1 $managed_reminder"
+          (crontab -l 2>/dev/null || true; printf '%s\n' "$fast" "$reminder") | crontab -
+          crontab -l | grep -F -q "$managed_fast"
+          crontab -l | grep -F -q "$managed_reminder"
+          trap - ERR
+          echo "TELEGRAM_FAST_POLLING_ENABLED"
+          echo "TELEGRAM_REMINDER_CRON_ENABLED"
+          echo "TELEGRAM_FAST_INITIAL_HEALTH_OK"
           REMOTE
