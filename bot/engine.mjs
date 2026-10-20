@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 import {dateParts,lessonStart,lessonList,planned,cancelled,reminderDue,lessonState,changeText,
   scheduleText,digestDue,dayLabel} from './logic.mjs';
-import {homeButtons,backButtons,dashboardText,studentsText,subscriptionsText,paymentsText} from './presentation.mjs';
+import {homeButtons,backButtons,dashboardText,studentsText,subscriptionsText,paymentsText,hashLessonId,lessonRequestKeyboard} from './presentation.mjs';
 
 export function chooseButtons(links){
  return links.slice(0,20).map(link=>[{text:link.role==='teacher'?'👩‍🏫 Мой кабинет преподавателя':'📚 Мой кабинет ученика',
@@ -38,6 +38,30 @@ export class BotEngine {
      await this.telegram.message(userId,studentsText(payload),backButtons(link));
    } else if(range==='subs'){
      await this.telegram.message(userId,subscriptionsText(payload,link),backButtons(link));
+   } else if(range==='requests'){
+     if(link.role==='student'){
+       const lessons=lessonList(payload,link.student_id,this.now(),timezone,14).slice(0,5);
+       await this.telegram.message(userId,lessons.length?
+         '✉️ Запрос по занятию\n\nВыберите занятие и действие. Запрос будет отправлен преподавателю. Расписание и оплата пока не изменятся.':
+         'Ближайших занятий для запроса нет.',lessonRequestKeyboard(link,lessons));
+     }else if(link.role==='teacher'){
+       const items=await this.store.lessonRequests(link.owner_id);
+       if(!items.length){
+         await this.telegram.message(userId,'📨 Новых запросов учеников пока нет.',backButtons(link));
+       }else{
+         const clients=Array.isArray(payload.clients)?payload.clients:[];
+         for(const item of items.slice(0,8)){
+           const name=clients.find(c=>String(c.id)===String(item.student_id))?.name||'Ученик';
+           const kind=item.kind==='reschedule'?'Просит перенести занятие':'Не сможет прийти';
+           const l=(payload.lessons||[]).find(l=>String(l.id)===String(item.lesson_id));
+           const when=l?l.date+' · '+l.time:'занятие из расписания';
+           await this.telegram.message(userId,'📨 '+name+'\n'+kind+'\n'+when,
+             [[{text:'Взять в работу',callback_data:'q:'+item.id+':s'},
+               {text:'Отклонить запрос',callback_data:'q:'+item.id+':d'}]]);
+         }
+         await this.telegram.message(userId,'После принятия запроса внесите изменение в расписание TeacherPro.',backButtons(link));
+       }
+     }
    } else if(range==='payments'&&link.role==='teacher'){
      await this.telegram.message(userId,paymentsText(payload,link),backButtons(link));
    } else if(['today','tomorrow','week','next'].includes(range)){
@@ -66,8 +90,54 @@ export class BotEngine {
      await this.telegram.message(id,msg);return;
    }
    const links=await this.store.connections({telegram_user_id:'eq.'+id,status:'eq.active'});
+   if(callback?.data?.startsWith('r:')){
+     const match=/^r:([a-f0-9-]{36}):([a-f0-9]{12}):([cm])$/.exec(callback.data);
+     if(!match)return;
+     const link=links.find(x=>x.id===match[1]&&x.role==='student');
+     if(!link)return;
+     const [payload,prefs]=await Promise.all([this.store.app(link.owner_id),this.store.prefs(link.owner_id)]);
+     const events=lessonList(payload,link.student_id,this.now(),prefs.timezone||'UTC',14);
+     const lesson=events.find(x=>hashLessonId(x.lesson.id)===match[2])?.lesson;
+     if(!lesson){await this.telegram.message(id,'Занятие изменилось. Откройте список заново.',backButtons(link));return;}
+     const kind=match[3]==='c'?'cannot_attend':'reschedule';
+     const result=await this.store.lessonRequest(link.id,id,lesson.id,kind);
+     if(result.status==='created'){
+       await this.telegram.message(id,'Запрос отправлен преподавателю. Расписание и остаток оплаченных занятий пока не изменились.',backButtons(link));
+       const teachers=await this.store.connections({owner_id:'eq.'+link.owner_id,role:'eq.teacher',status:'eq.active'});
+       const name=(payload.clients||[]).find(c=>String(c.id)===String(link.student_id))?.name||'Ученик';
+       for(const teacher of teachers){
+         await this.telegram.message(teacher.chat_id,
+           '📨 Новый запрос · '+name+'\n'+
+           (kind==='reschedule'?'Перенести занятие':'Не сможет прийти')+'\n'+
+           lesson.date+' · '+lesson.time+'\n'+
+           'Подтверждение запроса не меняет само занятие или оплату.',
+           [[{text:'Взять в работу',callback_data:'q:'+result.id+':s'},
+             {text:'Отклонить запрос',callback_data:'q:'+result.id+':d'}]]);
+       }
+     }else{
+       await this.telegram.message(id,result.status==='existing'?
+         'Такой запрос уже отправлен преподавателю.':'Не удалось отправить запрос. Попробуйте позднее.',backButtons(link));
+     }
+     return;
+   }
+   if(callback?.data?.startsWith('q:')){
+     const match=/^q:([a-f0-9-]{36}):([sd])$/.exec(callback.data);
+     if(!match||!links.some(x=>x.role==='teacher'))return;
+     const outcome=await this.store.decideRequest(match[1],id,match[2]==='s'?'seen':'declined');
+     if(!['seen','declined'].includes(outcome?.status)){
+       await this.telegram.message(id,'Этот запрос уже закрыт или недоступен.');return;
+     }
+     await this.telegram.message(id,outcome.status==='seen'?
+       'Запрос взят в работу. Измените занятие в TeacherPro — бот не списывает и не переносит его автоматически.':
+       'Запрос отклонён. Расписание не изменено.');
+     const original=await this.store.connections({id:'eq.'+outcome.link_id,status:'eq.active',role:'eq.student'});
+     for(const link of original)await this.telegram.message(link.chat_id,outcome.status==='seen'?
+       'Преподаватель получил ваш запрос и взял его в работу. Дождитесь изменения расписания.':
+       'Преподаватель отклонил запрос. Занятие остаётся в прежнем расписании.');
+     return;
+   }
    if(callback?.data?.startsWith('v:')){
-     const match=/^v:([a-f0-9-]{36}):(home|today|tomorrow|week|next|students|subs|payments|off|on)$/.exec(callback.data);
+     const match=/^v:([a-f0-9-]{36}):(home|today|tomorrow|week|next|students|subs|payments|requests|off|on)$/.exec(callback.data);
      if(!match)return;
      const link=links.find(x=>x.id===match[1]);
      if(!link)return; // Never trust callback payload without ownership check.
@@ -84,7 +154,7 @@ export class BotEngine {
      await this.telegram.message(id,'Выберите профиль TeacherPro:',chooseButtons(links));return;
    }
    const intent={'/today':'today','/tomorrow':'tomorrow','/week':'week','/next':'next',
-     '/students':'students','/balance':'subs','/payments':'payments'}[text];
+     '/students':'students','/balance':'subs','/payments':'payments','/requests':'requests'}[text];
    if(intent){
      if(links.length===1){
        const link=links[0];
