@@ -90,15 +90,13 @@ export function paymentsText(payload,link){
 
 
 export function lessonRequestKeyboard(link,lessons){
-  return lessons.slice(0,5).flatMap(({lesson:l})=>{
-    // 12 hex chars = 48-bit truncated SHA-256 fingerprint, no lesson IDs in callbacks.
+  const rows=lessons.slice(0,5).map(({lesson:l})=>{
     const hash=hashLessonId(l.id);
+    const clock=dayLabel(l.date)+' '+l.time;
     return [
-      [button(link,'home','← Главное меню')],
-      [{text:dayLabel(l.date)+' · '+l.time+' · '+(Number(l.duration)||60)+' мин',
-        callback_data:'v:'+link.id+':next'}],
-      [{text:'Не смогу прийти',callback_data:'r:'+link.id+':'+hash+':c'},
-       {text:'Запросить перенос',callback_data:'r:'+link.id+':'+hash+':m'}]
+      {text:'🚫 '+clock+' · Не смогу',callback_data:'r:'+link.id+':'+hash+':c'},
+      {text:'↗ Перенести',callback_data:'r:'+link.id+':'+hash+':m'}
     ];
   });
+  return [...rows,...backButtons(link)];
 }
