@@ -106,3 +106,26 @@ jobs:
           fi
           REMOTE
           if ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=7 -o IdentitiesOnly=yes -i "$HOME/.ssh/id_ed25519" "root@$VPS_HOST" 'test "$(id -u)" = 0' >/dev/null 2>&1; then echo 'ROOT_AUTH_WITH_EXISTING_KEY=yes'; else echo 'ROOT_AUTH_WITH_EXISTING_KEY=no'; fi
+
+      - name: Inspect nginx include targets and deploy-writable hooks
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          conf=/etc/nginx/conf.d/teacherpro.conf
+          echo 'SITE_INCLUDE_DIRECTIVES_START'
+          awk '/^[[:space:]]*include[[:space:]]/ {print $0}' "$conf" | sed -E 's/(password|token|key)=\S+/REDACTED/Ig'
+          echo 'SITE_INCLUDE_DIRECTIVES_END'
+          echo 'SITE_LOCATION_DIRECTIVES_START'
+          grep -E '^[[:space:]]*(location|root|listen|server_name|proxy_pass)[[:space:]]' "$conf" | sed -E 's/(password|token|key)=\S+/REDACTED/Ig'
+          echo 'SITE_LOCATION_DIRECTIVES_END'
+          for dir in /etc/nginx/conf.d /etc/nginx/sites-enabled /etc/nginx/snippets /srv/teacherpro /srv/teacherpro/current; do
+            if test -d "$dir"; then
+              test -w "$dir" && echo "DIRECTORY_WRITE:$dir=yes" || echo "DIRECTORY_WRITE:$dir=no"
+            fi
+          done
+          REMOTE
