@@ -12,6 +12,13 @@ const teacher=read('teacherpro-platform.js');
 const index=read('index.html');
 const workflow=read('.github/workflows/deploy-vps.yml');
 
+test('loading overlay is removed from layout after authorization',()=>{
+  const css=read('admin/admin.css');
+  assert.match(css,/\.loading\[hidden\]\s*\{\s*display\s*:\s*none\s*!important\s*;?\s*\}/);
+  const html=read('admin/index.html');
+  assert.match(html,/id="loading" class="loading"/);
+  assert.match(read('admin/admin.js'),/\.hidden=name!==id/);
+});
 test('separate owner and teacher routes with existing teacher UI preserved',()=>{
   assert.match(read('admin/index.html'),/admin\.js/);
   assert.match(index,/teacherpro-platform\.js/);
