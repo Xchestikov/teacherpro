@@ -5,7 +5,7 @@
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./admin.css?v=20261027-loading-fix1">
+<link rel="stylesheet" href="./admin.css?v=20261027-loading-fix1"><link rel="stylesheet" href="./admin-insights.css?v=20261027-insights1">
 </head><body>
 <div id="auth" class="auth-shell" hidden><div class="login-card"><span class="eyebrow">TEACHERPRO · OWNER</span><h1>Панель управления</h1><p>Войди в аккаунт владельца TeacherPro. Доступ преподавателей сюда ограничен сервером.</p><form id="login-form"><label>Email<input type="email" id="email" required autocomplete="username"></label><label>Пароль<input type="password" id="password" required autocomplete="current-password"></label><button class="button primary" type="submit">Войти</button></form><p id="auth-error" class="error" role="alert"></p><a href="../">Перейти в кабинет преподавателя</a></div></div>
 <div id="loading" class="loading">Подключаем панель TeacherPro…</div>
@@ -19,9 +19,10 @@
       <button data-page="analytics"><span>▤</span> Аналитика</button>
       <button data-page="settings"><span>⚙</span> Настройки</button>
       <button data-page="telegram"><span>✉</span> Telegram</button>
+      <button data-page="diagnostics"><span>◉</span> Диагностика</button>
       <button data-page="support"><span>☏</span> Поддержка</button>
-      <button data-page="plans"><span>◇</span> Тарифы</button>
-      <button data-page="billing"><span>₽</span> Доход TeacherPro</button>
+      <button class="nav-deferred" data-page="plans"><span>◇</span> Тарифы</button>
+      <button class="nav-deferred" data-page="billing"><span>₽</span> Доход TeacherPro</button>
       <button data-page="audit"><span>◷</span> Журнал</button>
     </nav>
     <div class="side-footer"><a href="../">↗ Кабинет преподавателя</a><button id="logout">Выйти</button></div>
@@ -35,5 +36,5 @@
   </main>
 </div>
 <div class="modal-scrim" id="modal" hidden><div class="modal"><div class="modal-head"><h2 id="modal-title"></h2><button class="button ghost" id="modal-close" aria-label="Закрыть">×</button></div><div id="modal-content"></div></div></div>
-<script src="../vendor/supabase-sdk.js"></script><script src="../cloud-config.js"></script><script src="./admin.js?v=1"></script>
+<script src="../vendor/supabase-sdk.js"></script><script src="../cloud-config.js"></script><script src="./admin-insights.js?v=20261027-insights1"></script><script src="./admin.js?v=20261027-insights1"></script>
 </body></html>
