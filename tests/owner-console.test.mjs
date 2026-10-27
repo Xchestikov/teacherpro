@@ -57,7 +57,7 @@ test('prices stay fixed per lesson, prorated only for hourly mode',()=>{
   assert.equal(runInNewContext(hourly),133333);
 });
 test('all platform static assets are uploaded and health-checked on VPS',()=>{
-  for(const file of ['admin/index.html','admin/admin.js','admin/admin.css','teacherpro-platform.js']){
+  for(const file of ['admin/index.html','admin/admin.js','admin/admin.css','admin/admin-insights.js','admin/admin-insights.css','teacherpro-platform.js']){
     assert.ok(workflow.includes(file),file+' missing from deploy workflow');
   }
   assert.match(workflow,/node --check admin\/admin\.js/);
@@ -67,4 +67,14 @@ test('support requests are owned by teacher and cannot write role tables',()=>{
   assert.match(migration,/teacher_id=\(select auth\.uid\(\)\)/);
   assert.match(migration,/support_requests/);
   assert.doesNotMatch(privileges,/grant insert on public\.tp_platform_admins to authenticated/i);
+});
+
+test('periodic metrics and reconciliation API stay server-only and segregate personal data',()=>{
+ const frontend=read('admin/admin-insights.js');
+ const edge=read('supabase/functions/teacherpro-admin/index.ts');
+ assert.match(edge,/action==="teacher_finances"/);
+ assert.match(edge,/action==="diagnostics"/);
+ assert.match(frontend,/renderTeacherFinancials/);
+ assert.match(frontend,/exportReport/);
+ assert.doesNotMatch(frontend,/SERVICE_ROLE_KEY|sb_secret_/);
 });
