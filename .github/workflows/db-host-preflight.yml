@@ -69,7 +69,7 @@ jobs:
           for base in /usr/lib/postgresql /usr/local/pgsql/bin /opt/postgresql; do
             if test -d "$base"; then
               printf 'Existing PostgreSQL base directory: %s\\n' "$base"
-              find "$base" -maxdepth 3 -type f \\( -name postgres -o -name initdb -o -name pg_ctl \\) -printf '%P\\n' 2>/dev/null | head -20
+              find "$base" -maxdepth 3 -type f -name postgres -printf '%P\\n' 2>/dev/null | head -10
             fi
           done
           for package in postgresql-16 postgresql-17 postgresql-client-16 postgresql-client-17; do
