@@ -9,7 +9,7 @@ const date=v=>v?new Date(v).toLocaleDateString("ru-RU"):"—";
 const label={overview:["ПЛАТФОРМА","Обзор"],teachers:["ПОЛЬЗОВАТЕЛИ","Преподаватели"],
  analytics:["ПОКАЗАТЕЛИ","Аналитика"],settings:["ПЛАТФОРМА","Настройки"],
  telegram:["ИНТЕГРАЦИИ","Telegram"],support:["ОБРАТНАЯ СВЯЗЬ","Поддержка"],
- plans:["МОНЕТИЗАЦИЯ","Тарифы"],audit:["БЕЗОПАСНОСТЬ","Журнал действий"]};
+ plans:["МОНЕТИЗАЦИЯ","Тарифы"],billing:["ДОХОД ПЛАТФОРМЫ","Платежи TeacherPro"],audit:["БЕЗОПАСНОСТЬ","Журнал действий"]};
 let client,me,page="overview",loaded={},busy=false;
 function show(id){["auth","loading","workspace"].forEach(name=>$("#"+name).hidden=name!==id)}
 function toast(msg){const n=$("#toast");n.textContent=msg;n.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>n.hidden=true,4400)}
@@ -66,6 +66,7 @@ async function navigate(next,force=false){
       if(next==="telegram")results=await api("system");
       if(next==="support")results=await api("support");
       if(next==="plans")results=await api("plans");
+      if(next==="billing")results=await api("billing");
       if(next==="audit")results=await api("audit");
       loaded[next]=results;
     }
@@ -86,7 +87,8 @@ function renderOverview(d){
    '<div style="height:12px"></div>'+stat("Начислено по занятиям",rub(x.earned),"Оценка по данным уроков; не равно поступлениям")+'</div>'+
    '<div class="panel"><h2>Требует внимания</h2>'+
    '<p>Приостановлено аккаунтов: <strong>'+count(x.suspended)+'</strong></p>'+
-   '<p>Открытых обращений: <strong>'+count(x.supportOpen)+'</strong></p>'+
+   '<p>Открытых обращений: <strong>'+count(x.supportOpen)+'</strong></p>'+ 
+   '<p>Доход TeacherPro: <strong>'+rub(x.ownerRevenue)+'</strong> · за текущий месяц: <strong>'+rub(x.ownerRevenueMonth)+'</strong></p>'+ 
    '<p class="muted">Быстрые действия</p>'+
    '<div class="line-actions"><button class="button" data-nav="teachers">Управление преподавателями</button>'+
    '<button class="button" data-nav="settings">Настройки функций</button>'+
@@ -107,7 +109,7 @@ function renderTeachers(d){
     statusBadge(t.status)+'<div class="line-actions" style="margin-top:8px">'+
     '<button class="button" data-action="detail" data-id="'+esc(t.id)+'">Открыть</button>'+
     '<button class="button '+(t.status==="active"?"danger":"")+'" data-action="teacher_status" data-id="'+esc(t.id)+'" data-status="'+(t.status==="active"?"suspended":"active")+'">'+(t.status==="active"?"Приостановить":"Восстановить")+'</button>'+
-    '<button class="button" data-action="teacher_plan" data-id="'+esc(t.id)+'">Тариф</button></div></td></tr>'));
+    '<button class="button" data-action="teacher_plan" data-id="'+esc(t.id)+'">Тариф</button><button class="button" data-action="teacher_receipt" data-id="'+esc(t.id)+'">Поступление</button></div></td></tr>'));
 }
 function renderAnalytics(d){
   const teachers=d.teachers||[],top=[...teachers].sort((a,b)=>(b.earned||0)-(a.earned||0)).slice(0,12);
@@ -165,12 +167,27 @@ function renderPlans(d){
   '<td><button class="button" data-action="edit_plan" data-code="'+esc(p.code)+'">Изменить</button></td></tr>'))+
  '<p class="foot">Назначение тарифа преподавателю выполняется через раздел «Преподаватели». Пока доступ к существующим функциям не ограничивается тарифами — это нужно подключать отдельно перед запуском платных продаж.</p>';
 }
+function renderBilling(d){
+ const entries=d.receipts||[];
+ return note("Только платежи за доступ к TeacherPro. Учительские оплаты учеников здесь не учитываются. Все операции вводятся вручную и записываются в журнал.")+
+ '<div class="stats">'+stat("Фактически получено",rub(d.receivedTotal),"Все действующие записи")+
+ stat("Получений",count(entries.filter(x=>!x.voided_at).length),"Учтённые поступления")+
+ stat("Отменённых записей",count(entries.filter(x=>x.voided_at).length),"История сохраняется")+
+ stat("Тарифов",count((d.plans||[]).length),"Конфигурация тарифов")+'</div>'+
+ '<div class="section-head"><h2>Платежи TeacherPro</h2><button class="button primary" data-action="new_receipt">Добавить поступление</button></div>'+
+ table(["Дата","Преподаватель","Тариф","Сумма","Способ","Действия"],entries.map(x=>
+ '<tr><td>'+esc(x.received_on)+'</td><td>'+esc(x.teacher_id.slice(0,8))+'</td><td>'+esc(x.plan_code)+'</td>'+
+ '<td class="strong">'+esc(rub(x.amount_rub))+'</td><td>'+esc(x.method)+(x.voided_at?' · Отменено':'')+'</td>'+
+ '<td>'+(x.voided_at?'<span class="small">Запись отменена</span>':
+ '<button class="button danger" data-action="void_receipt" data-id="'+esc(x.id)+'">Отменить</button>')+'</td></tr>'))+
+ '<p class="foot">Поступления фиксируются только после реального получения денег. Автоматического эквайринга и выставления чеков в этой версии нет.</p>';
+}
 function renderAudit(d){
  return note("История административных изменений помогает отслеживать, кто и когда изменял настройки платформы, статус преподавателя, тариф или обращение.")+
  table(["Когда","Действие","Объект","Изменения"],(d.items||[]).map(x=>'<tr><td>'+esc(new Date(x.created_at).toLocaleString("ru-RU"))+'</td><td class="strong">'+esc(x.action)+'</td><td>'+esc(x.target)+'</td><td>'+esc(JSON.stringify(x.details))+'</td></tr>'));
 }
 function render(which,d){return ({overview:renderOverview,teachers:renderTeachers,analytics:renderAnalytics,settings:renderSettings,
-  telegram:renderTelegram,support:renderSupport,plans:renderPlans,audit:renderAudit})[which](d)}
+  telegram:renderTelegram,support:renderSupport,plans:renderPlans,billing:renderBilling,audit:renderAudit})[which](d)}
 function modal(title,html){$("#modal-title").textContent=title;$("#modal-content").innerHTML=html;$("#modal").hidden=false}
 function closeModal(){$("#modal").hidden=true;$("#modal-content").replaceChildren()}
 async function run(action,extra,next=page){
@@ -192,9 +209,9 @@ function choosePlan(id){
  if(!t)return;
  modal("Тариф преподавателя",'<p>'+esc(t.name||t.email)+'</p>'+
  '<form id="plan-assign" class="form"><label class="field">Тариф<input name="plan" value="'+esc(t.plan||"free")+'" required pattern="[a-z][a-z0-9_]{1,29}"></label>'+
- '<p class="muted">Тариф должен существовать и быть включён в разделе «Тарифы».</p>'+
+ '<label class="field">Доступ до (необязательно)<input name="until" type="date" value="'+esc(t.planUntil||'')+'"></label><p class="muted">Тариф должен существовать и быть включён в разделе «Тарифы».</p>'+
  '<button class="button primary" type="submit">Назначить тариф</button></form>');
- $("#plan-assign").onsubmit=e=>{e.preventDefault();run("teacher_plan",{id,plan:new FormData(e.target).get("plan")},"teachers")};
+ $("#plan-assign").onsubmit=e=>{e.preventDefault();run("teacher_plan",{id,plan:new FormData(e.target).get("plan"),until:new FormData(e.target).get("until")},"teachers")};
 }
 function editPlan(code){
  const p=(loaded.plans?.plans||[]).find(x=>x.code===code)||{code:"",title:"",period:"month",price_rub:0,max_students:0,enabled:false};
@@ -209,12 +226,37 @@ function editPlan(code){
  $("#plan-edit").onsubmit=e=>{e.preventDefault();const o=Object.fromEntries(new FormData(e.target).entries());
   run("plan_save",{code:o.code,title:o.title,price:Number(o.price),period:o.period,max_students:Number(o.max_students),enabled:o.enabled==="true"},"plans")};
 }
+async function newReceipt(defaultId=""){
+ let teachers=(loaded.teachers?.teachers||[]);
+ if(!teachers.length){try{teachers=(await api("teachers")).teachers||[];loaded.teachers={teachers};}catch(e){return fail(e)}}
+ let plans=(loaded.billing?.plans||loaded.plans?.plans||[]).filter(x=>x.enabled);
+ if(!plans.length){try{plans=(await api("plans")).plans.filter(x=>x.enabled);loaded.plans={plans};}catch(e){return fail(e)}}
+ if(!teachers.length)return toast("Не найдено преподавателей");
+ modal("Записать поступление TeacherPro",'<form id="receipt-form" class="form">'+
+ '<label class="field">Преподаватель<select name="id">'+teachers.map(t=>
+ '<option value="'+esc(t.id)+'" '+(t.id===defaultId?"selected":"")+'>'+esc(t.name||t.email||t.id)+'</option>').join("")+'</select></label>'+
+ '<label class="field">Тариф<select name="plan">'+plans.map(p=>'<option value="'+esc(p.code)+'">'+esc(p.title)+'</option>').join("")+'</select></label>'+
+ '<div class="form-grid"><label class="field">Получено, ₽<input type="number" name="amount" required min="0.01" step="0.01" max="1000000"></label>'+
+ '<label class="field">Дата получения<input name="date" type="date" value="'+new Date().toISOString().slice(0,10)+'" required></label></div>'+
+ '<label class="field">Способ<select name="method"><option value="manual">Вручную</option><option value="bank">Банковский перевод</option><option value="other">Другой</option></select></label>'+
+ '<label class="field">Комментарий<input name="note" maxlength="300" placeholder="Основание платежа"></label>'+
+ '<p class="muted">Добавляй запись только после фактического поступления средств. Операцию можно отменить с сохранением истории.</p>'+
+ '<button class="button primary" type="submit">Записать получение</button></form>');
+ $("#receipt-form").onsubmit=e=>{e.preventDefault();const p=Object.fromEntries(new FormData(e.target).entries());run("receipt_record",{id:p.id,
+ plan:p.plan,amount:Number(p.amount),date:p.date,method:p.method,note:p.note},"billing")};
+}
 document.addEventListener("click",async e=>{
  const n=e.target.closest("[data-nav]");if(n){navigate(n.dataset.nav);return}
  const b=e.target.closest("[data-action]");if(!b||busy)return;
  const a=b.dataset.action;
  if(a==="detail")return detail(b.dataset.id);
  if(a==="teacher_plan")return choosePlan(b.dataset.id);
+ if(a==="teacher_receipt")return newReceipt(b.dataset.id);
+ if(a==="new_receipt")return newReceipt();
+ if(a==="void_receipt"){
+   if(!confirm("Отменить этот платёж TeacherPro? Запись останется в истории, но будет исключена из выручки."))return;
+   return run("receipt_void",{id:b.dataset.id},"billing");
+ }
  if(a==="teacher_status"){
   if(b.dataset.status==="suspended"&&!confirm("Приостановить преподавателя? Сохранённые данные останутся в базе, но облачное рабочее пространство будет недоступно."))return;
   return run("teacher_status",{id:b.dataset.id,status:b.dataset.status},"teachers");
