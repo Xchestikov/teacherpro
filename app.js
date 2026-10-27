@@ -51,6 +51,9 @@ async function submitAuth(e){e.preventDefault();$('#authError').textContent='';$
 
 async function activateCloudUser(user,preferCloud=false){if(!user?.id)return;clearAccountState();const generation=authGeneration;cloudUser=user;showLoading();cloudHydrating=true;setCloudStatus('Проверяем облачные данные…','pending');
 try{const {data:identity,error:identityError}=await Promise.race([cloudClient.auth.getUser(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Сервер авторизации не отвечает в течение 12 секунд.')),12000))]);if(generation!==authGeneration||cloudUser?.id!==user.id)return;if(identityError||identity?.user?.id!==user.id)throw new Error('Не удалось проверить сессию пользователя.');
+const {data:access,error:accessError}=await cloudClient.from('tp_teacher_control').select('status').eq('user_id',user.id).maybeSingle();
+if(accessError)throw new Error('Не удалось проверить доступ к аккаунту. Повтори вход.');
+if(access?.status==='suspended')throw new Error('Доступ к TeacherPro временно приостановлен администратором. Обратись в поддержку.');
 const {data,error}=await Promise.race([cloudClient.from('app_data').select('payload,updated_at').eq('user_id',user.id).maybeSingle(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Не удалось загрузить данные с сервера за 12 секунд.')),12000))]);if(generation!==authGeneration||cloudUser?.id!==user.id)return;if(error)throw error;
 const cached=localStorage.getItem(userStorageKey(user.id)),meta=readSyncMeta(user.id);cloudRevision=data?.updated_at||null;
 if(!preferCloud&&meta?.dirty&&cached){db=normalizeDb(JSON.parse(cached));cloudDirty=true;const remoteRevision=cloudRevision;cloudRevision=meta.revision??null;if(cloudRevision!==remoteRevision)cloudConflict=true;}
