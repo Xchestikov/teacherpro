@@ -55,6 +55,7 @@ jobs:
           node --check bot/reminders.mjs
           node --check bot/daemon.test.mjs
           bash -n bot/supervisor.sh
+          bash -n infra/selfhost/host-preflight.sh
           node --check bot/telegram-proxy.mjs
           node --check bot/quattro-vless.mjs
           node --check bot/telegram-proxy.test.mjs
