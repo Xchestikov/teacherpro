@@ -54,3 +54,45 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes "$VPS_USER@$VPS_HOST" 'bash "$HOME/teacherpro-pg-pilot/bin/bootstrap.sh"'
+      - name: Enable scoped automatic restart after server reboot
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          command -v crontab >/dev/null
+          command -v flock >/dev/null
+          dir="$HOME/teacherpro-pg-pilot"
+          test -s "$dir/data/PG_VERSION"
+          test "$(cat "$dir/data/PG_VERSION")" = 17
+          "$dir/runtime/usr/lib/postgresql/17/bin/pg_ctl" -D "$dir/data" status >/dev/null
+          tmp="$(mktemp)"
+          trap 'rm -f "$tmp"' EXIT
+          {
+            crontab -l 2>/dev/null | grep -v '# teacherpro-pg-pilot-reboot' || true
+            printf '%s\n' '@reboot /usr/bin/flock -n "$HOME/teacherpro-pg-pilot/restart.lock" /bin/bash "$HOME/teacherpro-pg-pilot/bin/bootstrap.sh" >> "$HOME/teacherpro-pg-pilot/logs/boot.log" 2>&1 # teacherpro-pg-pilot-reboot'
+          } > "$tmp"
+          crontab "$tmp"
+          crontab -l | grep -q '# teacherpro-pg-pilot-reboot'
+          echo 'OK: scoped PostgreSQL restart after reboot installed; unrelated cron jobs preserved.'
+          REMOTE
+      - name: Confirm private socket and healthy empty test database
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          base="$HOME/teacherpro-pg-pilot"
+          export PGHOST="$base/socket" PGUSER="$(id -un)" PGDATABASE=teacherpro_stage
+          test "$(stat -c %a "$base/socket")" = 700
+          test "$(psql -X -Atc "SELECT current_setting('listen_addresses');")" = ''
+          test "$(psql -X -Atc "SELECT 42;")" = 42
+          test "$(psql -X -Atc "SELECT count(*) FROM pg_tables WHERE schemaname='public';")" = 0
+          echo 'OK: empty pilot database, private socket 0700, TCP disabled, SQL operational.'
+          free -m | awk '/^Mem:/{print "Available memory: " $7 " MiB"}'
+          REMOTE
+
