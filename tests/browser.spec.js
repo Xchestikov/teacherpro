@@ -11,6 +11,7 @@ async function setup(page){
  const issues=[];page.on('pageerror',e=>issues.push(e.message));
  await page.goto('/');
  await expect(page.locator('#authGate')).toBeVisible();
+ await page.locator('#tpCookieBanner').getByRole('button',{name:'Только необходимые'}).click();
  return issues;
 }
 async function login(page,email='a@teacherpro.test'){
@@ -1325,5 +1326,37 @@ test('Telegram desktop card uses structured layout and offers a safe Telegram We
    'href','https://web.telegram.org/k/#@Assistant_Teacher_Pro_bot');
  await expect(invite.locator('.tp-tg-code-input')).toHaveValue('/start '+'b'.repeat(64));
  await expect(invite.getByRole('button',{name:'Скопировать команду'})).toBeVisible();
+ expect(errors).toEqual([]);
+});
+
+test('Legal: cookies default to necessary, can be revised, and signup requires separate checks',async({page})=>{
+ const errors=await setup(page);
+ const first=await page.evaluate(()=>window.tpCookieConsent());
+ expect(first.necessary).toBe(true);
+ expect(first.analytics).toBe(false);
+ await page.context().clearCookies();
+ await page.reload();
+ await expect(page.locator('#tpCookieBanner')).toBeVisible();
+ await page.locator('#tpCookieBanner').getByRole('button',{name:'Настроить'}).click();
+ await expect(page.locator('#tpCookiePreferences')).toBeVisible();
+ await page.locator('#tpCookiePreferences input[type=checkbox]').check();
+ await page.locator('#tpCookiePreferences').getByRole('button',{name:'Сохранить настройки'}).click();
+ expect((await page.evaluate(()=>window.tpCookieConsent())).analytics).toBe(true);
+ await page.locator('.tp-auth-footer').getByRole('button',{name:'Настройки cookies'}).click();
+ await page.locator('#tpCookiePreferences input[type=checkbox]').uncheck();
+ await page.locator('#tpCookiePreferences').getByRole('button',{name:'Сохранить настройки'}).click();
+ expect((await page.evaluate(()=>window.tpCookieConsent())).analytics).toBe(false);
+ await page.locator('#authSwitch').click();
+ await expect(page.locator('#authLegalAcceptance')).toBeVisible();
+ await expect(page.locator('#authTermsAccept')).not.toBeChecked();
+ await expect(page.locator('#authDataConsent')).not.toBeChecked();
+ await page.goto('/legal/privacy.html');
+ await expect(page.getByRole('heading',{name:'Политика обработки персональных данных'})).toBeVisible();
+ await page.goto('/legal/offer.html');
+ await expect(page.getByRole('heading',{name:'Оферта и условия использования'})).toBeVisible();
+ await page.goto('/legal/consent.html');
+ await expect(page.getByRole('heading',{name:'Согласие на обработку персональных данных'})).toBeVisible();
+ await page.goto('/legal/cookies.html');
+ await expect(page.getByRole('heading',{name:'Политика cookies и локального хранения'})).toBeVisible();
  expect(errors).toEqual([]);
 });
