@@ -1,6 +1,9 @@
 # TeacherPro — перенос Supabase на свой FirstVDS (подготовлено 27.10.2026)
 
-**Стадия:** только подготовка. **На этом сервере Supabase НЕ установлен и НЕ запущен.**
+**Стадия:** частичная инфраструктура. **Полный Supabase НЕ установлен и НЕ запущен.**
+27.10.2026 на этом же сервере отдельно развернули **пустой PostgreSQL 17.11 pilot** без sudo и Docker в каталоге `$HOME/teacherpro-pg-pilot/` с ограничениями памяти. Он работает через приватный Unix socket (без TCP), имеет тестовую базу `teacherpro_stage`, и настроен на запуск после перезагрузки посредством собственного пользовательского crontab; доступ к реальным персональным данным ему не выдавался.
+Успешные отчёты: https://github.com/Xchestikov/teacherpro/actions/runs/40500542762 и https://github.com/Xchestikov/teacherpro/actions/runs/40500794600.
+Источник: `infra/selfhost/postgres-pilot.sh` и workflow `.github/workflows/db-postgres-pilot.yml` в `main`. Тестовый сервер не является Supabase и **не заменяет PostgreSQL-платформу с Auth/API/RLS/Realtime**, поэтому существующая миграция пока заблокирована недостаточностью ресурсов.
 Источник данных: действующий Supabase-проект `egopcojrzklvytcuhpov` (Сеул, Postgres 17).
 Сайт `teacherpro-app.ru` и бот пока используют прежний проект.
 Нельзя менять `cloud-config.js`, Nginx proxy или секреты бота до проверки восстановления.
@@ -20,7 +23,7 @@
 | ОС | Ubuntu 24.04 | подходит |
 
 Официальные требования: https://supabase.com/docs/guides/self-hosting/docker.
-**Не запускайте Compose или PostgreSQL как продакшен-сервис на текущих ресурсах.**
+**Не запускайте полный Supabase или PostgreSQL с реальными данными как продакшен-сервис на текущих ресурсах.** Установленный пустой rootless PostgreSQL — исключительно тест.
 
 ## Условие следующего этапа
 
