@@ -1,0 +1,56 @@
+name: Bootstrap private PostgreSQL pilot on FirstVDS
+
+# Runs once when introduced. Does NOT touch live TeacherPro backend or VPS Nginx.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/db-postgres-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teacherpro-local-db-pilot
+  cancel-in-progress: false
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    environment: production-vps
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check reviewed script
+        run: bash -n infra/selfhost/postgres-pilot.sh
+      - name: Initialize scoped SSH credentials
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST" && test -n "$VPS_USER"
+          test -n "$VPS_SSH_KEY" && test -n "$VPS_KNOWN_HOSTS"
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+      - name: Copy isolated launcher outside website root
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          SSH_OPTS="-i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
+          ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" 'mkdir -p "$HOME/teacherpro-pg-pilot/bin" && chmod 700 "$HOME/teacherpro-pg-pilot" "$HOME/teacherpro-pg-pilot/bin"'
+          rsync -a --chmod=F700 -e "ssh $SSH_OPTS" infra/selfhost/postgres-pilot.sh "$VPS_USER@$VPS_HOST:teacherpro-pg-pilot/bin/bootstrap.sh"
+      - name: Start and verify local-only empty PostgreSQL
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes "$VPS_USER@$VPS_HOST" 'bash "$HOME/teacherpro-pg-pilot/bin/bootstrap.sh"'
