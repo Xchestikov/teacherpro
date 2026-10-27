@@ -11,6 +11,9 @@ test('WebKit iPhone viewport keeps lesson text unselectable and mobile payment m
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
  await page.goto('/');
+ if (await page.locator('#tpCookieBanner').isVisible()) {
+   await page.locator('#tpCookieBanner').getByRole('button',{name:'Только необходимые'}).click();
+ }
  await page.locator('#authEmail').fill('a@teacherpro.test');
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
@@ -54,6 +57,9 @@ test('WebKit long press disables hour selection and moves a lesson through touch
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
  await page.goto('/');
+ if (await page.locator('#tpCookieBanner').isVisible()) {
+   await page.locator('#tpCookieBanner').getByRole('button',{name:'Только необходимые'}).click();
+ }
  await page.locator('#authEmail').fill('a@teacherpro.test');
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
@@ -122,6 +128,9 @@ test('iPhone touch drag snaps each quarter hour and moves the lesson preview wit
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
  await page.goto('/');
+ if (await page.locator('#tpCookieBanner').isVisible()) {
+   await page.locator('#tpCookieBanner').getByRole('button',{name:'Только необходимые'}).click();
+ }
  await page.locator('#authEmail').fill('a@teacherpro.test');
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
@@ -220,6 +229,9 @@ test('iPhone can type a custom lesson duration directly when adding and editing 
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
  await page.goto('/');
+ if (await page.locator('#tpCookieBanner').isVisible()) {
+   await page.locator('#tpCookieBanner').getByRole('button',{name:'Только необходимые'}).click();
+ }
  await page.locator('#authEmail').fill('a@teacherpro.test');
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
@@ -249,6 +261,9 @@ test('iPhone student pricing offers fixed and hourly rates without changing the 
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
  await page.goto('/');
+ if (await page.locator('#tpCookieBanner').isVisible()) {
+   await page.locator('#tpCookieBanner').getByRole('button',{name:'Только необходимые'}).click();
+ }
  await page.locator('#authEmail').fill('a@teacherpro.test');
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
@@ -278,6 +293,9 @@ test('iPhone Telegram card is responsive and both Telegram Web and manual /start
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
  await page.goto('/');
+ if (await page.locator('#tpCookieBanner').isVisible()) {
+   await page.locator('#tpCookieBanner').getByRole('button',{name:'Только необходимые'}).click();
+ }
  await page.locator('#authEmail').fill('a@teacherpro.test');
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
@@ -322,6 +340,9 @@ test('Parent onboarding from student card uses separately scoped invitation and 
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
  await page.goto('/');
+ if (await page.locator('#tpCookieBanner').isVisible()) {
+   await page.locator('#tpCookieBanner').getByRole('button',{name:'Только необходимые'}).click();
+ }
  await page.locator('#authEmail').fill('a@teacherpro.test');
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
@@ -352,6 +373,9 @@ test('iPhone dashboard uses a centered birthday gift and readable weekly counts'
  await page.route('https://fonts.gstatic.com/**',r=>r.abort());
  await page.addInitScript({content:mock});
  await page.goto('/');
+ if (await page.locator('#tpCookieBanner').isVisible()) {
+   await page.locator('#tpCookieBanner').getByRole('button',{name:'Только необходимые'}).click();
+ }
  await page.locator('#authEmail').fill('a@teacherpro.test');
  await page.locator('#authPassword').fill('DemoPass123');
  await page.locator('#authSubmit').click();
