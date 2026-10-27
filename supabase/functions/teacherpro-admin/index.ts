@@ -92,8 +92,9 @@ Deno.serve(async(req:Request)=>{
       const sum=(key:"students"|"done"|"earned"|"received")=>teachers.reduce((n,t)=>n+num(t[key]),0);
       const cutoff=Date.now()-7*86400000;
       const active7d=teachers.filter(t=>t.lastSignInAt&&Date.parse(t.lastSignInAt)>=cutoff).length;
-      const alerts=must(await ADMIN.from("tp_support_tickets").select("id",{count:"exact",head:true}).neq("status","resolved")) as unknown;
-      const ticketCount=(alerts as {length?:number})?.length||0;
+      const ticketQuery=await ADMIN.from("tp_support_tickets").select("id",{count:"exact",head:true}).neq("status","resolved");
+      if(ticketQuery.error)throw ticketQuery.error;
+      const ticketCount=ticketQuery.count||0;
       return send({overview:{teachers:teachers.length,active7d,students:sum("students"),done:sum("done"),
         earned:sum("earned"),received:sum("received"),suspended:teachers.filter(t=>t.status==="suspended").length,
         supportOpen:ticketCount,updatedAt:new Date().toISOString()},recent:teachers.slice(0,8)});
@@ -151,7 +152,7 @@ Deno.serve(async(req:Request)=>{
       const sum=num(arg.price),max=num(arg.max_students),period=safeStr(arg.period,10);
       if(!/^[a-z][a-z0-9_]{1,29}$/.test(code)||title.length<2||
         !["month","year","manual"].includes(period)||!Number.isInteger(max)||max<0||max>100000||
-        sum<0||sum>1000000||Math.round(sum*100)!==sum*100||typeof arg.enabled!=="boolean"||
+        sum<0||sum>1000000||Math.abs(Math.round(sum*100)-sum*100)>1e-6||typeof arg.enabled!=="boolean"||
         (code==="free"&&sum!==0))return send({error:"Invalid plan"},400);
       must(await ADMIN.from("tp_platform_plans").upsert({code,title,period,price_rub:sum,max_students:max,
         enabled:arg.enabled,updated_at:new Date().toISOString()},{onConflict:"code"}));
