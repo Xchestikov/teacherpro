@@ -65,5 +65,23 @@ jobs:
           printf 'Unprivileged userns clone: '; cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null || echo unknown
           if test -S /var/run/docker.sock; then echo 'docker_socket=present'; else echo 'docker_socket=absent'; fi
           if test -w "$HOME"; then echo 'home_writable=yes'; else echo 'home_writable=no'; fi
+          echo '== PostgreSQL package readiness (read only) =='
+          for base in /usr/lib/postgresql /usr/local/pgsql/bin /opt/postgresql; do
+            if test -d "$base"; then
+              printf 'Existing PostgreSQL base directory: %s\\n' "$base"
+              find "$base" -maxdepth 3 -type f \\( -name postgres -o -name initdb -o -name pg_ctl \\) -printf '%P\\n' 2>/dev/null | head -20
+            fi
+          done
+          for package in postgresql-16 postgresql-17 postgresql-client-16 postgresql-client-17; do
+            dpkg-query -W -f="${Status} ${Version}" "$package" 2>/dev/null | awk -v x="$package" '{print x ": " $0}' || true
+            apt-cache policy "$package" 2>/dev/null | awk -v x="$package" '/Candidate:/{print x " candidate: " $2}' || true
+          done
+          printf 'Architecture: '; dpkg --print-architecture 2>/dev/null || echo unknown
+          printf 'Available memory currently: '; awk '/MemAvailable:/{print $2 " KiB"}' /proc/meminfo
+          printf 'Current disk space on home: '; df -h "$HOME" | tail -1 | awk '{print $4 " free"}'
+          printf 'Cron available: '; if command -v crontab >/dev/null; then echo yes; else echo no; fi
+          printf 'Read-only port status: '; if command -v ss >/dev/null; then
+            ss -Hlt 'sport = :5432 or sport = :55432' 2>/dev/null | wc -l
+          else echo unknown; fi
           echo '== No live data read, no changes made =='
           REMOTE
