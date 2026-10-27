@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TeacherPro — управление платформой</title>
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./admin.css?v=1">
+</head><body>
+<div id="auth" class="auth-shell" hidden><div class="login-card"><span class="eyebrow">TEACHERPRO · OWNER</span><h1>Панель управления</h1><p>Войди в аккаунт владельца TeacherPro. Доступ преподавателей сюда ограничен сервером.</p><form id="login-form"><label>Email<input type="email" id="email" required autocomplete="username"></label><label>Пароль<input type="password" id="password" required autocomplete="current-password"></label><button class="button primary" type="submit">Войти</button></form><p id="auth-error" class="error" role="alert"></p><a href="../">Перейти в кабинет преподавателя</a></div></div>
+<div id="loading" class="loading">Подключаем панель TeacherPro…</div>
+<div id="workspace" class="layout" hidden>
+  <aside class="side">
+    <a class="brand" href="./"><span class="brand-mark">T</span><span>TeacherPro<small>OWNER CONSOLE</small></span></a>
+    <div class="nav-caption">УПРАВЛЕНИЕ</div>
+    <nav id="nav">
+      <button data-page="overview" class="active"><span>⌂</span> Обзор</button>
+      <button data-page="teachers"><span>♙</span> Преподаватели</button>
+      <button data-page="analytics"><span>▤</span> Аналитика</button>
+      <button data-page="settings"><span>⚙</span> Настройки</button>
+      <button data-page="telegram"><span>✉</span> Telegram</button>
+      <button data-page="support"><span>☏</span> Поддержка</button>
+      <button data-page="plans"><span>◇</span> Тарифы</button>
+      <button data-page="audit"><span>◷</span> Журнал</button>
+    </nav>
+    <div class="side-footer"><a href="../">↗ Кабинет преподавателя</a><button id="logout">Выйти</button></div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div><div class="eyebrow" id="page-kicker">ПЛАТФОРМА</div><h1 id="page-title">Обзор</h1></div>
+      <div class="top-actions"><span id="signed-email" class="email"></span><span class="owner-pill">OWNER</span><button class="button ghost" id="refresh">↻ Обновить</button></div>
+    </header>
+    <div class="content" id="content" aria-live="polite"></div>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </main>
+</div>
+<div class="modal-scrim" id="modal" hidden><div class="modal"><div class="modal-head"><h2 id="modal-title"></h2><button class="button ghost" id="modal-close" aria-label="Закрыть">×</button></div><div id="modal-content"></div></div></div>
+<script src="../vendor/supabase-sdk.js"></script><script src="../cloud-config.js"></script><script src="./admin.js?v=1"></script>
+</body></html>
