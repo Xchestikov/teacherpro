@@ -9,6 +9,8 @@ on:
       - 'supabase/owner-console*.sql'
       - 'supabase/functions/teacherpro-admin/**'
       - 'tests/owner-console.test.mjs'
+      - 'tests/owner-insights.test.mjs'
+      - 'teacherpro-platform.js'
       - '.github/workflows/deploy-vps.yml'
       - '.github/workflows/admin-ci.yml'
   workflow_dispatch:
@@ -22,8 +24,9 @@ jobs:
       - name: Check runtime syntax
         run: |
           node --check admin/admin.js
+          node --check admin/admin-insights.js
           node --check teacherpro-platform.js
           node --check app.js
           node --check sw.js
       - name: Owner console regression checks
-        run: node --test tests/owner-console.test.mjs
+        run: node --test tests/owner-console.test.mjs tests/owner-insights.test.mjs

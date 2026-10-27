@@ -8,7 +8,7 @@ const count=n=>new Intl.NumberFormat("ru-RU").format(Number(n)||0);
 const date=v=>v?new Date(v).toLocaleDateString("ru-RU"):"—";
 const label={overview:["ПЛАТФОРМА","Обзор"],teachers:["ПОЛЬЗОВАТЕЛИ","Преподаватели"],
  analytics:["ПОКАЗАТЕЛИ","Аналитика"],settings:["ПЛАТФОРМА","Настройки"],
- telegram:["ИНТЕГРАЦИИ","Telegram"],support:["ОБРАТНАЯ СВЯЗЬ","Поддержка"],
+ telegram:["ИНТЕГРАЦИИ","Telegram"],diagnostics:["СИСТЕМА","Диагностика"],support:["ОБРАТНАЯ СВЯЗЬ","Поддержка"],
  plans:["МОНЕТИЗАЦИЯ","Тарифы"],billing:["ДОХОД ПЛАТФОРМЫ","Платежи TeacherPro"],audit:["БЕЗОПАСНОСТЬ","Журнал действий"]};
 let client,me,page="overview",loaded={},busy=false;
 function show(id){["auth","loading","workspace"].forEach(name=>$("#"+name).hidden=name!==id)}
@@ -49,6 +49,7 @@ async function api(action,extra={}){
 }
 function fail(e){toast(e?.message||"Неизвестная ошибка");console.error("Owner console",e)}
 function setBusy(b){busy=b;$("#refresh").disabled=b}
+const insightCtx={esc,rub,count,stat,empty,table,note,statusBadge};
 async function navigate(next,force=false){
   if(busy)return;
   page=next;$("#page-title").textContent=label[next]?.[1]||"Управление";
@@ -60,14 +61,31 @@ async function navigate(next,force=false){
     let results;
     if(!force&&loaded[next])results=loaded[next];
     else{
-      if(next==="overview")results=await api("overview");
-      if(next==="teachers"||next==="analytics")results=await api("teachers");
-      if(next==="settings")results=await api("flags");
+      if(next==="overview"||next==="analytics"){
+        const period=window.TPOwnerInsights.period();
+        const first=await api("insights",period);
+        results={insights:first.insights};
+        if(next==="overview"){
+          const diag=await api("diagnostics");
+          results.diagnostics=diag.diagnostics;
+        }
+      }
+      if(next==="teachers")results=await api("teachers");
+      if(next==="settings"){
+        const [flags,overrides,teachers]=await Promise.all([
+          api("flags"),api("flag_overrides"),api("teachers")
+        ]);
+        results={flags:flags.flags,overrides:overrides.overrides,teachers:teachers.teachers};
+      }
       if(next==="telegram")results=await api("system");
-      if(next==="support")results=await api("support");
+      if(next==="support"){
+        const [support,teachers]=await Promise.all([api("support"),api("teachers")]);
+        results={tickets:support.tickets,teachers:teachers.teachers};
+      }
       if(next==="plans")results=await api("plans");
       if(next==="billing")results=await api("billing");
       if(next==="audit")results=await api("audit");
+      if(next==="diagnostics")results=await api("diagnostics");
       loaded[next]=results;
     }
     $("#content").innerHTML=render(next,results||{});
@@ -186,8 +204,15 @@ function renderAudit(d){
  return note("История административных изменений помогает отслеживать, кто и когда изменял настройки платформы, статус преподавателя, тариф или обращение.")+
  table(["Когда","Действие","Объект","Изменения"],(d.items||[]).map(x=>'<tr><td>'+esc(new Date(x.created_at).toLocaleString("ru-RU"))+'</td><td class="strong">'+esc(x.action)+'</td><td>'+esc(x.target)+'</td><td>'+esc(JSON.stringify(x.details))+'</td></tr>'));
 }
-function render(which,d){return ({overview:renderOverview,teachers:renderTeachers,analytics:renderAnalytics,settings:renderSettings,
-  telegram:renderTelegram,support:renderSupport,plans:renderPlans,billing:renderBilling,audit:renderAudit})[which](d)}
+function render(which,d){
+ const ui=window.TPOwnerInsights;
+ const custom={
+   overview:ui.renderOverview,analytics:ui.renderAnalytics,diagnostics:ui.renderDiagnostics,
+   settings:ui.renderSettings,support:ui.renderSupport
+ };
+ if(custom[which])return custom[which](d,insightCtx);
+ return ({teachers:renderTeachers,telegram:renderTelegram,plans:renderPlans,billing:renderBilling,audit:renderAudit})[which](d);
+}
 function modal(title,html){$("#modal-title").textContent=title;$("#modal-content").innerHTML=html;$("#modal").hidden=false}
 function closeModal(){$("#modal").hidden=true;$("#modal-content").replaceChildren()}
 async function run(action,extra,next=page){
@@ -197,12 +222,11 @@ async function run(action,extra,next=page){
 }
 async function detail(id){
  try{
-  const {teacher:t}=await api("teacher_detail",{id});
-  modal("Преподаватель",'<p class="strong">'+esc(t.name||t.email)+'</p><p class="muted">'+esc(t.email)+'</p>'+
-    '<div class="stats" style="grid-template-columns:1fr 1fr">'+stat("Учеников",count(t.students),"")+
-    stat("Проведено",count(t.done),"")+stat("Начислено",rub(t.earned),"")+stat("Поступления",rub(t.received),"")+'</div>'+
-    '<p class="foot">Детальные карточки учеников открываются только при согласованном доступе для поддержки.</p>');
- }catch(e){fail(e)}
+   modal("Финансовая сверка преподавателя",'<p class="muted">Загружаем показатели…</p>');
+   const data=await api("teacher_finances",{id,...window.TPOwnerInsights.period()});
+   if($("#modal").hidden)return;
+   $("#modal-content").innerHTML=window.TPOwnerInsights.renderTeacherFinancials(data,insightCtx);
+ }catch(e){fail(e);$("#modal-content").innerHTML='<div class="alert">Не удалось загрузить сверку преподавателя.</div>'}
 }
 function choosePlan(id){
  const t=(loaded.teachers?.teachers||[]).find(x=>x.id===id);
@@ -246,9 +270,42 @@ async function newReceipt(defaultId=""){
  plan:p.plan,amount:Number(p.amount),date:p.date,method:p.method,note:p.note},"billing")};
 }
 document.addEventListener("click",async e=>{
+ const period=e.target.closest("[data-period]");
+ if(period){
+   try{window.TPOwnerInsights.applyPreset(period.dataset.period);loaded.overview=null;loaded.analytics=null;await navigate(page,true)}catch(err){fail(err)}
+   return;
+ }
  const n=e.target.closest("[data-nav]");if(n){navigate(n.dataset.nav);return}
  const b=e.target.closest("[data-action]");if(!b||busy)return;
  const a=b.dataset.action;
+ if(a==="apply_period"){
+   try{
+     window.TPOwnerInsights.setPeriod({from:$("#insight-from")?.value,to:$("#insight-to")?.value,preset:"custom"});
+     loaded.overview=null;loaded.analytics=null;
+     await navigate(page,true);
+   }catch(err){fail(err)}return;
+ }
+ if(a==="export_report")return window.TPOwnerInsights.exportReport();
+ if(a==="export_teacher")return window.TPOwnerInsights.exportTeacher();
+ if(a==="diag_refresh"){loaded.diagnostics=null;return navigate("diagnostics",true)}
+ if(a==="override_clear"){
+   if(!confirm("Вернуть преподавателю глобальные настройки объявления?"))return;
+   return run("flag_override_set",{id:b.dataset.id,key:"maintenance_banner",mode:"inherit"},"settings");
+ }
+ if(a==="override_open"){
+   const teachers=loaded.settings?.teachers||[];
+   modal("Объявление преподавателю",'<form id="override-form" class="form">'+
+    '<label class="field">Преподаватель<select name="id" required>'+window.TPOwnerInsights.teacherOption(teachers,esc)+'</select></label>'+
+    '<label class="field">Показ объявления<select name="enabled"><option value="true">Включить только здесь</option>'+
+    '<option value="false">Скрыть только здесь</option></select></label>'+
+    '<label class="field">Текст объявления<input name="value" maxlength="240" placeholder="Текст для преподавателя"></label>'+
+    '<p class="muted">Настройка действует только на выбранного преподавателя. Она не меняет общий текст для остальных.</p>'+
+    '<button class="button primary" type="submit">Сохранить</button></form>');
+   $("#override-form").onsubmit=e=>{e.preventDefault();const form=new FormData(e.target);
+     run("flag_override_set",{id:form.get("id"),key:"maintenance_banner",enabled:form.get("enabled")==="true",
+       value:form.get("value")},"settings")};
+   return;
+ }
  if(a==="detail")return detail(b.dataset.id);
  if(a==="teacher_plan")return choosePlan(b.dataset.id);
  if(a==="teacher_receipt")return newReceipt(b.dataset.id);
@@ -282,6 +339,9 @@ $("#logout").addEventListener("click",async()=>{await client?.auth.signOut();loc
 $("#modal-close").addEventListener("click",closeModal);
 $("#modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
+$("#content").addEventListener("change",e=>{
+ if(e.target.id==="ticket-filter")window.TPOwnerInsights.updateTicketFilter(e.target.value);
+});
 $("#content").addEventListener("input",e=>{
  if(e.target.id==="teacher-search"){const q=e.target.value.toLowerCase().trim();
   document.querySelectorAll("[data-teacher-row]").forEach(row=>row.hidden=!row.dataset.search.includes(q))}

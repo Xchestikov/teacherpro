@@ -1,5 +1,6 @@
 // TeacherPro Owner Console API. All platform-wide access is server-side.
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
+import {validPeriod,teacherFinancials,buildInsights} from "./insights.ts";
 
 const URL = Deno.env.get("SUPABASE_URL") || "";
 const SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -74,6 +75,92 @@ Deno.serve(async(req:Request)=>{
     const arg=JSON.parse(input||"{}");
     const action=safeStr(arg.action,60);
     const until=new Date().toISOString().slice(0,10);
+    if(action==="insights"||action==="teacher_finances"){
+      let period;
+      try{period=validPeriod({from:arg.from,to:arg.to});}
+      catch(e){return send({error:String((e as Error).message)},400);}
+      if(action==="teacher_finances"){
+        const id=safeStr(arg.id,40);
+        if(!UUID.test(id))return send({error:"Invalid teacher"},400);
+        const admin=must(await ADMIN.from("tp_platform_admins").select("user_id").eq("user_id",id).maybeSingle());
+        if(admin)return send({error:"Not a teacher account"},403);
+        const {data:account,error:accountError}=await ADMIN.auth.admin.getUserById(id);
+        if(accountError||!account?.user)return send({error:"Teacher not found"},404);
+        const row=must(await ADMIN.from("app_data").select("user_id,payload,updated_at").eq("user_id",id).maybeSingle()) as Row|null;
+        const fin=teacherFinancials(row||undefined,period);
+        return send({period,teacher:{id,email:account.user.email||"",name:String(
+          ((row?.payload?.settings as Record<string,unknown>)||{}).name||"").slice(0,100),
+          lastSavedAt:row?.updated_at||null},...fin,
+          privacy:"Имена, контакты, заметки и расписание отдельных учеников не передаются в кабинет владельца."});
+      }
+      const [users,rows,admins,controls]=await Promise.all([
+        allUsers(),allPayloads(),
+        ADMIN.from("tp_platform_admins").select("user_id").then(must),
+        ADMIN.from("tp_teacher_control").select("user_id,status").then(must)
+      ]);
+      const ignored=new Set((admins as {user_id:string}[]).map(x=>x.user_id));
+      const states=new Map((controls as {user_id:string,status:string}[]).map(x=>[x.user_id,x.status]));
+      const profiles=new Map(rows.map(x=>[x.user_id,x]));
+      const teachers=users.filter(x=>!ignored.has(x.id)).map(u=>({
+        id:u.id,email:u.email||"",lastSignInAt:u.last_sign_in_at||null,
+        name:String(((profiles.get(u.id)?.payload?.settings as Record<string,unknown>)||{}).name||"").slice(0,100),
+        students:list(profiles.get(u.id)?.payload?.clients).length,status:states.get(u.id)||"active"
+      }));
+      return send({insights:buildInsights(teachers,rows,period)});
+    }
+    if(action==="diagnostics"){
+      const [rows,deliveries,links,tickets]=await Promise.all([
+        allPayloads(),
+        ADMIN.from("tp_telegram_delivery").select("status,attempted_at,link_id").order("attempted_at",{ascending:false}).limit(1000).then(must),
+        ADMIN.from("tp_telegram_links").select("status,owner_id,updated_at").limit(1000).then(must),
+        ADMIN.from("tp_support_tickets").select("status,created_at,teacher_id").order("created_at",{ascending:false}).limit(1000).then(must)
+      ]);
+      const now=Date.now(),recent=now-7*86400000;
+      const failed=(deliveries as {status:string,attempted_at:string}[]).filter(x=>x.status==="failed"&&Date.parse(x.attempted_at)>recent).length;
+      const sent=(deliveries as {status:string,attempted_at:string}[]).filter(x=>x.status==="sent"&&Date.parse(x.attempted_at)>recent).length;
+      const issues:{kind:string,severity:string,title:string,detail:string,teacherId?:string}[]=[];
+      let unverified=0,priceMissing=0,stale=0;
+      for(const row of rows){
+        const f=teacherFinancials(row,{from:"2000-01-01",to:new Date().toISOString().slice(0,10)}).info;
+        if(f.unverifiedLessons){unverified+=f.unverifiedLessons;issues.push({kind:"subscriptions",severity:"warning",
+          title:"Неподтверждённые списания абонемента",detail:f.unverifiedLessons+" зан. · "+f.unverified.toLocaleString("ru-RU")+" ₽ требуют сверки",teacherId:row.user_id});}
+        if(f.priceUnitMissing){priceMissing+=f.priceUnitMissing;issues.push({kind:"pricing",severity:"info",
+          title:"Занятия без сохранённого типа тарифа",detail:f.priceUnitMissing+" проведённых занятий с исторической почасовой трактовкой",teacherId:row.user_id});}
+        if(row.updated_at&&now-Date.parse(row.updated_at)>7*86400000)stale++;
+      }
+      if(failed)issues.unshift({kind:"telegram",severity:"warning",title:"Ошибки доставки Telegram",detail:failed+" за последние 7 дней"});
+      const opened=(tickets as {status:string}[]).filter(t=>t.status!=="resolved").length;
+      if(opened)issues.unshift({kind:"support",severity:"info",title:"Открытые обращения",detail:opened+" требуют обработки"});
+      return send({diagnostics:{checkedAt:new Date().toISOString(),
+        api:"available",database:"available",telegram:{activeLinks:(links as {status:string}[]).filter(x=>x.status==="active").length,sent7d:sent,failed7d:failed},
+        accounts:{withData:rows.length,withoutRecentChanges7d:stale},ticketsOpen:opened,
+        unverifiedSubscriptionLessons:unverified,legacyPrices:priceMissing,issues:issues.slice(0,60),
+        note:"Это проверка доступности административного API и состояния записей, не прямой health-check VPS или процесса Telegram."}});
+    }
+    if(action==="flag_overrides"){
+      const overrides=must(await ADMIN.from("tp_platform_flag_overrides")
+        .select("teacher_id,key,enabled,value,updated_at").eq("key","maintenance_banner").order("updated_at",{ascending:false}));
+      return send({overrides});
+    }
+    if(action==="flag_override_set"){
+      const id=safeStr(arg.id,40),key=safeStr(arg.key,60);
+      if(!UUID.test(id)||key!=="maintenance_banner")return send({error:"Invalid announcement target"},400);
+      const admin=must(await ADMIN.from("tp_platform_admins").select("user_id").eq("user_id",id).maybeSingle());
+      const {data:target,error:targetError}=await ADMIN.auth.admin.getUserById(id);
+      if(admin||targetError||!target?.user)return send({error:"Invalid teacher"},400);
+      if(arg.mode==="inherit"){
+        must(await ADMIN.from("tp_platform_flag_overrides").delete().eq("teacher_id",id).eq("key",key));
+        await audit(uid,"flag_override_clear",id,{key});
+        return send({ok:true});
+      }
+      if(typeof arg.enabled!=="boolean")return send({error:"Invalid enabled value"},400);
+      const value=safeStr(arg.value,240);
+      must(await ADMIN.from("tp_platform_flag_overrides").upsert({
+        teacher_id:id,key,enabled:arg.enabled,value,updated_at:new Date().toISOString()
+      },{onConflict:"teacher_id,key"}));
+      await audit(uid,"flag_override_set",id,{key,enabled:arg.enabled});
+      return send({ok:true});
+    }
     if(action==="overview"||action==="teachers"){
       const [users,rows,controls,admins]=await Promise.all([
         allUsers(), allPayloads(),
