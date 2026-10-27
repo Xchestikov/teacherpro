@@ -2,7 +2,7 @@
    Admin rights are checked in Supabase RLS; this module grants no access itself. */
 (function(){
   'use strict';
-  let checkedUser='',lastCheck=0,checking=false,owner=false,flags=[];
+  let checkedUser='',lastCheck=0,checking=false,owner=false,flags=[],overrides=[];
   const safe=x=>htmlSafe(String(x??''));
   function appendUi(){
     if(!cloudUser)return;
@@ -25,7 +25,9 @@
     if(help&&!help.enabled)top?.querySelector('#tpSupportButton')?.remove();
     if(!owner)top?.querySelector('#tpOwnerLink')?.remove();
     document.querySelector('#tpPlatformBanner')?.remove();
-    const banner=flags.find(x=>x.key==='maintenance_banner');
+    const globalBanner=flags.find(x=>x.key==='maintenance_banner');
+    const targeted=overrides.find(x=>x.key==='maintenance_banner');
+    const banner=targeted?{enabled:targeted.enabled,value:targeted.value||globalBanner?.value}:globalBanner;
     if(banner?.enabled&&page!=='settings'){
       const node=document.createElement('div');node.id='tpPlatformBanner';
       node.setAttribute('role','status');node.textContent=String(banner.value||'В TeacherPro проводятся технические работы.');
@@ -39,13 +41,15 @@
     if(uid===checkedUser&&Date.now()-lastCheck<120000)return appendUi();
     checking=true;
     try{
-      const [adminResponse,flagsResponse]=await Promise.all([
+      const [adminResponse,flagsResponse,overrideResponse]=await Promise.all([
         cloudClient.from('tp_platform_admins').select('role').eq('user_id',uid).maybeSingle(),
-        cloudClient.from('tp_platform_flags').select('key,enabled,value')
+        cloudClient.from('tp_platform_flags').select('key,enabled,value'),
+        cloudClient.from('tp_platform_flag_overrides').select('key,enabled,value').eq('teacher_id',uid)
       ]);
       if(cloudUser?.id!==uid)return;
       owner=!adminResponse.error&&['owner','admin'].includes(adminResponse.data?.role);
       flags=flagsResponse.error?[]:(flagsResponse.data||[]);
+      overrides=overrideResponse.error?[]:(overrideResponse.data||[]);
       checkedUser=uid;lastCheck=Date.now();appendUi();
     }catch(_){/* Personal schedule must not fail when admin features are unavailable. */}
     finally{checking=false}
