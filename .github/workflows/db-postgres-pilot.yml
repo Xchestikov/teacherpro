@@ -93,6 +93,9 @@ jobs:
           test "$(psql -X -Atc "SELECT 42;")" = 42
           test "$(psql -X -Atc "SELECT count(*) FROM pg_tables WHERE schemaname='public';")" = 0
           echo 'OK: empty pilot database, private socket 0700, TCP disabled, SQL operational.'
+          test "$(curl --noproxy '*' -sS -o /dev/null -w '%{http_code}' --max-time 12 --resolve teacherpro-app.ru:443:127.0.0.1 https://teacherpro-app.ru/)" = 200
+          echo 'OK: Existing TeacherPro website responds with HTTPS 200 through local Nginx.'
+
           free -m | awk '/^Mem:/{print "Available memory: " $7 " MiB"}'
           REMOTE
 
