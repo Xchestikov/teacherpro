@@ -95,7 +95,7 @@ Deno.serve(async(req:Request)=>{
       const ticketQuery=await ADMIN.from("tp_support_tickets").select("id",{count:"exact",head:true}).neq("status","resolved");
       if(ticketQuery.error)throw ticketQuery.error;
       const ticketCount=ticketQuery.count||0;
-      const allReceipts=must(await ADMIN.from("tp_platform_receipts").select("amount_rub,received_on")) as {amount_rub:number,received_on:string}[];
+      const allReceipts=must(await ADMIN.from("tp_platform_receipts").select("amount_rub,received_on").is("voided_at",null)) as {amount_rub:number,received_on:string}[];
       const ownerRevenue=allReceipts.reduce((n,p)=>n+cents(p.amount_rub),0);
       const ownerRevenueMonth=allReceipts.filter(p=>p.received_on?.startsWith(until.slice(0,7)))
         .reduce((n,p)=>n+cents(p.amount_rub),0);
@@ -168,10 +168,10 @@ Deno.serve(async(req:Request)=>{
     }
     if(action==="billing"){
       const [receipts,plans]=await Promise.all([
-        ADMIN.from("tp_platform_receipts").select("id,teacher_id,plan_code,amount_rub,received_on,method,note,created_at").order("received_on",{ascending:false}).limit(300).then(must),
+        ADMIN.from("tp_platform_receipts").select("id,teacher_id,plan_code,amount_rub,received_on,method,note,voided_at,created_at").order("received_on",{ascending:false}).limit(300).then(must),
         ADMIN.from("tp_platform_plans").select("code,title,price_rub,period,enabled").order("code").then(must)
       ]);
-      const total=(receipts as {amount_rub:number}[]).reduce((n,r)=>n+cents(r.amount_rub),0);
+      const total=(receipts as {amount_rub:number,voided_at:string|null}[]).filter(r=>!r.voided_at).reduce((n,r)=>n+cents(r.amount_rub),0);
       return send({receipts,plans,receivedTotal:money(total)});
     }
     if(action==="receipt_record"){
@@ -190,6 +190,16 @@ Deno.serve(async(req:Request)=>{
       }).select("id").single()) as {id:string};
       await audit(uid,"receipt_record",id,{receiptId:receipt.id,plan,amount,date,method});
       return send({ok:true,id:receipt.id});
+    }
+    if(action==="receipt_void"){
+      const id=safeStr(arg.id,40);
+      if(!UUID.test(id))return send({error:"Invalid receipt"},400);
+      const receipt=must(await ADMIN.from("tp_platform_receipts").update({
+        voided_at:new Date().toISOString(),voided_by:uid
+      }).eq("id",id).is("voided_at",null).select("teacher_id,amount_rub").maybeSingle()) as {teacher_id:string,amount_rub:number}|null;
+      if(!receipt)return send({error:"Receipt not found or already reversed"},404);
+      await audit(uid,"receipt_void",id,{teacherId:receipt.teacher_id,amount:receipt.amount_rub});
+      return send({ok:true});
     }
     if(action==="support"){
       const tickets=must(await ADMIN.from("tp_support_tickets").select("id,teacher_id,category,subject,message,status,created_at,updated_at").order("created_at",{ascending:false}).limit(100));
