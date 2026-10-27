@@ -77,16 +77,16 @@ Deno.serve(async(req:Request)=>{
     if(action==="overview"||action==="teachers"){
       const [users,rows,controls,admins]=await Promise.all([
         allUsers(), allPayloads(),
-        ADMIN.from("tp_teacher_control").select("user_id,status,plan_code,updated_at").then(must),
+        ADMIN.from("tp_teacher_control").select("user_id,status,plan_code,plan_until,updated_at").then(must),
         ADMIN.from("tp_platform_admins").select("user_id,role").then(must)
       ]);
       const adminsSet=new Set((admins as {user_id:string}[]).map(x=>x.user_id));
       const byRow=new Map(rows.map(x=>[x.user_id,x]));
-      const byControl=new Map((controls as {user_id:string,status:string,plan_code:string}[]).map(x=>[x.user_id,x]));
+      const byControl=new Map((controls as {user_id:string,status:string,plan_code:string,plan_until:string|null}[]).map(x=>[x.user_id,x]));
       const teachers=users.filter(u=>!adminsSet.has(u.id)).map(u=>{
         const s=summarize(byRow.get(u.id),until),c=byControl.get(u.id);
         return {id:u.id,email:u.email||"",createdAt:u.created_at,lastSignInAt:u.last_sign_in_at,
-          status:c?.status||"active",plan:c?.plan_code||"free",...s};
+          status:c?.status||"active",plan:c?.plan_code||"free",planUntil:c?.plan_until||null,...s};
       });
       if(action==="teachers")return send({teachers});
       const sum=(key:"students"|"done"|"earned"|"received")=>teachers.reduce((n,t)=>n+num(t[key]),0);
@@ -95,9 +95,13 @@ Deno.serve(async(req:Request)=>{
       const ticketQuery=await ADMIN.from("tp_support_tickets").select("id",{count:"exact",head:true}).neq("status","resolved");
       if(ticketQuery.error)throw ticketQuery.error;
       const ticketCount=ticketQuery.count||0;
+      const allReceipts=must(await ADMIN.from("tp_platform_receipts").select("amount_rub,received_on")) as {amount_rub:number,received_on:string}[];
+      const ownerRevenue=allReceipts.reduce((n,p)=>n+cents(p.amount_rub),0);
+      const ownerRevenueMonth=allReceipts.filter(p=>p.received_on?.startsWith(until.slice(0,7)))
+        .reduce((n,p)=>n+cents(p.amount_rub),0);
       return send({overview:{teachers:teachers.length,active7d,students:sum("students"),done:sum("done"),
         earned:sum("earned"),received:sum("received"),suspended:teachers.filter(t=>t.status==="suspended").length,
-        supportOpen:ticketCount,updatedAt:new Date().toISOString()},recent:teachers.slice(0,8)});
+        supportOpen:ticketCount,ownerRevenue:money(ownerRevenue),ownerRevenueMonth:money(ownerRevenueMonth),updatedAt:new Date().toISOString()},recent:teachers.slice(0,8)});
     }
     if(action==="teacher_detail"){
       const id=safeStr(arg.id,40);
@@ -126,6 +130,9 @@ Deno.serve(async(req:Request)=>{
         const valid=must(await ADMIN.from("tp_platform_plans").select("code").eq("code",plan).eq("enabled",true).maybeSingle());
         if(!valid)return send({error:"Plan unavailable"},400);
         payload.plan_code=plan;
+        const untilArg=safeStr(arg.until,12);
+        if(untilArg&&!/^\d{4}-\d{2}-\d{2}$/.test(untilArg))return send({error:"Invalid plan end date"},400);
+        payload.plan_until=untilArg||null;
       }
       must(await ADMIN.from("tp_teacher_control").upsert(payload,{onConflict:"user_id"}));
       await audit(uid,action,id,{value:payload.status||payload.plan_code});
@@ -158,6 +165,31 @@ Deno.serve(async(req:Request)=>{
         enabled:arg.enabled,updated_at:new Date().toISOString()},{onConflict:"code"}));
       await audit(uid,"plan_save",code,{title,period,price:sum,enabled:arg.enabled});
       return send({ok:true});
+    }
+    if(action==="billing"){
+      const [receipts,plans]=await Promise.all([
+        ADMIN.from("tp_platform_receipts").select("id,teacher_id,plan_code,amount_rub,received_on,method,note,created_at").order("received_on",{ascending:false}).limit(300).then(must),
+        ADMIN.from("tp_platform_plans").select("code,title,price_rub,period,enabled").order("code").then(must)
+      ]);
+      const total=(receipts as {amount_rub:number}[]).reduce((n,r)=>n+cents(r.amount_rub),0);
+      return send({receipts,plans,receivedTotal:money(total)});
+    }
+    if(action==="receipt_record"){
+      const id=safeStr(arg.id,40),plan=safeStr(arg.plan,30),date=safeStr(arg.date,12);
+      const amount=num(arg.amount),method=safeStr(arg.method,12),note=safeStr(arg.note,300);
+      if(!UUID.test(id)||!["manual","bank","other"].includes(method)||
+        !/^\d{4}-\d{2}-\d{2}$/.test(date)||date<"2000-01-01"||
+        date>until||amount<=0||amount>1000000||Math.abs(Math.round(amount*100)-amount*100)>1e-6)
+        return send({error:"Invalid payment details"},400);
+      const isAdmin=must(await ADMIN.from("tp_platform_admins").select("user_id").eq("user_id",id).maybeSingle());
+      const subscription=must(await ADMIN.from("tp_platform_plans").select("code").eq("code",plan).maybeSingle());
+      const {data:user,error:userError}=await ADMIN.auth.admin.getUserById(id);
+      if(isAdmin||!subscription||userError||!user?.user)return send({error:"Teacher or plan not found"},400);
+      const receipt=must(await ADMIN.from("tp_platform_receipts").insert({
+        teacher_id:id,plan_code:plan,amount_rub:money(cents(amount)),received_on:date,method,note,created_by:uid
+      }).select("id").single()) as {id:string};
+      await audit(uid,"receipt_record",id,{receiptId:receipt.id,plan,amount,date,method});
+      return send({ok:true,id:receipt.id});
     }
     if(action==="support"){
       const tickets=must(await ADMIN.from("tp_support_tickets").select("id,teacher_id,category,subject,message,status,created_at,updated_at").order("created_at",{ascending:false}).limit(100));
