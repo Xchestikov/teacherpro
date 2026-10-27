@@ -1,0 +1,69 @@
+name: TeacherPro database host preflight
+
+# Read-only inspection of the existing FirstVDS deploy account. Does not install, start,
+# reboot, reconfigure, copy private data, or switch any application connection.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/db-host-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    environment: production-vps
+    timeout-minutes: 5
+    steps:
+      - name: Configure SSH without printing credentials
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST" && test -n "$VPS_USER"
+          test -n "$VPS_SSH_KEY" && test -n "$VPS_KNOWN_HOSTS"
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+      - name: Collect sanitized system capabilities (read-only)
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes \
+              "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -uo pipefail
+          echo '== Server capacity =='
+          printf 'CPU cores: '; nproc 2>/dev/null || echo unknown
+          free -m | awk '/^Mem:/{print "RAM MB total=" $2 " available=" $7} /^Swap:/{print "Swap MB total=" $2}'
+          df -Pm / /home /srv 2>/dev/null | awk 'NR==1{print "Filesystem MB: " $0} NR>1{print $1, "size=" $2, "available=" $4, "mount=" $6}' | sort -u
+          if test -r /etc/os-release; then . /etc/os-release; printf 'OS: %s %s\n' "${ID:-unknown}" "${VERSION_ID:-unknown}"; fi
+          echo '== Deployment capabilities =='
+          for cmd in docker podman rootlesskit dockerd-rootless-setuptool.sh docker-compose psql pg_dump pg_restore initdb pg_ctl postgres nginx systemctl; do
+            if command -v "$cmd" >/dev/null 2>&1; then echo "$cmd=present"; else echo "$cmd=absent"; fi
+          done
+          if command -v docker >/dev/null 2>&1; then
+            if docker info --format '{{.ServerVersion}}' >/dev/null 2>&1; then echo 'docker_daemon_access=yes'; else echo 'docker_daemon_access=no'; fi
+            if docker compose version >/dev/null 2>&1; then echo 'docker_compose=yes'; else echo 'docker_compose=no'; fi
+          fi
+          if command -v podman >/dev/null 2>&1; then
+            if podman info --format '{{.Host.Arch}}' >/dev/null 2>&1; then echo 'podman_access=yes'; else echo 'podman_access=no'; fi
+          fi
+          if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then echo 'passwordless_sudo=yes'; else echo 'passwordless_sudo=no'; fi
+          printf 'User namespaces max: '; cat /proc/sys/user/max_user_namespaces 2>/dev/null || echo unknown
+          printf 'Unprivileged userns clone: '; cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null || echo unknown
+          if test -S /var/run/docker.sock; then echo 'docker_socket=present'; else echo 'docker_socket=absent'; fi
+          if test -w "$HOME"; then echo 'home_writable=yes'; else echo 'home_writable=no'; fi
+          echo '== No live data read, no changes made =='
+          REMOTE
