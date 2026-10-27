@@ -40,7 +40,7 @@ test('teacher data stays RLS-isolated and privilege escalation unavailable',()=>
   assert.match(privileges,/grant insert on public\.tp_support_tickets to authenticated/);
 });
 test('prices stay fixed per lesson, prorated only for hourly mode',()=>{
-  const declaration=edge.match(/const price = \(l:Record<string,unknown>\)=>[^;]+;/)?.[0];
+  const declaration=edge.match(/const price = \(l:Record<string,unknown>\)=>[^;]+;/)?.[0]?.replace('(l:Record<string,unknown>)','(l)');
   assert.ok(declaration,'Price function not found');
   const script='const num=v=>Number(v)||0; const cents=v=>Math.round(num(v)*100);'+declaration+
     ' price({priceUnit:"lesson",hourlyRate:1000,duration:80})';
