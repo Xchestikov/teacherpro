@@ -37,19 +37,24 @@
 
   function applyChange(lessonId,changes,kind){
     const lesson=eventById(lessonId);
-    if(!lesson||lesson.status!=='planned')return false;
+    if(!lesson||(kind==='resize'&&lesson.status!=='planned'))return false;
     const next={...lesson,duration:Number(lesson.duration)||60,...changes};
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(next.date)||!/^\d{2}:\d{2}$/.test(next.time)||!validDuration(Number(next.duration)))return false;
+    const duration=Number(next.duration);
+    // Moving must also support custom lesson lengths (40, 55, 70 min).
+    // Only drag-resizing is constrained to 15-minute increments.
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(next.date)||!/^\d{2}:\d{2}$/.test(next.time)||
+      (kind==='resize'?!validDuration(duration):!Number.isInteger(duration)||duration<15||duration>240))return false;
     if(next.date===lesson.date&&next.time===lesson.time&&Number(next.duration)===(Number(lesson.duration)||60))return false;
     if(minutes(next.time)<300||minutes(next.time)>=1440||minutes(next.time)+Number(next.duration)>1440){
       alert('Занятие должно начинаться в календаре и завершаться не позднее 00:00.');return false;
     }
-    const conflict=lessonConflicts(next,lesson.id);
+    // Cancelled, no-show and deleted markers do not occupy a teaching slot.
+    const conflict=lessonIsCancelled(next.status)?[]:lessonConflicts(next,lesson.id);
     if(conflict.length){
       const names=conflict.slice(0,3).map(l=>(client(l.clientId)?.name||'Ученик')+' · '+l.time).join('\n');
       alert('Выбранное время занято: '+names+'. Выбери другое.');return false;
     }
-    // Move/resize is reversible via toast. Only overlap overrides ask confirmation.
+    // Move/resize is reversible via toast. Keep original status and financial links untouched.
     const previous={date:lesson.date,time:lesson.time,duration:Number(lesson.duration)||60};
     const expected={date:next.date,time:next.time,duration:next.duration};
     Object.assign(lesson,changes);save();render();

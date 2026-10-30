@@ -436,6 +436,58 @@ test('Calendar V2 keyboard resize changes duration and undo restores previous va
  expect(errors).toEqual([]);
 });
 
+test('Calendar moves every lesson status, including 40-minute completed lessons, without altering payments',async({page})=>{
+ const errors=await setup(page);await login(page);await addStudent(page,'Перенос всех статусов','09.09');
+ const initial=await page.evaluate(()=>{
+   const student=db.clients[0],today=todayISO();
+   const next=new Date(today+'T12:00:00');next.setDate(next.getDate()+1);
+   const targetDate=localDateISO(next);
+   const statuses=['done','cancelled','cancelled_charged','no_show','no_show_charged','cancelled_by_teacher','deleted','planned'];
+   db.subscriptions=[{id:'keep-sub',clientId:student.id,total:10,remaining:7,price:12000,paymentStatus:'paid',status:'active'}];
+   db.payments=[{id:'keep-receipt',clientId:student.id,subscriptionId:'keep-sub',amount:12000,status:'paid',date:today}];
+   db.lessons=statuses.map((status,i)=>({
+     id:'all-'+status,clientId:student.id,date:today,time:minutesToClock(360+i*90),
+     duration:status==='done'?40:60,status,
+     ...(lessonCharges(status)?{consumedSubscriptionId:'keep-sub'}:{})
+   }));
+   calendarMode='week';weekOffset=0;setPage('schedule');
+   return {targetDate,statuses,balances:JSON.stringify({subscriptions:db.subscriptions,payments:db.payments}),
+     draggable:[...document.querySelectorAll('.calendar-event')].map(e=>({id:e.dataset.lessonId,draggable:e.draggable}))};
+ });
+ expect(initial.draggable).toHaveLength(initial.statuses.length);
+ expect(initial.draggable.every(entry=>entry.draggable)).toBe(true);
+ const result=await page.evaluate(({targetDate,statuses})=>{
+   const moved=statuses.map((status,i)=>{
+     const lesson=db.lessons.find(l=>l.id==='all-'+status);
+     return window.tpCalendarMove(lesson,targetDate,minutesToClock(375+i*90));
+   });
+   const snapshot=db.lessons.map(l=>({id:l.id,date:l.date,time:l.time,duration:l.duration,
+     status:l.status,consumedSubscriptionId:l.consumedSubscriptionId||null}));
+   // A completed lesson occupies its destination slot, but a cancelled marker does not.
+   const overlapDenied=window.tpCalendarMove(db.lessons.find(l=>l.status==='planned'),targetDate,'06:15');
+   const cancelledOverlap=window.tpCalendarMove(db.lessons.find(l=>l.status==='cancelled'),targetDate,'06:15');
+   const finance=JSON.stringify({subscriptions:db.subscriptions,payments:db.payments});
+   return {moved,snapshot,overlapDenied,cancelledOverlap,finance};
+ },initial);
+ expect(result.moved).toEqual(initial.statuses.map(()=>true));
+ expect(result.snapshot.every((l,i)=>l.status===initial.statuses[i]&&l.date===initial.targetDate)).toBe(true);
+ expect(result.snapshot.find(l=>l.status==='done')).toMatchObject({duration:40,consumedSubscriptionId:'keep-sub',time:'06:15'});
+ expect(result.snapshot.find(l=>l.status==='no_show_charged').consumedSubscriptionId).toBe('keep-sub');
+ expect(result.snapshot.find(l=>l.status==='cancelled_charged').consumedSubscriptionId).toBe('keep-sub');
+ expect(result.overlapDenied).toBe(false);
+ expect(result.cancelledOverlap).toBe(true);
+ expect(result.finance).toBe(initial.balances);
+ const movedAgain=await page.evaluate(({targetDate})=>window.tpCalendarMove(
+   db.lessons.find(l=>l.status==='done'),targetDate,'06:30'),initial);
+ expect(movedAgain).toBe(true);
+ await expect(page.locator('.cv2-toast')).toContainText('06:30');
+ await page.locator('.cv2-toast').getByRole('button',{name:'Отменить'}).click();
+ const restored=await page.evaluate(()=>({time:db.lessons.find(l=>l.status==='done').time,
+   remaining:db.subscriptions[0].remaining,receipt:db.payments[0].amount}));
+ expect(restored).toEqual({time:'06:15',remaining:7,receipt:12000});
+ expect(errors).toEqual([]);
+});
+
 test('Calendar V2 cancelled filter affects day and month without mutating lesson data',async({page})=>{
  const errors=await setup(page);await login(page);
  await addStudent(page,'Отмена В2','08.07');
