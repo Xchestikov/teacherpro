@@ -213,6 +213,51 @@ test('iPhone touch drag snaps each quarter hour and moves the lesson preview wit
  expect(errors).toEqual([]);
 });
 
+test('WebKit touch hold can drag completed, cancelled and deleted lessons with custom duration',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
+ await page.route('https://fonts.googleapis.com/**',r=>r.abort());
+ await page.route('https://fonts.gstatic.com/**',r=>r.abort());
+ await page.addInitScript({content:mock});
+ await page.goto('/');
+ await page.locator('#authEmail').fill('a@teacherpro.test');
+ await page.locator('#authPassword').fill('DemoPass123');
+ await page.locator('#authSubmit').click();
+ await expect(page.locator('#authGate')).toBeHidden();
+ for(const status of ['done','cancelled','deleted']){
+   const result=await page.evaluate(async status=>{
+     db.clients=[{id:55,name:'Сенсорный перенос'}];
+     db.lessons=[{id:'status-touch',clientId:55,date:todayISO(),time:'10:00',duration:40,status}];
+     calendarMode='day';calendarSelectedDate=todayISO();setPage('schedule');
+     const source=document.querySelector('[data-lesson-id="status-touch"]');
+     source.scrollIntoView({block:'center'});
+     await new Promise(resolve=>setTimeout(resolve,80));
+     const rect=source.getBoundingClientRect(),cell=source.closest('.calendar-cell').getBoundingClientRect();
+     const x=rect.left+Math.min(rect.width/3,35),fromY=rect.top+10;
+     // Grip is 10px below the top of the card; the target top is at 10:30.
+     const toY=cell.top+cell.height/2+10;
+     const fire=(kind,y)=>{
+       const e=new Event(kind,{bubbles:true,cancelable:true});
+       Object.defineProperty(e,'changedTouches',{value:[{identifier:170,clientX:x,clientY:y,target:source}]});
+       source.querySelector('.event-time').dispatchEvent(e);
+       return e.defaultPrevented;
+     };
+     const draggable=source.draggable,touchAction=getComputedStyle(source).touchAction;
+     const prevented=fire('touchstart',fromY);
+     await new Promise(resolve=>setTimeout(resolve,520));
+     const active=source.classList.contains('touch-dragging');
+     fire('touchmove',toY);
+     const preview=document.querySelector('.tp-mobile-quarter-guide')?.dataset.targetTime;
+     fire('touchend',toY);
+     return {draggable,touchAction,prevented,active,preview,time:db.lessons[0].time,
+       status:db.lessons[0].status,duration:db.lessons[0].duration};
+   },status);
+   expect(result).toMatchObject({draggable:true,touchAction:'none',prevented:true,
+     active:true,preview:'10:30',time:'10:30',status,duration:40});
+ }
+ expect(errors).toEqual([]);
+});
+
 test('iPhone can type a custom lesson duration directly when adding and editing a student',async({page})=>{
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.route('**/vendor/supabase-sdk.js?*',r=>r.fulfill({status:200,contentType:'application/javascript',body:'/* test stub */'}));
