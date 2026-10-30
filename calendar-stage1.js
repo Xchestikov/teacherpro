@@ -37,11 +37,11 @@
   }
   function moveLesson(lesson,cell,clientY){
     const minute=calendarSlotAtPoint(cell,clientY);
-    if(!lesson||lesson.status!=='planned'||minute===null||minute<300||minute>=1440)return;
+    if(!lesson||minute===null||minute<300||minute>=1440||minute+(Number(lesson.duration)||60)>1440)return;
     const date=cell.dataset.date,time=minutesToClock(minute);
     if(typeof window.tpCalendarMove==='function'){window.tpCalendarMove(lesson,date,time);return;}
     if(date===lesson.date&&time===lesson.time)return;
-    const conflicts=lessonConflicts({...lesson,date,time},lesson.id);
+    const conflicts=lessonIsCancelled(lesson.status)?[]:lessonConflicts({...lesson,date,time},lesson.id);
     if(conflicts.length)return alert('Это время уже занято. Выбери другое.');
     lesson.date=date;lesson.time=time;save();render();
   }
@@ -105,7 +105,7 @@
     const hour=Number(cell.dataset.minute);
     if(!Number.isFinite(hour)||r.height<=0)return null;
     const minute=snap15(hour+(topY-r.top)/r.height*60);
-    if(!safeRange(minute))return null;
+    if(!safeRange(minute)||minute+(Number(lessonFor(g.element)?.duration)||60)>1440)return null;
     return {cell,date:cell.dataset.date,time:minutesToClock(minute),minute};
   }
   function positionGhost(g,target,x,y){
@@ -137,7 +137,7 @@
   }
   function beginGesture(el,x,y,pointerId=null,fromTouch=false,touchId=null){
     const lesson=lessonFor(el);
-    if(!lesson||lesson.status!=='planned')return false;
+    if(!lesson)return false;
     dismiss();
     clearTimeout(holdTimer);
     if(gesture){gesture.element.classList.remove('touch-dragging');removeDragGhost(gesture);}
@@ -289,7 +289,7 @@
 
   document.addEventListener('touchstart',e=>{
     const el=calendarTouchTarget(e.target);
-    if(!el||!lessonFor(el)||lessonFor(el).status!=='planned')return;
+    if(!el||!lessonFor(el))return;
     const t=e.changedTouches?.[0];if(!t)return;
     // Cancels the Safari text-selection recognizer BEFORE the long-press.
     if(e.cancelable)e.preventDefault();
